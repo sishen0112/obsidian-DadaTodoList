@@ -58,7 +58,6 @@
 - **Subtasks** — indented lines become nested subtasks of any depth
 - **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
 - **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note
-- **Live sync** — edits made directly in the editor (or from another device) refresh the panel automatically
 
 ### Installation
 
@@ -164,7 +163,6 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 - **过期待办顺延**：一键把所有已过期任务顺延到今天（保留原时刻，全天任务保持全天）
 - **Ctrl/⌘ + 点击**：直接跳转到任务所在的笔记并高亮定位
 - **待办侧栏**：周 / 月视图左侧可展开「无日期 / 所有待办」列表，拖到日历即改期
-- **实时同步**：在编辑器里直接改笔记、或其他设备同步变更后，面板自动刷新（防抖，无闪烁）
 
 #### 🔒 数据与隐私
 
