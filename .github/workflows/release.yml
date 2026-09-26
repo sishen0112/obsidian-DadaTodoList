@@ -1,7 +1,7 @@
 name: Release Obsidian plugin
 
 # 推送 tag 即自动构建并发布 release。
-# 用法：git tag 0.1.0 && git push origin 0.1.0
+# 用法：git tag 0.1.2 && git push origin 0.1.2
 # 注意：tag 必须与 manifest.json 的 version 完全一致（不带 v 前缀），
 # 这是 Obsidian 社区插件商店的审核要求。
 on:
@@ -10,7 +10,9 @@ on:
       - '*'
 
 permissions:
-  contents: write
+  contents: write      # 创建 Release
+  id-token: write      # 生成构建来源证明（OIDC）
+  attestations: write  # 上传 artifact attestation
 
 jobs:
   release:
@@ -31,20 +33,26 @@ jobs:
       - name: Build
         run: npm run build
 
-      # 构建产物位于 dada-todo-list/ 目录（见 vite.config.js），
-      # 收集为 release assets：main.js / manifest.json / styles.css + versions.json
+      # 构建产物位于 dada-todo-list/ 目录（见 vite.config.js）。
+      # Obsidian 只会下载 main.js / manifest.json / styles.css 三个文件，
+      # 其余文件（如 versions.json）不要放进 release assets。
       - name: Collect release assets
         run: |
-          mkdir -p release
-          cp dada-todo-list/main.js release/
-          cp dada-todo-list/manifest.json release/
-          cp dada-todo-list/styles.css release/
-          cp versions.json release/
+          mkdir -p dist
+          cp dada-todo-list/main.js dist/
+          cp dada-todo-list/manifest.json dist/
+          cp dada-todo-list/styles.css dist/
+
+      # 构建来源证明：让用户可密码学验证资产由本仓库源码构建
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*'
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*
+          files: dist/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
