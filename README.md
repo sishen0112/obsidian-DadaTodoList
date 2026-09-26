@@ -77,6 +77,30 @@
 
 Everything is plain Markdown. Uninstalling the plugin changes nothing — your notes stay as they are.
 
+### Writing checklists
+
+Any note whose frontmatter `tags` include the checklist tag (default `todoList`) becomes a checklist. Use **`###` third-level headings as group separators** — the checklist view renders one group per heading:
+
+```markdown
+---
+tags:
+  - todoList
+---
+
+### Work
+- [ ] Finish the quarterly report #work
+    - [ ] Collect data
+- [x] Reply to client emails
+
+### Life
+- [ ] Book a dentist appointment
+```
+
+- **`###` heading = group name**, freely added/renamed/removed; tasks before any heading fall into "Ungrouped"
+- **Indented checkboxes are subtasks**, nesting to any depth
+- Switch between **list / columns** layouts; **drag a task onto another group** to move it
+- Each group has a **+ button** to add tasks; the sidebar shows live total / done progress per checklist
+
 ### Data access disclosure
 
 - **File enumeration**: the plugin lists Markdown file paths and their frontmatter to discover daily notes and checklist files (checklists are identified anywhere in the vault by their tags). Only matched daily notes (within the configured load window), the inbox file, and tag-matched checklist files are actually read — no other file's content is ever touched.
@@ -177,6 +201,35 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 > 三个位置只有收件箱路径与清单标记是本插件的设置项；每日笔记完全跟随你现有的日记配置，装上即用、无需导入。
 >
 > 若核心「日记」插件未开启，面板顶部会出现提醒条，有日期任务暂不可读写，收件箱与清单不受影响。
+
+### 📝 清单文件的写法
+
+任意一篇笔记，只要 frontmatter `tags` 含有清单识别标记（默认 `todoList`）就会成为一份清单。文件里用 **`###` 三级标题作为分组依据**，清单视图按分组展示：
+
+```markdown
+---
+tags:
+  - todoList
+---
+
+### 工作
+- [ ] 完成季度汇报 #work
+    - [ ] 收集数据
+    - [ ] 制作图表
+- [x] 回复客户邮件
+
+### 生活
+- [ ] 预约牙医
+- [x] 给绿萝浇水
+```
+
+规则与技巧：
+
+- **`###` 标题 = 分组名**，可增删改，无需任何额外配置；标题前的任务归入「未分组」
+- **缩进的复选框 = 子任务**，层级不限
+- 清单视图支持**列表 / 分栏**两种布局；**拖拽任务到其他分组**即可移动归属
+- 每个分组标题旁有 **+ 按钮**可向该分组新增任务；侧栏实时显示各清单的总数与完成进度
+- 一篇笔记就是一份清单，任务直接存在这篇笔记里——在编辑器里手动增删改，面板实时同步
 
 ### ⚙️ 设置
 
