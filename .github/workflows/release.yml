@@ -1,0 +1,50 @@
+name: Release Obsidian plugin
+
+# 推送 tag 即自动构建并发布 release。
+# 用法：git tag 0.1.0 && git push origin 0.1.0
+# 注意：tag 必须与 manifest.json 的 version 完全一致（不带 v 前缀），
+# 这是 Obsidian 社区插件商店的审核要求。
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # 构建产物位于 obsidian-dada-todo-list/ 目录（见 vite.config.js），
+      # 收集为 release assets：main.js / manifest.json / styles.css + versions.json
+      - name: Collect release assets
+        run: |
+          mkdir -p release
+          cp obsidian-dada-todo-list/main.js release/
+          cp obsidian-dada-todo-list/manifest.json release/
+          cp obsidian-dada-todo-list/styles.css release/
+          cp versions.json release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
