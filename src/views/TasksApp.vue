@@ -153,7 +153,7 @@ export default {
       agendaCollapsed: { overdue: true, far: true },
       // 日程视图：左侧日期导航（未来7天 + 更远）选中日期
       agendaActiveKey: ymd(new Date()),
-      // 清单（3. Resources/清单 下的 md 文件）
+      // 清单（frontmatter tags 命中识别标记的 md 文件）
       checklists: [],
       // 清单主区视图（列表 / 分栏）：与顶栏切换按钮联动，持久化到 localStorage
       clMainView: getClMainViewPref()

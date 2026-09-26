@@ -97,7 +97,7 @@
     "noSubtasks": "No subtasks",
     "addSubtask": "Add subtask",
     "moveFail": "Failed to move: ",
-    "clSideEmpty": "No checklists yet<br />Create a .md file under 3. Resources/清单",
+    "clSideEmpty": "No checklists yet<br />Add the todoList tag to a note's frontmatter to create one",
     "clPickSide": "Pick a checklist from the left",
     "clProgress": "{{done}} / {{total}} completed",
     "ungrouped": "Ungrouped",

@@ -1,4 +1,4 @@
-import { ItemView, Plugin, TFile } from 'obsidian';
+import { ItemView, Plugin } from 'obsidian';
 import { createApp } from 'vue';
 import { ElTooltip, ElButton, ElButtonGroup, ElDropdown, ElDropdownMenu, ElDropdownItem, ElRadioGroup, ElRadioButton } from 'element-plus';
 import 'element-plus/es/components/tooltip/style/css';
@@ -158,62 +158,24 @@ export default class DadaTodoPlugin extends Plugin {
 
   async loadSettings() {
     const data = (await this.loadData()) || {};
-    // 收件箱文件：未配置时一次性迁移——旧收件箱存在则沿用，否则用默认 DadaTodoList.md
-    let inboxFile = data.inboxFile;
-    if (!inboxFile) {
-      const legacyInbox = '2. Memo/任务待办.md';
-      inboxFile = this.app.vault.getAbstractFileByPath(legacyInbox) ? legacyInbox : 'DadaTodoList.md';
-    }
-    // 清单标记（数组，任一命中即识别清单文件）：
-    // 兼容旧单值 checklistTag → 数组；全新安装默认 ['todoList'] 并一次性补打旧目录标签
-    let checklistTags = Array.isArray(data.checklistTags) && data.checklistTags.length
+    // 清单识别标记（数组，任一命中即识别清单文件）：兼容旧单值 checklistTag → 数组
+    const checklistTags = Array.isArray(data.checklistTags) && data.checklistTags.length
       ? data.checklistTags.map((s) => String(s).trim()).filter(Boolean)
-      : (typeof data.checklistTag === 'string' && data.checklistTag.trim() ? [data.checklistTag.trim()] : null);
-    let legacyMigrated = false;
-    if (!checklistTags) {
-      checklistTags = ['todoList'];
-      legacyMigrated = await this.tagLegacyChecklists('todoList');
-    }
+      : (typeof data.checklistTag === 'string' && data.checklistTag.trim()
+        ? [data.checklistTag.trim()]
+        : ['todoList']);
     this.settings = {
+      // 打开位置：左侧栏 / 主工作区标签页 / 右侧栏
       openLocation: data.openLocation || 'main',
       // 启动 Obsidian 后是否自动打开本插件面板
       autoOpen: data.autoOpen ?? false,
       // 无日期任务的存放文件（相对库根目录）
-      inboxFile,
+      inboxFile: data.inboxFile || 'DadaTodoList.md',
       // 清单识别标记：frontmatter tags 含任一标签的笔记即清单文件
       checklistTags,
       // 每日笔记加载窗口（天）：默认 'all'；大库可调小以提升加载性能
       dailyLoadWindow: data.dailyLoadWindow || 'all',
     };
-    if (legacyMigrated) await this.saveSettings();
-  }
-
-  // 一次性迁移：旧版清单存于「3. Resources/清单」目录；升级后改为 tag 识别，
-  // 给该目录下所有 md 笔记的 frontmatter 补打清单标记（已有则跳过）。
-  // 注意：frontmatter 的 tags 数组可能含 null 项（YAML 空值），所有标签匹配都要判空。
-  async tagLegacyChecklists(tag) {
-    const dir = this.app.vault.getAbstractFileByPath('3. Resources/清单');
-    if (!dir || !Array.isArray(dir.children)) return false;
-    let tagged = false;
-    for (const f of dir.children) {
-      if (!(f instanceof TFile) || !/\.md$/i.test(f.name)) continue;
-      try {
-        await this.app.fileManager.processFrontMatter(f, (fm) => {
-          const raw = fm.tags;
-          const list = Array.isArray(raw)
-            ? raw.filter((x) => x != null && String(x).trim()).map((x) => String(x).trim())
-            : (typeof raw === 'string' && raw.trim() ? raw.split(',').map((s) => s.trim()).filter(Boolean) : []);
-          if (list.some((x) => x === tag || x.indexOf(tag + '/') === 0)) return;
-          list.push(tag);
-          fm.tags = list.length === 1 ? list[0] : list;
-          tagged = true;
-        });
-      } catch (e) {
-        // 单个文件 frontmatter 异常不阻断加载
-        console.warn('[DadaTodo] 迁移清单标记失败：', f.path, e);
-      }
-    }
-    return tagged;
   }
 
   async saveSettings() {

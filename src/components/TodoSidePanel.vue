@@ -83,13 +83,19 @@ export default {
     if (this.registerTodoPanel) this.registerTodoPanel(this);
   },
   watch: {
-    // 面板展开时播放入场动画，并懒加载清单无日期任务
-    open(open) {
-      clearTimeout(this._animTimer);
-      if (!open) { this.animating = false; return; }
-      this.animating = true;
-      this._animTimer = setTimeout(() => { this.animating = false; }, 700);
-      if (this.mode === 'nodate') this.loadClNoDate();
+    // 面板展开时播放入场动画，并懒加载清单无日期任务。
+    // immediate：视图切换（周↔日经 :key 重建、月视图换容器）会重挂载本组件，
+    // 若挂载时面板已处于展开状态，open 不会发生变化，必须在初始时也触发一次加载，
+    // 否则重挂载后无日期列表为空
+    open: {
+      immediate: true,
+      handler(open) {
+        clearTimeout(this._animTimer);
+        if (!open) { this.animating = false; return; }
+        this.animating = true;
+        this._animTimer = setTimeout(() => { this.animating = false; }, 700);
+        if (this.mode === 'nodate') this.loadClNoDate();
+      }
     }
   },
   beforeUnmount() {

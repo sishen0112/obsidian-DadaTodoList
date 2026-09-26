@@ -47,7 +47,7 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
   // 列表视图「已办」/「已取消」分组（默认收起）
   const showCompleted = ref(false);
   const showCancelled = ref(false);
-  // 清单（3. Resources/清单 下的 md 文件）；activeList 为空表示「全部任务」
+  // 清单（frontmatter tags 命中识别标记的 md 文件，全库任意位置）；activeList 为空表示「全部任务」
   const activeList = ref('');
   const checklistTasks = ref([]);
   const selectedGuid = ref('');
@@ -286,7 +286,7 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
     tagFilter.value = '';
     if (key) await loadChecklistTasks();
   }
-  // 打开清单对应的 vault 文件（清单任务固定在一个文件内：3. Resources/清单/<名>.md）
+  // 打开清单对应的 vault 文件（清单任务固定在一个 md 文件内）
   function openListFile(key) {
     const path = taskFilePath(key);
     if (!path) { new Notice(t('app.checklistFileMissing')); return; }

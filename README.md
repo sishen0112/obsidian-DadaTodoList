@@ -9,8 +9,6 @@
 
 ## 📸 界面预览
 
-> **截图占位**：把截图放到仓库 `docs/screenshots/` 目录下（PNG，建议宽度 ≥ 1200px，深浅色主题任选其一），文件名与下方一一对应即可，无需改动其他内容。不需要的槽位整段删除即可。
-
 <p align="center">
   <img src="docs/screenshots/week-view.png" alt="周视图"><br>
   <em>周视图：七天并排时间轴，定时任务按泳道排布、互不遮挡</em>
@@ -99,7 +97,7 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 
 ## 简体中文
 
-**Dada Todo List** 是一款基于 Obsidian 笔记的待办与清单管理插件。所有任务就是你笔记里的 Markdown 复选框（`- [ ]` / `- [x]`），插件负责把它们聚合起来，提供日历、时间轴、日程等多种视图和顺手的编辑体验。
+**Dada Todo List（达达清单）** 是一款基于 Obsidian 笔记的待办与清单管理插件。所有任务就是你笔记里的 Markdown 复选框（`- [ ]` / `- [x]`），插件负责把它们聚合起来，提供日历、时间轴、日程等多种视图和顺手的编辑体验。
 
 ### 🎯 这个插件适合你吗？
 
@@ -191,11 +189,8 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 
 如果这个插件对你有帮助，欢迎请作者喝杯咖啡，是我持续更新的动力～
 
-| 支付宝 Alipay | 微信赞赏 WeChat Pay |
-|:---:|:---:|
-| ![支付宝收款码](docs/donate-alipay.png) | ![微信赞赏码](docs/donate-wechat.png) |
-
-*（把你的收款码图片放到仓库 `docs/` 目录下，替换上方文件名即可）*
+微信赞赏 WeChat Pay
+![微信赞赏码](docs/donate-wechat.jpg)
 
 ---
 

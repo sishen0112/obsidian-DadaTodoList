@@ -97,7 +97,7 @@
     "noSubtasks": "暂无子任务",
     "addSubtask": "添加子任务",
     "moveFail": "移动失败：",
-    "clSideEmpty": "还没有清单<br />在 3. Resources/清单 下新建 .md 文件即可",
+    "clSideEmpty": "还没有清单<br />在笔记 frontmatter 的 tags 中加入 todoList 标记即可",
     "clPickSide": "从左侧选择一个清单查看",
     "clProgress": "{{done}} / {{total}} 已完成",
     "ungrouped": "未分组",

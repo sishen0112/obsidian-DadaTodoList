@@ -25,7 +25,7 @@
       </button>
     </template>
 
-    <!-- 清单：3. Resources/清单 下的 md 文件，文件名即清单名。
+    <!-- 清单：frontmatter tags 命中识别标记的 md 文件，文件名即清单名。
          点击名称 = 选中清单并在列表加载其任务；右侧图标 = 打开对应 vault 文件 -->
     <template v-if="checklists.length">
       <div class="tk-filter-h">{{ $t('app.filterChecklist') }}</div>
