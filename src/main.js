@@ -40,7 +40,8 @@ class DadaTodoView extends ItemView {
   }
 
   getViewType() { return VIEW_TYPE_DADA_TODO; }
-  getDisplayText() { return 'Dada Todo List'; }
+  // 视图标题跟随界面语言：中文「达达清单」，英文「Dada Todo List」
+  getDisplayText() { return t('app.viewTitle'); }
   getIcon() { return 'check-square'; }
 
   async onOpen() {

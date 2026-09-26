@@ -120,7 +120,8 @@
     "listDone": "已完成",
     "listCancelled": "已取消",
     "listTasks": "任务",
-    "openDada": "打开 Dada Todo List",
+    "openDada": "打开达达清单",
+    "viewTitle": "达达清单",
     "clProgressPct": "{{done}} / {{total}} 已完成 · {{pct}}%",
     "toggleDone": "切换完成状态",
     "viewInCal": "在完成日历中查看",
@@ -168,7 +169,7 @@
     "thatTask": "该任务"
   },
   "settings": {
-    "title": "Dada Todo List 设置",
+    "title": "达达清单",
     "openLocation": "打开位置",
     "openLocationDesc": "选择面板打开的区域：左侧栏、主窗口标签页，或右侧栏。修改后立即生效。",
     "locLeft": "左侧区域",

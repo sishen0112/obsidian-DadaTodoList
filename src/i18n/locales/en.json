@@ -121,6 +121,7 @@
     "listCancelled": "Cancelled",
     "listTasks": "Tasks",
     "openDada": "Open Dada Todo List",
+    "viewTitle": "Dada Todo List",
     "clProgressPct": "{{done}} / {{total}} completed · {{pct}}%",
     "toggleDone": "Toggle completion",
     "viewInCal": "View in completion calendar",
