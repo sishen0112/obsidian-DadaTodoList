@@ -57,7 +57,7 @@
 - **Flexible time** — single time, time ranges (start – end), or all-day, switchable per task
 - **Subtasks** — indented lines become nested subtasks of any depth
 - **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
-- **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note, per-task reminder mute with 🔕
+- **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note
 - **Live sync** — edits made directly in the editor (or from another device) refresh the panel automatically
 
 ### Installation
@@ -128,7 +128,6 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 - **标题内联语法**：直接写 `#标签` 和 `[文字](链接)`，渲染为可点击的标签胶囊与超链接
 - **时间灵活**：单时间、时间段（开始 – 结束）、全天，三种形态一键切换
 - **子任务**：无限层级缩进即子任务，弹窗内直接增删改
-- **到点提醒**：标题里写 🔕 可关闭该任务到点提醒
 
 #### 🖱 效率操作
 
