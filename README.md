@@ -77,6 +77,11 @@
 
 Everything is plain Markdown. Uninstalling the plugin changes nothing — your notes stay as they are.
 
+### Data access disclosure
+
+- **File enumeration**: the plugin lists Markdown file paths and their frontmatter to discover daily notes and checklist files (checklists are identified anywhere in the vault by their tags). Only matched daily notes (within the configured load window), the inbox file, and tag-matched checklist files are actually read — no other file's content is ever touched.
+- **localStorage**: stores only non-essential UI preferences (current view, filters, onboarding state) on the local device. It never contains note content and is never synced; it is deliberately *not* written to `data.json` to avoid triggering cloud-sync services on every interaction.
+
 ### Settings
 
 | Option | Description |
@@ -142,6 +147,11 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 - **纯 Markdown**：任务就是笔记里的复选框，插件删除后数据原样保留
 - **全本地**：不依赖任何外部服务，不联网，天然适配各种同步方案
 - **界面记忆**：视图、筛选等偏好存本机 localStorage，不污染 data.json、不触发云盘同步
+
+#### 📂 数据访问说明
+
+- **扫描文件列表**：插件会枚举库内 Markdown 文件的**路径与 frontmatter**，用于发现每日笔记与清单文件（清单通过标记全库识别）；**只有**命中的日记（限加载范围内）、收件箱、清单文件会被读取正文，其余文件一概不碰。
+- **localStorage**：仅存储非必要的界面偏好（当前视图、筛选状态、引导关闭标记等），只存在于本机、不含任何笔记内容、绝不联网同步；刻意不写入 `data.json`，避免频繁改写触发云盘同步服务。
 
 #### 🌍 界面
 
