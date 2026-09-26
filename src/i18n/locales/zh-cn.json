@@ -169,7 +169,7 @@
     "thatTask": "该任务"
   },
   "settings": {
-    "title": "达达清单",
+    "title": "达达清单 Dada Todo List",
     "openLocation": "打开位置",
     "openLocationDesc": "选择面板打开的区域：左侧栏、主窗口标签页，或右侧栏。修改后立即生效。",
     "locLeft": "左侧区域",
