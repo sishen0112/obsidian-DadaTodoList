@@ -36,9 +36,9 @@
   width: 20px; height: 20px; line-height: 20px; margin-top: 3px;
 }
 .task-app .tk-check.done { color: var(--c-done); }
-/* 已取消：红色减号圆圈（!important 压过各视图 scoped 的局部覆盖） */
-.task-app .tk-check.la-minus-circle { color: var(--c-cancel) !important; }
-.task-app .tk-check.la-minus-circle:hover { color: var(--c-cancel) !important; }
+/* 已取消：红色减号圆圈（类名翻倍提高优先级，压过各视图 scoped 的局部覆盖） */
+.task-app .tk-check.la-minus-circle.la-minus-circle { color: var(--c-cancel); }
+.task-app .tk-check.la-minus-circle.la-minus-circle:hover { color: var(--c-cancel); }
 
 /* ===== 标签胶囊（列表展示 / 详情面板可删可增 / 日历侧栏） ===== */
 .task-app .tk-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 1px; }
@@ -80,7 +80,7 @@
 .task-app .tk-sum { color: var(--ink); word-break: break-word; }
 .task-app .tk-item .tk-sum { flex: 6 1 0; min-width: 0; color: var(--ink); line-height: 1.5; word-break: break-word; }
 .task-app .tk-row .tk-sum { color: var(--ink); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; min-width: 0; }
-.task-app .tk-sum.done, .task-app .tk-row.done .tk-sum { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--line); }
+.task-app .tk-sum.done, .task-app .tk-row.done .tk-sum { color: var(--ink-soft); text-decoration: line-through; }
 /* 日期时间：右对齐（撑满左侧名称后自然靠右），字号/颜色对齐清单列表项 .tk-cl-date */
 .task-app .tk-row .tk-date {
   flex: none; margin-left: auto; width: auto; white-space: nowrap;
