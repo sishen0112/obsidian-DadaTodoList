@@ -169,6 +169,8 @@ export default class DadaTodoPlugin extends Plugin {
       openLocation: data.openLocation || 'main',
       // 启动 Obsidian 后是否自动打开本插件面板
       autoOpen: data.autoOpen ?? false,
+      // 是否显示农历与节假日（日 / 周 / 月视图表头与日历格）
+      showLunar: data.showLunar ?? true,
       // 无日期任务的存放文件（相对库根目录）
       inboxFile: data.inboxFile || 'DadaTodoList.md',
       // 清单识别标记：frontmatter tags 含任一标签的笔记即清单文件

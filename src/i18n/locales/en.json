@@ -176,6 +176,8 @@
     "locRight": "Right sidebar",
     "autoOpen": "Auto-open on startup",
     "autoOpenDesc": "When enabled, the Dada Todo List panel opens automatically each time Obsidian launches (at the location set above).",
+    "showLunar": "Show lunar calendar & holidays",
+    "showLunarDesc": "Show lunar dates, solar terms, festivals and statutory holiday badges in day / week / month views. Turn off to show Gregorian dates only.",
     "inboxFile": "Inbox file",
     "inboxFileDesc": "Where tasks without a date are stored (path relative to vault root, your choice). Created automatically on startup if missing.",
     "inboxMoveAsk": "The old inbox still has {{n}} task(s). Move them to the new file?",

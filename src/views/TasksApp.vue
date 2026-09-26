@@ -569,10 +569,11 @@ export default {
       const d = new Date(t.dueAt);
       return pad(d.getHours()) + ':' + pad(d.getMinutes());
     },
-    // 农历 / 节假日：纯函数在 tasks-logic（与 WeekDayView 共用），此处仅作 ctx 委托
-    lunarDayText(date) { return lunarDayText(date); },
-    lunarTagText(date) { return lunarTagText(date); },
-    holidayOf(day) { return holidayOf(day); },
+    // 农历 / 节假日：纯函数在 tasks-logic（与 WeekDayView 共用），此处仅作 ctx 委托；
+    // 受「显示农历与节假日」开关控制（月视图 ctx 路径）
+    lunarDayText(date) { return this.plugin.settings.showLunar === false ? '' : lunarDayText(date); },
+    lunarTagText(date) { return this.plugin.settings.showLunar === false ? '' : lunarTagText(date); },
+    holidayOf(day) { return this.plugin.settings.showLunar === false ? null : holidayOf(day); },
     async onSaved() {
       await this.reload();
       this.maybeRefreshNoDate();

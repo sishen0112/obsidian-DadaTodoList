@@ -74,7 +74,13 @@ export default {
       dropY: -1
     };
   },
+  inject: ['plugin'],
   computed: {
+    // 是否显示农历 / 节假日（设置开关，默认开；plugin 由 main.js provide）
+    showLunar() {
+      const st = this.plugin && this.plugin.settings;
+      return !st || st.showLunar !== false;
+    },
     // 时间轴每小时像素高：窗口宽度 >700 → 48，否则（≤700）→ 60
     hourH() { return this.winW > 700 ? 48 : 60; },
     // 当前时间线：仅当「现在」落在时间轴区间（07:00–24:00）内才显示，跨度像素用 yForMin 对齐刻度
@@ -114,9 +120,9 @@ export default {
     tlHelpers() {
       const s = this;
       return {
-        holidayOf: (d) => holidayOf(d),
-        lunarDayText: (d) => lunarDayText(d),
-        lunarTagText: (d) => lunarTagText(d),
+        holidayOf: (d) => (s.showLunar ? holidayOf(d) : null),
+        lunarDayText: (d) => (s.showLunar ? lunarDayText(d) : ''),
+        lunarTagText: (d) => (s.showLunar ? lunarTagText(d) : ''),
         itemColor: (t) => itemColor(t),
         blockStyle: (b) => s.blockStyle(b),
         statusIcon: (t) => statusIcon(t),

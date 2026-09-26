@@ -137,6 +137,19 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         });
       });
+
+    new Setting(containerEl)
+      .setName(t('settings.showLunar'))
+      .setDesc(t('settings.showLunarDesc'))
+      .addToggle((tg) => {
+        tg.setValue(this.plugin.settings.showLunar !== false);
+        tg.onChange(async (value) => {
+          this.plugin.settings.showLunar = value;
+          await this.plugin.saveSettings();
+          // 立即生效：刷新已打开的面板（农历渲染非响应式，靠重载触发重算）
+          this.plugin.reloadOpenViews();
+        });
+      });
   }
 
   // 收件箱路径变更（输入逐字符触发 / 补全选中触发）：去抖 1s 后统一处理
