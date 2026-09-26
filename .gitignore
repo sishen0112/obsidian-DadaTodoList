@@ -1,5 +1,5 @@
 node_modules/
 dist/
-obsidian-dada-todo-list/
+dada-todo-list/
 *.log
 .DS_Store

@@ -63,7 +63,7 @@
 ### Installation
 
 **Manual**: download `main.js`, `styles.css` and `manifest.json` into
-`your-vault/.obsidian/plugins/obsidian-dada-todo-list/`, then enable the plugin in Settings → Community plugins.
+`your-vault/.obsidian/plugins/dada-todo-list/`, then enable the plugin in Settings → Community plugins.
 
 **BRAT**: install [BRAT](https://github.com/TfTHacker/obsidian42-brat) and add this repository.
 
@@ -153,7 +153,7 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 ### 🚀 安装
 
 **手动安装**：下载 `main.js`、`styles.css`、`manifest.json` 三个文件，放入
-`你的库/.obsidian/plugins/obsidian-dada-todo-list/` 目录，然后在设置中启用第三方插件并开启本插件。
+`你的库/.obsidian/plugins/dada-todo-list/` 目录，然后在设置中启用第三方插件并开启本插件。
 
 **BRAT**：安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 后，添加本仓库地址即可自动更新。
 
@@ -198,14 +198,14 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 
 ```bash
 npm install
-npm run build     # 生产构建（产物：obsidian-dada-todo-list/main.js、styles.css、manifest.json）
+npm run build     # 生产构建（产物：dada-todo-list/main.js、styles.css、manifest.json）
 npm run dev       # 开发模式：监听 src/ 改动自动重建
 ```
 
 本地调试：把测试库的插件目录软链到产物目录即可（目录名与插件 id 一致）：
 
 ```bash
-ln -s "$(pwd)/obsidian-dada-todo-list" "你的库/.obsidian/plugins/obsidian-dada-todo-list"
+ln -s "$(pwd)/dada-todo-list" "你的库/.obsidian/plugins/dada-todo-list"
 ```
 
 ## 📄 License

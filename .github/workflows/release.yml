@@ -31,14 +31,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      # 构建产物位于 obsidian-dada-todo-list/ 目录（见 vite.config.js），
+      # 构建产物位于 dada-todo-list/ 目录（见 vite.config.js），
       # 收集为 release assets：main.js / manifest.json / styles.css + versions.json
       - name: Collect release assets
         run: |
           mkdir -p release
-          cp obsidian-dada-todo-list/main.js release/
-          cp obsidian-dada-todo-list/manifest.json release/
-          cp obsidian-dada-todo-list/styles.css release/
+          cp dada-todo-list/main.js release/
+          cp dada-todo-list/manifest.json release/
+          cp dada-todo-list/styles.css release/
           cp versions.json release/
 
       - name: Create GitHub Release
