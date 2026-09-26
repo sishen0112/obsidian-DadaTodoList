@@ -1,0 +1,239 @@
+/* 任务模块跨组件共享样式原语。
+   由 TasksApp.vue 以「非 scoped」方式引入一次。
+   原因：scoped 样式无法作用于子组件内部元素与 v-html 注入内容，
+   因此 TaskRow / ChecklistCardGrid / ChecklistDoneCalendar
+   等子组件与父容器共用的原语类必须全局可用。
+   所有类名均以 tk- 前缀限定，并挂在 .task-app 容器下，避免全局污染。
+   设计令牌（--gold 等）定义在 .task-app 上，经 CSS 变量继承到子组件。 */
+
+/* ===== 标题行内富文本（v-html 注入，无 scoped 属性） ===== */
+.task-app .tk-inline-link {
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+.task-app .tk-inline-link:hover { color: var(--gold-soft); }
+.task-app .tk-inline-tag {
+  display: inline-block;
+  margin: 0 .15em;
+  padding: 0 .5em;
+  font-size: .8em;
+  line-height: 1.6;
+  border-radius: 999px;
+  background: var(--tag-bg);
+  color: var(--tag-ink);
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+/* ===== 状态勾选圆圈（列表行 / 周月视图 / 卡片 / 详情共用） ===== */
+.task-app .tk-check { flex: none; font-size: 20px; color: var(--ink-soft); cursor: pointer; transition: color .15s ease; }
+.task-app .tk-check:hover { color: var(--gold); }
+/* 列表行：勾选圆圈与首行任务名垂直居中对齐（图标字体在行内易偏，固定盒子后定位圆心） */
+.task-app .tk-row .tk-check {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; line-height: 20px; margin-top: 3px;
+}
+.task-app .tk-check.done { color: var(--c-done); }
+/* 已取消：红色减号圆圈（!important 压过各视图 scoped 的局部覆盖） */
+.task-app .tk-check.la-minus-circle { color: var(--c-cancel) !important; }
+.task-app .tk-check.la-minus-circle:hover { color: var(--c-cancel) !important; }
+
+/* ===== 标签胶囊（列表展示 / 详情面板可删可增 / 日历侧栏） ===== */
+.task-app .tk-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 1px; }
+.task-app .tk-tag {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 0 8px; border-radius: 999px;
+  font-size: 11px; line-height: 17px; font-weight: 500;
+  background: var(--tag-bg); color: var(--tag-ink); white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+.task-app .tk-tag:hover { background: rgba(110, 79, 184, .2); color: var(--tag-ink-strong); }
+.task-app .tk-tag-text { white-space: nowrap; }
+.task-app .tk-tag-del {
+  flex: none; width: 14px; height: 14px; margin-right: -4px;
+  border: none; border-radius: 50%; background: transparent; color: inherit;
+  font-size: 9px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  opacity: .6; transition: opacity .15s ease, background .15s ease;
+}
+.task-app .tk-tag-del:hover { opacity: 1; background: rgba(110, 79, 184, .22); }
+.task-app .tk-tag.is-editing { padding: 0 8px; }
+.task-app .tk-tag-input {
+  width: 76px; border: none; background: transparent; padding: 0;
+  font: inherit; font-size: 11px; color: inherit;
+}
+.task-app .tk-tag-input:focus { outline: none; }
+.task-app .tk-tag-input::placeholder { color: var(--ink-soft); }
+
+/* ===== 列表行（TaskRow）与周/月视图共用的行内原语 ===== */
+.task-app .tk-row-wrap { width: 100%; }
+.task-app .tk-row {
+  display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; width: 100%;
+  cursor: pointer; font-size: 15px; line-height: 26px; border-radius: var(--radius-sm);
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.task-app .tk-row:hover { background: var(--background-modifier-hover); box-shadow: inset 3px 0 0 var(--gold); }
+.task-app .tk-row-wrap.sel .tk-row { background: var(--gold-bg); box-shadow: inset 3px 0 0 var(--gold); }
+.task-app .tk-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.task-app .tk-sum { color: var(--ink); word-break: break-word; }
+.task-app .tk-item .tk-sum { flex: 6 1 0; min-width: 0; color: var(--ink); line-height: 1.5; word-break: break-word; }
+.task-app .tk-row .tk-sum { color: var(--ink); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; min-width: 0; }
+.task-app .tk-sum.done, .task-app .tk-row.done .tk-sum { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--line); }
+/* 日期时间：右对齐（撑满左侧名称后自然靠右），字号/颜色对齐清单列表项 .tk-cl-date */
+.task-app .tk-row .tk-date {
+  flex: none; margin-left: auto; width: auto; white-space: nowrap;
+  text-align: right; padding-top: 3px;
+  color: var(--text-faint); font-weight: 400; font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.task-app .tk-date.tk-ph { color: var(--line); font-weight: 400; }
+/* 极窄（≤420px）：隐藏任务行标签，仅留单行名称与右侧日期（随面板宽度，与清单视图一致） */
+@container (max-width: 420px) {
+  .task-app .tk-tags { display: none; }
+}
+/* 日期/时间前的图标（通用类，作用于 .tk-date / .tk-cl-date；字形视觉偏小，字号略大于文字以协调） */
+.task-app .tk-date-ico { margin-right: 4px; font-size: 13px; opacity: .85; }
+/* 日期与时间并排时的时钟图标：与前面的日期拉开距离，避免贴在一起 */
+.task-app .tk-date-ico-sep { margin-left: 6px; }
+/* 打开源文件后高亮任务所在行：现由 Obsidian 原生 .block-highlight（块引用跳转）承担，不再自定义 */
+.task-app .tk-edit {
+  flex: none; width: 30px; margin-left: 4px; display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--ink-soft); font-size: 15px; cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity .12s ease, color .12s ease;
+}
+.task-app .tk-item-wrap:hover .tk-edit, .task-app .tk-row:hover .tk-edit { opacity: 1; pointer-events: auto; }
+.task-app .tk-edit:hover { color: var(--gold); }
+/* 子任务面板（周/月/列表行下方通用） */
+.task-app .tk-sub-panel { margin: 0 0 4px 12px; padding: 2px 6px 4px 16px; border-left: 2px solid var(--line); }
+.task-app .tk-item-wrap .tk-sub-panel, .task-app .tk-row-wrap .tk-sub-panel { margin-left: 30px; }
+/* 行末「+ 新增」小圆钮（详情面板链接/标签行） */
+.task-app .tk-add-mini {
+  flex: none; width: 20px; height: 20px;
+  border: 1px dashed var(--line); border-radius: 50%;
+  background: transparent; color: var(--ink-soft); font-size: 10px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.task-app .tk-add-mini:hover { background: var(--gold-bg); color: var(--gold); border-color: var(--gold); }
+/* 分组空态（列表分组 / 卡片网格共用） */
+.task-app .tk-group-empty { color: var(--ink-soft); font-size: 12.5px; padding: 8px 4px 14px; opacity: .7; }
+
+/* ===== 拖拽「待办」侧栏（周视图时间轴 / 月视图共用，随两者全局可用） ===== */
+.task-app .tk-side {
+  flex: none; width: 248px; max-height: 100%; margin-right: 14px; align-self: stretch;
+  display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 12px 12px 8px;
+}
+/* 展开 / 收起过渡（宽度与高度同时收敛，避免布局突兀） */
+.task-app .tk-side-enter-active, .task-app .tk-side-leave-active {
+  overflow: hidden;
+  transition: width .28s cubic-bezier(.4, 0, .2, 1),
+              max-height .28s cubic-bezier(.4, 0, .2, 1),
+              margin-right .28s cubic-bezier(.4, 0, .2, 1),
+              margin-bottom .28s cubic-bezier(.4, 0, .2, 1),
+              padding .28s cubic-bezier(.4, 0, .2, 1),
+              border-width .28s ease,
+              opacity .2s ease,
+              transform .28s cubic-bezier(.4, 0, .2, 1);
+}
+.task-app .tk-side-enter-from, .task-app .tk-side-leave-to {
+  width: 0; max-height: 0;
+  margin-right: 0; margin-bottom: 0;
+  padding: 0;
+  border-width: 0; opacity: 0; transform: translateX(-16px);
+}
+@keyframes tkSideItemIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.task-app .tk-side.side-anim .tk-side-item { animation: tkSideItemIn .3s ease backwards; }
+.task-app .tk-side.side-anim .tk-side-item:nth-child(1) { animation-delay: .04s; }
+.task-app .tk-side.side-anim .tk-side-item:nth-child(2) { animation-delay: .07s; }
+.task-app .tk-side.side-anim .tk-side-item:nth-child(3) { animation-delay: .1s; }
+.task-app .tk-side.side-anim .tk-side-item:nth-child(4) { animation-delay: .13s; }
+.task-app .tk-side.side-anim .tk-side-item:nth-child(5) { animation-delay: .16s; }
+.task-app .tk-side.side-anim .tk-side-item:nth-child(n+6) { animation-delay: .19s; }
+.task-app .tk-side-h {
+  flex: none; display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font-size: 14px; font-weight: 700; color: var(--ink);
+}
+/* ===== 自实现按钮（不依赖 Element Plus，避免 Obsidian 对原生 button 的全局样式污染）=====
+   直接用 <button class="tk-btn"> 完全自绘；class 选择器优先级高于 Obsidian 的 button 元素选择器。
+   放到共享样式（非 scoped）下，确保 TasksApp 与子视图（如月视图 TaskMonthView）按钮一致。 */
+.task-app button.tk-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  box-sizing: border-box; margin: 0;
+  appearance: none; -webkit-appearance: none; box-shadow: none;
+  font-family: inherit; font-size: 14px; line-height: 1; font-weight: 600;
+  height: 30px; padding: 0 12px;
+  background: var(--panel); color: var(--ink-soft);
+  border: 1px solid var(--line); border-radius: 9px;
+  cursor: pointer; white-space: nowrap;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.task-app button.tk-btn:hover { background: var(--gold-bg); color: var(--ink); border-color: var(--line); }
+.task-app button.tk-btn:active { background: var(--gold-bg); color: var(--ink); }
+.task-app button.tk-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.task-app button.tk-btn:disabled, .task-app button.tk-btn.is-disabled {
+  opacity: .5; cursor: not-allowed; background: var(--panel); color: var(--ink-2);
+}
+/* 开启 / 选中态：填充主题色 */
+.task-app button.tk-btn.on { background: var(--gold); color: var(--text-on-accent); border-color: transparent; }
+.task-app button.tk-btn.on:hover { background: var(--gold); color: var(--text-on-accent); }
+/* 仅图标按钮：更紧凑 */
+.task-app button.tk-btn.ico { padding: 0 9px; }
+/* 分段按钮组（列表/分栏、上/本/下、无日期/所有待办 等）：连接成一体的分段控件 */
+.task-app .tk-btn-group { display: inline-flex; }
+.task-app .tk-btn-group button.tk-btn { border-radius: 0; }
+.task-app .tk-btn-group button.tk-btn:first-child { border-top-left-radius: 9px; border-bottom-left-radius: 9px; }
+.task-app .tk-btn-group button.tk-btn:last-child { border-top-right-radius: 9px; border-bottom-right-radius: 9px; }
+.task-app .tk-btn-group button.tk-btn + button.tk-btn { border-left: none; }
+/* 按钮内计数徽标（无日期/所有待办 等） */
+.task-app button.tk-btn .cnt { font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 8px; background: rgba(0, 0, 0, .06); font-variant-numeric: tabular-nums; }
+.task-app button.tk-btn.on .cnt { background: transparent; color: var(--text-on-accent); }
+/* 视图切换下拉（自实现，不 teleport，样式随 .task-app 作用域） */
+.task-app .tk-dropdown { position: relative; display: inline-flex; z-index: 60; }
+.task-app .tk-dropdown .tk-view-trigger { position: relative; z-index: 55; }
+.task-app .tk-dropdown-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  width: 120px; padding: 4px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .22);
+}
+.task-app .tk-dropdown-item {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; text-align: left;
+  padding: 8px 10px; font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1;
+  background: transparent; color: var(--ink-soft);
+  border: none; border-radius: 7px; cursor: pointer;
+}
+.task-app .tk-dropdown-item:hover, .task-app .tk-dropdown-item:focus { background: var(--gold-bg); color: var(--ink); outline: none; }
+.task-app .tk-dropdown-item.on { color: var(--interactive-accent); }
+.task-app .tk-dropdown-item.on i { color: var(--interactive-accent); }
+.task-app .tk-dropdown-item i { width: 18px; text-align: center; font-size: 15px; color: var(--interactive-accent); }
+.task-app .tk-dd-backdrop { position: fixed; inset: 0; z-index: 50; }
+/* ===== 待办侧栏顶部分段切换（无日期 / 所有待办）：复用 .tk-btn-group 统一样式 ===== */
+/* 去掉外框与填充底纹：按钮本身 border:none，非选中段透明、仅选中段金填充成胶囊，
+   做成干净的分段切换，不再出现「方块边框」 */
+.task-app .tk-side-seg { width: 100%; display: inline-flex; }
+.task-app .tk-side-seg button.tk-btn {
+  flex: 1; border: none; border-radius: 9px; background: transparent; color: var(--ink-soft);
+}
+.task-app .tk-side-seg button.tk-btn:hover { background: var(--gold-bg); color: var(--ink); }
+.task-app .tk-side-seg button.tk-btn.on { background: var(--gold); color: var(--text-on-accent); }
+.task-app .tk-side-seg button.tk-btn.on:hover { background: var(--gold); color: var(--text-on-accent); }
+.task-app .tk-side-h .cnt { font-size: 11px; font-weight: 400; color: var(--ink-soft); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 0 7px; }
+.task-app .tk-side-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.task-app .tk-side-empty { color: var(--ink-soft); font-size: 12.5px; padding: 10px 2px; opacity: .7; }
+.task-app .tk-side-item {
+  display: flex; align-items: flex-start; gap: 8px; padding: 6px; border-radius: var(--radius-sm);
+  font-size: 13px; line-height: 1.5; color: var(--ink);
+  cursor: grab; transition: background .15s ease, opacity .15s ease;
+}
+.task-app .tk-side-item:hover { background: var(--gold-bg); }
+.task-app .tk-side-item.dragging { opacity: .4; cursor: grabbing; }
+.task-app .tk-side-item .tk-check { width: 16px; height: 16px; font-size: 16px; line-height: 20px; }
+.task-app .tk-side-date { flex: none; color: var(--ink-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.task-app .tk-side-sum { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+.task-app .tk-side-tip { flex: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 11.5px; color: var(--ink-soft); }
+.task-app .tk-side-tip i { margin-right: 3px; }

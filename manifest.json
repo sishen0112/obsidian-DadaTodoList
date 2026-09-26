@@ -1,0 +1,9 @@
+{
+  "id": "obsidian-dada-todo-list",
+  "name": "Dada Todo List",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Manage tasks & checklists stored as plain Markdown checkboxes in your notes. Day / week / month timeline, agenda, checklists, subtasks, tags, links, drag-to-reschedule, lunar calendar & holidays — no external service.",
+  "author": "Plover",
+  "isDesktopOnly": false
+}

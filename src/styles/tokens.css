@@ -1,0 +1,62 @@
+/* ============================================================
+   设计令牌映射层（移植自 myLife-Plugin 的 App.vue .wb-root）。
+   ------------------------------------------------------------
+   任务模块（TasksApp / tasks-shared.css / task-modal.css）全部使用语义令牌
+   （--gold/--panel/--line/--ink …），这些令牌原由 myLife 的 .wb-root 统一
+   映射到 Obsidian 主题变量。
+
+   本插件直接挂载 TasksApp（无 .wb-root 外壳），故按需把令牌定义到：
+     · .task-app            —— 覆盖应用内所有任务 UI 及子组件；
+     · .mylife-vue-modal    —— Obsidian 原生 Modal 外壳（VueModal 注入），
+                              其下挂载的 TaskEditorModal / 完成日历等弹窗
+                              挂在 <body> 下、不在 .task-app 内，需单独覆盖。
+
+   不污染 :root，避免改掉 Obsidian 原生 UI 的 --shadow-* 等全局令牌。
+   不自行维护颜色：全部跟随 Obsidian 主题变量。卡片一律只用边框区分层级
+   （覆盖阴影令牌，关掉所有投影），贴合原生观感。
+   ============================================================ */
+.task-app,
+.mylife-vue-modal {
+  --gold: var(--interactive-accent);
+  --gold-soft: var(--interactive-accent-hover);
+  --gold-bg: var(--background-modifier-hover);
+  --paper: var(--background-primary);
+  --panel: var(--background-primary);
+  --panel-2: var(--background-secondary);
+  --line: var(--background-modifier-border);
+  --ink: var(--text-normal);
+  --ink-soft: var(--text-muted);
+  --ink-2: var(--text-muted);
+  /* --text-on-accent 不在此自覆盖：Obsidian 原生已在 :root 定义（强调色上的文字色），
+     直接继承即可，避免自引用导致解析失败回退成深色黑字。 */
+  --hover: var(--background-modifier-hover);
+  --shadow: none;
+  --shadow-s: none;
+  --shadow-m: none;
+  --shadow-l: none;
+
+  /* 任务状态 / 节假日徽标统一配色：已办绿、已取消红 */
+  --c-done: #52B434;
+  --c-cancel: #D12C1E;
+
+  /* Element Plus 组件跟随主题（任务编辑器沿用原生 input，这里仅做兜底映射） */
+  --el-color-primary: var(--interactive-accent);
+  --el-color-danger: var(--text-error, #e0524b);
+  --el-color-success: var(--text-success, #4ea96b);
+  --el-bg-color: var(--background-primary);
+  --el-bg-color-page: var(--background-primary);
+  --el-fill-color-blank: var(--background-primary);
+  --el-text-color-primary: var(--text-normal);
+  --el-text-color-regular: var(--text-normal);
+  --el-text-color-secondary: var(--text-muted);
+  --el-border-color: var(--background-modifier-border);
+  --el-border-color-light: var(--background-modifier-border);
+  --el-border-color-lighter: var(--background-modifier-border);
+  /* 统一默认圆角（round / circle 仍各自生效） */
+  --el-border-radius-base: 9px;
+}
+
+/* 任务视图根容器：补齐字体（原 .wb-root 负责的部分，这里只给任务模块用） */
+.task-app {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}

@@ -1,0 +1,33 @@
+/* ============================================================================
+   原生 Modal 表单样式
+   ----------------------------------------------------------------------------
+   Setting 默认是「左名称右控件」布局，控件宽度随类型各异（text 固定宽、
+   textarea 更窄），导致同一表单里输入框宽度不一致。
+   表单弹窗统一改为纵向布局：标签在上，输入框独占整行、宽度一致。
+   ============================================================================ */
+
+.mylife-form-modal .setting-item {
+  display: block;
+  padding: 10px 0;
+}
+
+.mylife-form-modal .setting-item .setting-item-info {
+  padding: 0;
+  margin: 0 0 6px;
+}
+
+.mylife-form-modal .setting-item-control input[type='text'],
+.mylife-form-modal .setting-item-control input[type='password'],
+.mylife-form-modal .setting-item-control textarea {
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+/* ===== 通用输入控件（原生 Modal 内使用） ===== */
+.mylife-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  font-family: inherit;
+}
+

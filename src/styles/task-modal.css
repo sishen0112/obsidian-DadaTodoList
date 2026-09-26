@@ -1,0 +1,219 @@
+/* ============================================================
+   任务模块自绘弹窗原语（编辑器 / 链接编辑 / 完成日历共用）。
+   由 TasksApp.vue 引入一次（非 scoped，类名以 tk-/lk-/btn- 限定）。
+   配色全部跟随主题变量（对应网页版 modal.css 的主题化版本）。
+   ============================================================ */
+
+/* ---------- 遮罩 ---------- */
+.tk-mask, .lk-mask {
+  position: fixed;
+  inset: 0;
+  background: var(--background-modifier-cover, rgba(0, 0, 0, .5));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+/* ---------- 卡片 ---------- */
+.tk-modal {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow-l);
+}
+
+/* ---------- 标题 / 关闭钮 / 操作行 ---------- */
+.tk-modal-title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.tk-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 20px;
+  cursor: pointer;
+}
+.tk-close:hover { color: var(--ink); }
+.tk-modal-ops {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.tk-modal-ops .spacer { flex: 1; }
+/* 标题行：标题 + 右侧图标按钮（打开文件） */
+.tk-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tk-modal-head .tk-modal-title { margin: 0; flex: 1 1 auto; }
+/* 方形图标按钮（标题行用） */
+.btn-icon { flex: none; width: 30px; height: 30px; padding: 0; justify-content: center; }
+.btn-icon i { font-size: 14px; }
+
+/* ---------- 按钮族 ----------
+   色彩纪律：金色 = 唯一主按钮；红色 = 仅用于删除的文字/图标（quiet-danger）；
+   其余一律中性 quiet 按钮，靠图标区分语义。 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.btn i { font-size: 13px; line-height: 1; }
+.btn:hover { background: var(--gold-bg); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-gold {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+.btn-gold:hover { filter: brightness(1.08); background: var(--interactive-accent); }
+/* 危险操作（quiet-danger）：默认与中性按钮同底，仅文字/图标示警，hover 才亮红边 */
+.btn-danger {
+  border-color: transparent;
+  color: var(--el-color-danger, var(--text-error));
+}
+.btn-danger:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--el-color-danger, var(--text-error));
+  color: var(--el-color-danger, var(--text-error));
+}
+
+/* ---------- 设置页：清单标记多标签编辑器 ---------- */
+.dt-tags-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dt-tags-editor .dt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--tag-background, var(--background-modifier-hover));
+  color: var(--tag-color, var(--text-normal));
+  font-size: 12px;
+  line-height: 18px;
+}
+.dt-tags-editor .dt-chip span { white-space: nowrap; }
+.dt-tags-editor .dt-chip button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+  opacity: .6;
+}
+.dt-tags-editor .dt-chip button:hover { opacity: 1; color: var(--text-error); }
+.dt-tags-editor input {
+  flex: 1 1 140px;
+  min-width: 140px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 9px;
+}
+.dt-tags-editor input:focus { outline: none; border-color: var(--gold); }
+
+/* ---------- 表单原语 ---------- */
+.tk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.tk-field > span { font-size: 13px; color: var(--ink-soft); }
+.tk-field input, .tk-field textarea, .tk-field select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--panel);
+  resize: vertical;
+  color-scheme: dark light;
+}
+.tk-field input:focus, .tk-field textarea:focus, .tk-field select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.tk-err, .lk-err {
+  color: var(--el-color-danger, var(--text-error));
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* ============================================================
+   Vue-in-Modal 桥：Vue 弹窗组件渲染在 Obsidian 原生 Modal 内。
+   组件自带的 fixed 遮罩在 Modal 内降级为普通区块
+   （原生 Modal 已提供遮罩 / 居中 / ESC 关闭），卡片边框也交给外壳。
+   ============================================================ */
+.mylife-vue-modal .modal-content { padding: 0; }
+.mylife-vue-modal .mylife-vue-host .tk-mask,
+.mylife-vue-modal .mylife-vue-host .lk-mask {
+  position: static;
+  background: none;
+  padding: 0;
+  display: block;
+  z-index: auto;
+}
+.mylife-vue-modal .mylife-vue-host .tk-modal {
+  max-width: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 8px 14px 14px;
+  max-height: none;
+  overflow: visible;
+}
+/* 组件自带的 × 关闭钮与原生 Modal 的重复，隐藏 */
+.mylife-vue-modal .mylife-vue-host .tk-close { display: none; }
+/* 完成日历弹窗需要更宽 */
+.mylife-vue-modal.cl-cal-modal { width: min(920px, 92vw); }
+
+/* ============================================================
+   Element Plus 日期 / 时间选择器：贴合 Obsidian 主题变量
+   （下拉浮层 teleport 到 body，无法用 .tk-modal 限定，故全局兜底）
+   ============================================================ */
+.tk-modal .el-date-editor.el-input,
+.tk-modal .el-date-editor.el-input__wrapper { width: 100%; }
+/* 输入框 / 单选按钮等由 tokens.css 的 --el-* 变量统一映射主题（含 .mylife-vue-modal），
+   此处不再逐属性覆盖，避免屏蔽 size 等组件 props；仅保留日期选择器宽度 */
+
