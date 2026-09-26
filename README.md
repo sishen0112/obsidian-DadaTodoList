@@ -190,7 +190,7 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 如果这个插件对你有帮助，欢迎请作者喝杯咖啡，是我持续更新的动力～
 
 微信赞赏 WeChat Pay
-![微信赞赏码](docs/donate-wechat.jpg)
+![微信赞赏码|350](docs/donate-wechat.jpg)
 
 ---
 
