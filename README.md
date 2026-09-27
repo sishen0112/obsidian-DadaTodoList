@@ -9,7 +9,7 @@
 
 <!-- 主视图宣传图：请把生成好的主视图（Hero / 门面图）命名为 main-view.png，放入 docs/screenshots/ 目录即可自动显示 -->
 <p align="center">
-  <img src="docs/screenshots/main-view.png" alt="Dada Todo List 主视图"><br>
+  <img src="docs/screenshots/main-view.jpg" alt="Dada Todo List 主视图"><br>
   <em>Dada Todo List（达达清单）—— 把 Obsidian 变成你的任务中枢</em>
 </p>
 
