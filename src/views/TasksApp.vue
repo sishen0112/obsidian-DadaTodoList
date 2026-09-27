@@ -290,6 +290,9 @@ export default {
     try { this.onboardDismissed = localStorage.getItem('dada:onboardDismissed') === '1'; } catch (e) { /* 忽略 */ }
     try { this.dailyHintDismissed = localStorage.getItem('dada:dailyHintDismissed') === '1'; } catch (e) { /* 忽略 */ }
     this.load();
+    // 跨零点检测：每 30 秒对比系统日期，翻日时刷新「今天」锚点（todayKey / weekStart），
+    // 避免「挂机过夜后点『今天』仍回到昨天」的问题
+    this._dayTimer = setInterval(() => this.refreshTodayAnchor(), 30000);
     // 外部变更自动刷新：编辑器内改笔记 / 同步写入 / 其他插件改动 → 防抖 500ms 静默重载。
     // 插件自身写操作（api 层 noteSelfWrite 标记）引起的变更会在 1.2s 内被跳过，避免重复加载。
     const mc = this.plugin.app.metadataCache;
@@ -305,6 +308,7 @@ export default {
   beforeUnmount() {
     for (const [emitter, evt, fn] of this._extHandlers || []) emitter.off(evt, fn);
     clearTimeout(this._extTimer);
+    clearInterval(this._dayTimer);
   },
   methods: {
     // ---------- 弹窗（Obsidian 原生 Modal 外壳 + Vue 组件内容） ----------
@@ -397,10 +401,19 @@ export default {
     thisMonth() { this.currentMonth = new Date(); },
     prevWeek() { this.tlWeekOffset -= 1; },
     nextWeek() { this.tlWeekOffset += 1; },
-    thisWeek() { this.tlWeekOffset = 0; },
+    thisWeek() { this.refreshTodayAnchor(); this.tlWeekOffset = 0; },
     prevDay() { this.tlDayOffset -= 1; },
     nextDay() { this.tlDayOffset += 1; },
-    thisDay() { this.tlDayOffset = 0; },
+    thisDay() { this.refreshTodayAnchor(); this.tlDayOffset = 0; },
+    // 「今天」锚点刷新：定时器每 30s 调用一次，点「今天」时兜底再调一次。
+    // 跨零点后刷新 todayKey / weekStart，使日/周视图与「今日」高亮落到新的一天
+    refreshTodayAnchor() {
+      const tk = ymd(new Date());
+      if (tk !== this.todayKey) {
+        this.todayKey = tk;
+        this.weekStart = Tasks.startOfWeek(new Date());
+      }
+    },
     // 时间轴块配色 / 农历 / 节假日：纯函数在 tasks-logic（周视图组件与月视图 ctx 共用），此处仅作委托
     colorOf(t) { return colorOf(t); },
     itemColor(t) { return itemColor(t); },
@@ -410,6 +423,7 @@ export default {
     toggleAgendaGroup(kind) { this.agendaCollapsed[kind] = !this.agendaCollapsed[kind]; },
     // 日程视图：回到今天——将「今日」分组滚动到可视区域顶部
     scrollAgendaToToday() {
+      this.refreshTodayAnchor();
       this.agendaActiveKey = this.todayKey;
       this.scrollAgendaToDate(this.todayKey);
     },
