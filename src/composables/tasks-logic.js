@@ -456,7 +456,11 @@ export function doneDay(t) {
 
 // ---------- 周/月/日程视图共用的装饰（配色 / 农历 / 节假日） ----------
 
-// 四日时间轴任务块配色：浅底 + 同色深字（按标题哈希取色）
+// ---------- 任务块配色（多套方案，可在设置中切换） ----------
+// 每套均为「浅底 + 同色深字/强调色」，按标题哈希取色（浅底深字）。
+// default = 插件默认配色；morandi = 莫兰迪低饱和灰调；jelly = 卡通果冻高饱和糖果色。
+
+// 插件默认配色（default）
 export const TIMELINE_COLORS = [
   { bg: 'rgba(244, 67, 54, .18)', fg: '#c62828' },  // 红
   { bg: 'rgba(216, 27, 96, .18)', fg: '#ad1457' },  // 玫红（替代橙）
@@ -468,17 +472,56 @@ export const TIMELINE_COLORS = [
   { bg: 'rgba(156, 39, 176, .18)', fg: '#7b1fa2' }   // 紫
 ];
 
-// 时间轴任务块配色：按标题哈希取色（浅底深字）
-export function colorOf(t) {
-  const s = String((t && t.summary) || '');
-  let h = 0;
-  for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % TIMELINE_COLORS.length;
-  return TIMELINE_COLORS[h];
+// 莫兰迪配色：低饱和、带灰度的温柔色系
+export const MORANDI_COLORS = [
+  { bg: 'rgba(190, 158, 158, .30)', fg: '#8a6a6a' }, // 灰粉
+  { bg: 'rgba(191, 150, 165, .30)', fg: '#8a6072' }, // 灰玫
+  { bg: 'rgba(158, 173, 142, .30)', fg: '#5f6b4f' }, // 鼠尾草绿
+  { bg: 'rgba(142, 173, 173, .30)', fg: '#4f6b6b' }, // 灰青
+  { bg: 'rgba(150, 166, 186, .30)', fg: '#56657a' }, // 灰蓝
+  { bg: 'rgba(165, 156, 186, .30)', fg: '#605678' }, // 灰紫
+  { bg: 'rgba(193, 180, 150, .30)', fg: '#766a4f' }, // 燕麦
+  { bg: 'rgba(186, 163, 150, .30)', fg: '#7a6453' }  // 灰陶
+];
+
+// 卡通果冻配色：高饱和、半透明的糖果色，明亮有果冻感
+export const JELLY_COLORS = [
+  { bg: 'rgba(255, 143, 171, .38)', fg: '#e23a6b' }, // 草莓粉
+  { bg: 'rgba(110, 231, 183, .38)', fg: '#14b87a' }, // 薄荷绿
+  { bg: 'rgba(125, 211, 252, .38)', fg: '#1c9fe0' }, // 天空蓝
+  { bg: 'rgba(253, 224, 71, .40)', fg: '#d4a017' },  // 柠檬黄
+  { bg: 'rgba(196, 181, 253, .38)', fg: '#7c5cf0' }, // 葡萄紫
+  { bg: 'rgba(253, 186, 116, .38)', fg: '#e8821e' }, // 蜜桃橙
+  { bg: 'rgba(248, 113, 113, .38)', fg: '#e23a3a' }, // 樱桃红
+  { bg: 'rgba(94, 234, 212, .38)', fg: '#10b3a3' }   // 湖绿
+];
+
+// 配色方案注册表（设置项 colorScheme 的取值）
+export const COLOR_SCHEMES = {
+  default: TIMELINE_COLORS,
+  morandi: MORANDI_COLORS,
+  jelly: JELLY_COLORS,
+};
+
+// 当前生效的配色方案：由 main.js 在加载设置、以及设置变更时调用 setColorScheme 更新。
+// 视图组件在设置变更后通过 reloadOpenViews() 重载，从而用新方案重算颜色。
+let activeColorScheme = 'default';
+export function setColorScheme(name) {
+  activeColorScheme = COLOR_SCHEMES[name] ? name : 'default';
 }
 
-// 全天 / 凌晨列表项的背景与文字色（与时间轴块同一套莫兰迪配色）
-export function itemColor(t) {
-  const c = colorOf(t);
+// 时间轴任务块配色：按标题哈希取色（浅底深字）
+export function colorOf(t, scheme) {
+  const arr = COLOR_SCHEMES[scheme] || COLOR_SCHEMES[activeColorScheme];
+  const s = String((t && t.summary) || '');
+  let h = 0;
+  for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % arr.length;
+  return arr[h];
+}
+
+// 全天 / 凌晨列表项的背景与文字色（与时间轴块同一套配色）
+export function itemColor(t, scheme) {
+  const c = colorOf(t, scheme);
   return { background: c.bg, color: 'var(--ink)' };
 }
 

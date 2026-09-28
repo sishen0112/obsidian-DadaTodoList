@@ -192,7 +192,7 @@ async function ensureFolder(pathWithoutFile) {
   }
 }
 
-// 加载窗口（天）：'all' 或数字，控制旧日记的读取量（默认 'all'，大库可调小）
+// 加载窗口（天）：'all' 或数字，控制每日笔记的读取范围（以今天为中心的对称窗口，默认 'all'，大库可调小）
 function loadWindowDays() {
   const v = plugin.settings && plugin.settings.dailyLoadWindow;
   if (v === 'all' || v == null) return 'all';
@@ -201,18 +201,20 @@ function loadWindowDays() {
 }
 
 // 收集全部每日笔记：日记文件夹（含子目录）下、文件名为 YYYY-MM-DD.md 的笔记，
-// 且日期不早于加载窗口（设置 dailyLoadWindow，默认全部；大库可调小避免全量读取）
+// 且日期落在以今天为中心的对称窗口内 [今天-win天, 今天+win天]（设置 dailyLoadWindow，默认全部；大库可调小避免全量读取）
 function listDailyFiles() {
   const cfg = dailyNotesConfig();
   if (!cfg) return [];
   const folder = cfg.folder;
   const re = /^\d{4}-\d{2}-\d{2}\.md$/;
   const win = loadWindowDays();
-  const cutoff = win === 'all' ? null : todayKey(Date.now() - Number(win) * 86400000);
-  return vault().getMarkdownFiles()
+  const lower = win === 'all' ? null : todayKey(Date.now() - Number(win) * 86400000);
+  const upper = win === 'all' ? null : todayKey(Date.now() + Number(win) * 86400000);
+  const all = vault().getMarkdownFiles()
     .filter((f) => (folder ? f.path.indexOf(folder + '/') === 0 : f.path.indexOf('/') < 0) && re.test(f.name))
-    .map((f) => ({ key: f.name.replace(/\.md$/, ''), path: f.path }))
-    .filter((e) => (cutoff == null || e.key >= cutoff));
+    .map((f) => ({ key: f.name.replace(/\.md$/, ''), path: f.path }));
+  const filtered = all.filter((e) => (lower == null || (e.key >= lower && e.key <= upper)));
+  return filtered;
 }
 
 // 全库扫描：frontmatter tags 含任一「清单标记」的 md 文件 → [{ key: 'cl:<相对路径>', path, name }]

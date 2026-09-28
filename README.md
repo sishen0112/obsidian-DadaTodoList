@@ -162,6 +162,7 @@ tags:
 | **打开位置** | 左侧栏 / 主工作区标签页 / 右侧栏 |
 | **启动后自动打开** | 每次启动 Obsidian 自动打开任务面板 |
 | **显示农历与节假日** | 日 / 周 / 月视图中的农历、节气、节日及休 / 班标记，可关闭只显示公历 |
+| **任务块配色** | 时间轴 / 全天 / 凌晨等任务块的配色方案：默认 / 莫兰迪（低饱和灰调）/ 卡通果冻（高饱和糖果色）；按任务标题取色，相同标题颜色一致 |
 | **收件箱文件** | 无日期任务的存放文件（相对库根目录的路径）；更换路径时若旧文件还有任务，会主动询问是否整体迁移 |
 | **清单识别标记** | frontmatter `tags` 含任一标记的笔记即清单文件，可配置多个 |
 | **每日笔记加载范围** | 仅加载最近 N 天的每日笔记（近 30 / 90 / 180 天 / 一年 / 全部，默认全部）。笔记与任务较多时可调小以提升加载性能 |
@@ -245,6 +246,7 @@ tags:
 | Open location | Left sidebar / main workspace tab / right sidebar |
 | Open on startup | Automatically open the panel when Obsidian launches |
 | Lunar calendar & holidays | Show lunar dates, solar terms and holiday badges in day / week / month views; can be turned off |
+| Task block color scheme | Color scheme for task blocks (timeline / all-day / early-morning): Default / Morandi (muted) / Jelly (candy); color derived from the task title |
 | Inbox file | Where dateless tasks are stored; changing it offers to migrate existing tasks |
 | Checklist tags | Frontmatter tags that mark a note as a checklist file |
 | Daily-notes load window | Load only the last N days of daily notes (30 / 90 / 180 / 365 / all; default all) — lower it on large vaults for better performance |

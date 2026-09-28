@@ -1,6 +1,7 @@
 import { PluginSettingTab, Notice, Setting, AbstractInputSuggest } from 'obsidian';
 import { t } from '../i18n/index.js';
 import { countInboxTasks, migrateInboxTasks } from '../api/tasks.js';
+import { setColorScheme } from '../composables/tasks-logic.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
 class MarkdownFileSuggest extends AbstractInputSuggest {
@@ -147,6 +148,23 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           this.plugin.settings.showLunar = value;
           await this.plugin.saveSettings();
           // 立即生效：刷新已打开的面板（农历渲染非响应式，靠重载触发重算）
+          this.plugin.reloadOpenViews();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t('settings.colorScheme'))
+      .setDesc(t('settings.colorSchemeDesc'))
+      .addDropdown((dd) => {
+        dd.addOption('default', t('settings.schemeDefault'));
+        dd.addOption('morandi', t('settings.schemeMorandi'));
+        dd.addOption('jelly', t('settings.schemeJelly'));
+        dd.setValue(this.plugin.settings.colorScheme || 'default');
+        dd.onChange(async (value) => {
+          this.plugin.settings.colorScheme = value;
+          await this.plugin.saveSettings();
+          // 立即生效：切换到对应配色方案并刷新已打开的面板
+          setColorScheme(value);
           this.plugin.reloadOpenViews();
         });
       });

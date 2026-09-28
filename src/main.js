@@ -12,6 +12,7 @@ import 'element-plus/es/components/radio-group/style/css';
 import 'element-plus/es/components/radio-button/style/css';
 import TasksApp from './views/TasksApp.vue';
 import { initTasksApi, ensureInboxFile } from './api/tasks.js';
+import { setColorScheme } from './composables/tasks-logic.js';
 import { setupDevReload } from './dev/devReload.js';
 import { DadaTodoSettingTab } from './ui/settings.js';
 import { initI18n, t } from './i18n/index.js';
@@ -176,9 +177,13 @@ export default class DadaTodoPlugin extends Plugin {
       inboxFile: data.inboxFile || 'DadaTodoList.md',
       // 清单识别标记：frontmatter tags 含任一标签的笔记即清单文件
       checklistTags,
-      // 每日笔记加载窗口（天）：默认 'all'；大库可调小以提升加载性能
+      // 每日笔记加载窗口（天）：以今天为中心的对称窗口（前后各 N 天），默认 'all'；大库可调小以提升加载性能
       dailyLoadWindow: data.dailyLoadWindow || 'all',
+      // 任务块配色方案：default（默认）/ morandi（莫兰迪）/ jelly（卡通果冻），默认 default
+      colorScheme: data.colorScheme || 'default',
     };
+    // 启动即用已保存的配色方案初始化（视图重载时会按此重算颜色）
+    setColorScheme(this.settings.colorScheme);
   }
 
   async saveSettings() {
@@ -188,9 +193,11 @@ export default class DadaTodoPlugin extends Plugin {
   // 数据相关设置（每日笔记加载范围 / 收件箱路径）变更后调用：
   // 刷新所有已打开的面板，让新配置立即生效，无需手动重开面板
   reloadOpenViews() {
-    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DADA_TODO)) {
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_DADA_TODO);
+    for (const leaf of leaves) {
       const v = leaf.view;
-      if (v && v.vueRoot && typeof v.vueRoot.load === 'function') v.vueRoot.load();
+      const ok = !!(v && v.vueRoot && typeof v.vueRoot.load === 'function');
+      if (ok) v.vueRoot.load();
     }
   }
 }
