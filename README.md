@@ -282,24 +282,6 @@ npm run dev       # 开发模式：监听 src/ 改动自动重建
 ln -s "$(pwd)/dada-todo-list" "你的库/.obsidian/plugins/dada-todo-list"
 ```
 
-### 🚀 发布
-
-发布由 GitHub Actions **自动完成，无需手动创建 release 或上传资产**。
-
-仓库根目录的 `.github/workflows/release.yml` 会在**推送 tag** 时自动执行：拉取代码 → `npm ci` → `npm run build` → 收集 `dada-todo-list/` 下的 `main.js`、`manifest.json`、`styles.css` → 用官方 action 创建 GitHub Release 并上传这三个文件（release 说明由 GitHub 自动生成，可发布后手动编辑）。
-
-发布步骤：
-
-1. **升级版本号（三处必须一致）**：
-   - `manifest.json` 的 `version`
-   - `package.json` 的 `version`
-   - `versions.json` 增加 `"X.Y.Z": "最小支持 App 版本"`（与上一版保持一致即可）
-2. 提交改动：`git add -A && git commit -m "..."`
-3. 打 tag —— **必须与 `manifest.json` 的 `version` 完全一致，且不带 `v` 前缀**（这是 Obsidian 社区插件商店的审核要求）：`git tag X.Y.Z`
-4. 推送分支与 tag：`git push origin main && git push origin X.Y.Z`
-
-> 推送 tag 后等待 Actions 跑完即发布成功。**不要**手动在 GitHub 创建同名 release 或上传资产，否则会与 CI 冲突 / 重复。
-
 ## 📄 License
 
 MIT
