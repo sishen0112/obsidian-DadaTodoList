@@ -7,7 +7,8 @@
     "edit": "Edit",
     "add": "Add",
     "todo": "To-do",
-    "apiError": "Task API error: "
+    "apiError": "Task API error: ",
+    "dailyDisabledHint": "The core Daily Notes plugin is disabled; tasks with dates can't be handled. Please enable Daily Notes in Settings first."
   },
   "app": {
     "prevWeekTitle": "Previous week",

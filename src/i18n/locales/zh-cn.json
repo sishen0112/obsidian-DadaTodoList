@@ -7,7 +7,8 @@
     "edit": "编辑",
     "add": "新增",
     "todo": "待办",
-    "apiError": "任务接口错误："
+    "apiError": "任务接口错误：",
+    "dailyDisabledHint": "核心「日记」插件未启用，无法处理有日期的任务，请先在设置中开启日记插件"
   },
   "app": {
     "prevWeekTitle": "上一周",

@@ -28,7 +28,12 @@ export function weekDays(weekStart) {
 async function unwrap(p) {
   const r = await p;
   if (r.status >= 400 || r.body.ok === false) {
-    throw new Error(t('common.apiError') + (r.body.reason || r.status));
+    const reason = r.body.reason || String(r.status);
+    // bad_date 表示「有日期任务需要日记插件，但日记插件未启用」：给出明确引导而非裸错误码
+    const msg = reason === 'bad_date' ? t('common.dailyDisabledHint') : (t('common.apiError') + reason);
+    const err = new Error(msg);
+    err.reason = reason;
+    throw err;
   }
   return r.body;
 }

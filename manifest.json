@@ -1,8 +1,8 @@
 {
   "id": "dada-todo-list",
   "name": "Dada Todo List",
-  "version": "0.3.0",
-  "minAppVersion": "1.5.0",
+  "version": "0.3.1",
+  "minAppVersion": "1.11.0",
   "description": "Tasks and checklists in plain Markdown checkboxes. Day, week, month and agenda views, grouped checklists, subtasks, tags, links, drag-to-reschedule, lunar calendar and holidays. Fully local.",
   "author": "Plover",
   "authorUrl": "https://github.com/sishen0112",

@@ -1,12 +1,9 @@
 <template>
   <div class="task-app">
     <div v-if="error" class="tk-err">{{ error }}</div>
-    <!-- 核心「日记」插件未启用：有日期任务无法读写（顶部提醒，可关闭，localStorage 记忆；开启后自动消失） -->
-    <div v-if="!canUseDaily() && !dailyHintDismissed" class="tk-onboard tk-warn">
+    <!-- 核心「日记」插件未启用：有日期任务无法读写（顶部常驻提醒，不可手动关闭；开启日记插件后自动消失） -->
+    <div v-if="!canUseDaily()" class="tk-onboard tk-warn">
       <div class="tk-onboard-d">{{ $t('app.onboardDailyDisabled') }}</div>
-      <div class="tk-onboard-a">
-        <button class="tk-btn" type="button" @click="dismissDailyHint">{{ $t('app.onboardDismiss') }}</button>
-      </div>
     </div>
     <!-- 首次使用引导：任务池为空且未关闭过时显示（日记不可用时由上方提醒条负责） -->
     <div v-if="showOnboard() && canUseDaily()" class="tk-onboard">
@@ -27,7 +24,7 @@
                   @back-to-today="scrollAgendaToToday" />
 
     <div class="tk-body">
-      <transition name="tk-view" mode="out-in" appear @after-enter="onViewAfterEnter">
+      <transition name="tk-view" mode="out-in" appear>
       <div v-if="loading" key="loading" class="tk-loading">{{ $t('app.loading') }}</div>
 
       <!-- ===== 周 / 日视图（独立组件，含待办侧栏与时间轴） ===== -->
@@ -81,7 +78,7 @@ import { getCurrentInstance } from 'vue';
 import { Tasks } from '../composables/useTasks.js';
 import { isExternalChange } from '../api/tasks.js';
 import {
-  renderInlineHtml, plainInline, splitSummary, composeSummary, sanitizeTag,
+  renderInlineHtml, plainInline,
   dateText, timeText, statusIcon, plainTitle, richSummaryNoTags, doneDay,
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf, weekdayLong
 } from '../composables/tasks-logic.js';
@@ -93,7 +90,6 @@ import TaskRow from '../components/tasks/TaskRow.vue';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
 import ChecklistCardGrid from '../components/tasks/ChecklistCardGrid.vue';
 import ChecklistView from '../components/tasks/ChecklistView.vue';
-import TaskFilters from '../components/tasks/TaskFilters.vue';
 import TaskMonthView from '../components/tasks/TaskMonthView.vue';
 import TaskAgendaView from '../components/tasks/TaskAgendaView.vue';
 import TaskListView from '../components/tasks/TaskListView.vue';
@@ -107,7 +103,7 @@ function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + p
 export default {
   name: 'TasksApp',
   components: {
-    TaskRow, ChecklistCardGrid, TaskFilters, ChecklistView,
+    TaskRow, ChecklistCardGrid, ChecklistView,
     TaskMonthView, TaskAgendaView, TaskListView, TaskTopBar, WeekDayView
   },
   setup() {
@@ -145,8 +141,8 @@ export default {
       todoPanelOpen: false,
       // 首次使用引导（用户点「知道了」后不再显示，localStorage 记忆）
       onboardDismissed: false,
-      // 日记插件未启用提醒（顶部，可关闭，localStorage 记忆）
-      dailyHintDismissed: false,
+      // 日记插件是否「未启用」（响应式；由轮询 refreshDailyState 更新，供横幅实时显示/隐藏并触发任务重载）
+      dailyDisabled: !hasDailyNotesConfig(),
       // 周/月视图：隐藏已办（界面记忆，存 localStorage）
       hideDone: tv.hideDone,
       // 日程视图：已延期 / 更远 默认折叠
@@ -170,9 +166,8 @@ export default {
     },
     // 本周时间轴基准日期（周一 ~ 周日，跟随 tlWeekOffset 偏移）
     fourDayKeys() {
-      const base = new Date();
-      base.setHours(0, 0, 0, 0);
-      const start = Tasks.startOfWeek(new Date(base.getFullYear(), base.getMonth(), base.getDate() + this.tlWeekOffset * 7));
+      const start = Tasks.startOfWeek(new Date());
+      start.setDate(start.getDate() + this.tlWeekOffset * 7);
       return Tasks.weekDays(start).map((d) => ymd(d));
     },
     // 时间轴当前周范围文字（如 09/14 – 09/20）
@@ -288,11 +283,14 @@ export default {
   created() {
     this._todoPanels = new Set();
     try { this.onboardDismissed = localStorage.getItem('dada:onboardDismissed') === '1'; } catch (e) { /* 忽略 */ }
-    try { this.dailyHintDismissed = localStorage.getItem('dada:dailyHintDismissed') === '1'; } catch (e) { /* 忽略 */ }
     this.load();
     // 跨零点检测：每 30 秒对比系统日期，翻日时刷新「今天」锚点（todayKey / weekStart），
     // 避免「挂机过夜后点『今天』仍回到昨天」的问题
     this._dayTimer = setInterval(() => this.refreshTodayAnchor(), 30000);
+    // 日记插件启用状态实时检测：每 2 秒轮询，开关日记插件后顶部提醒条即时出现/消失，
+    // 且翻转时触发任务重载（关→开 加载有日期任务；开→关 剔除不可用的有日期任务）
+    this.refreshDailyState();
+    this._dailyTimer = setInterval(() => this.refreshDailyState(), 2000);
     // 外部变更自动刷新：编辑器内改笔记 / 同步写入 / 其他插件改动 → 防抖 500ms 静默重载。
     // 插件自身写操作（api 层 noteSelfWrite 标记）引起的变更会在 1.2s 内被跳过，避免重复加载。
     const mc = this.plugin.app.metadataCache;
@@ -309,6 +307,7 @@ export default {
     for (const [emitter, evt, fn] of this._extHandlers || []) emitter.off(evt, fn);
     clearTimeout(this._extTimer);
     clearInterval(this._dayTimer);
+    clearInterval(this._dailyTimer);
   },
   methods: {
     // ---------- 弹窗（Obsidian 原生 Modal 外壳 + Vue 组件内容） ----------
@@ -340,7 +339,6 @@ export default {
       catch (e) { this.error = this.$t('app.loadTasksFail') + (e && e.message || e); }
       finally { if (!silent) this.loading = false; }
     },
-    async refresh() { await this.load(); },
     // ---------- 首次使用引导 ----------
     // 任务池为空且未关闭过时显示
     showOnboard() { return !this.loading && !this.tasks.length && !this.onboardDismissed; },
@@ -355,12 +353,18 @@ export default {
       this.onboardDismissed = true;
       try { localStorage.setItem('dada:onboardDismissed', '1'); } catch (e) { /* 忽略 */ }
     },
-    dismissDailyHint() {
-      this.dailyHintDismissed = true;
-      try { localStorage.setItem('dada:dailyHintDismissed', '1'); } catch (e) { /* 忽略 */ }
+    // 核心「日记」插件是否可用（读取响应式 dailyDisabled；不可用时任务池必然不含日期任务）
+    canUseDaily() { return !this.dailyDisabled; },
+    // 实时检测日记插件启用状态（每 2 秒轮询）：开关日记插件后顶部提醒条即时出现/消失，
+    // 并在启用状态翻转时重载任务池（关→开 加载有日期任务；开→关 剔除不可用的有日期任务）
+    refreshDailyState() {
+      const enabled = hasDailyNotesConfig();
+      const nowDisabled = !enabled;
+      if (nowDisabled !== this.dailyDisabled) {
+        this.dailyDisabled = nowDisabled;
+        this.reload().catch(() => { /* 重载失败不阻断（错误已由 load 写入 this.error） */ });
+      }
     },
-    // 核心「日记」插件是否可用（实时检测；不可用时任务池必然不含日期任务）
-    canUseDaily() { return hasDailyNotesConfig(); },
     // 外部变更 → 防抖 500ms 静默重载（自身写操作 1.2s 内跳过）
     onExternalChange() {
       if (!isExternalChange()) return;
@@ -377,16 +381,13 @@ export default {
     // 列表筛选 / 清单选择 / 顺延等方法已抽离至 useListState（setup 展开绑定，仍以 this.xxx 访问）
     // 本地模式下 guid 与正文行号绑定：新增/删除/移动会改变行号，需重载并尽量保留当前选中项
     async reload() {
-      const cur = this.selectedTask;
-      const guid = cur ? cur.guid : this.selectedGuid;
-      const key = cur ? cur.summary : '';
+      const guid = this.selectedGuid;
       await this.load(true);
       if (this.activeList) await this.loadChecklistTasks();
       const pool = this.activeList ? this.checklistTasks : this.tasks;
-      // 优先按 guid 重定位：改标题/标签不增删行，行号不变，guid 稳定
-      // （按 summary 找会在标题修改后必然失配 → 选中被清空，面板看起来像没保存）
-      let again = guid ? pool.find((t) => t.guid === guid) : null;
-      if (!again && key) again = pool.find((t) => t.summary === key);
+      // 按 guid 重定位：改标题/标签不增删行，行号不变，guid 稳定
+      // （避免标题修改后选中被清空，面板看起来像没保存）
+      const again = guid ? pool.find((t) => t.guid === guid) : null;
       this.selectedGuid = again ? again.guid : '';
     },
     switchView(v) { this.view = v; if (v === 'day') this.tlDayOffset = 0; this.persistTaskView(); },
@@ -479,11 +480,6 @@ export default {
     toggleHideDone() { this.hideDone = !this.hideDone; this.persistTaskView(); },
     // 清单主区视图切换（列表 / 分栏）；状态提升到父组件，持久化在父组件
     setClMainView(v) { this.clMainView = v; setClMainViewPref(v); },
-    // 视图切换过渡钩子：进入日程视图。导航高亮仅由用户点击 / 回到今天控制，
-    // 不再随右侧滚动联动切换，避免点击闪烁与高亮跟着滚动乱跳。
-    onViewAfterEnter() {
-      if (this.view !== 'agenda') return;
-    },
     async openEdit(t) {
       let full = t;
       try { full = await Tasks.getDetail(t.guid); } catch (e) { /* keep summary view */ }
