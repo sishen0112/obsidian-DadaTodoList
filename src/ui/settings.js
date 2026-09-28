@@ -168,6 +168,37 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           this.plugin.reloadOpenViews();
         });
       });
+
+    new Setting(containerEl)
+      .setName(t('settings.timelineRange'))
+      .setDesc(t('settings.timelineRangeDesc'))
+      .addDropdown((dd) => {
+        for (let h = 0; h <= 23; h++) dd.addOption(String(h), (h < 10 ? '0' : '') + h + ':00');
+        dd.setValue(String(this.plugin.settings.timelineStartHour ?? 0));
+        dd.onChange(async (value) => {
+          const start = parseInt(value, 10);
+          let end = this.plugin.settings.timelineEndHour ?? 24;
+          if (end <= start) { end = start + 1; if (end > 24) end = 24; this.plugin.settings.timelineEndHour = end; }
+          this.plugin.settings.timelineStartHour = start;
+          await this.plugin.saveSettings();
+          this.plugin.reloadOpenViews();
+          this.display();
+        });
+      })
+      .addDropdown((dd) => {
+        for (let h = 1; h <= 24; h++) dd.addOption(String(h), (h < 10 ? '0' : '') + h + ':00');
+        dd.setValue(String(this.plugin.settings.timelineEndHour ?? 24));
+        dd.onChange(async (value) => {
+          let end = parseInt(value, 10);
+          const start = this.plugin.settings.timelineStartHour ?? 0;
+          if (end <= start) end = start + 1;
+          if (end > 24) end = 24;
+          this.plugin.settings.timelineEndHour = end;
+          await this.plugin.saveSettings();
+          this.plugin.reloadOpenViews();
+          this.display();
+        });
+      });
   }
 
   // 收件箱路径变更（输入逐字符触发 / 补全选中触发）：去抖 1s 后统一处理

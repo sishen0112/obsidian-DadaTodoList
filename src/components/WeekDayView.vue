@@ -15,6 +15,8 @@
         :today-key="todayKey"
         :hour-h="hourH"
         :now-top="nowTop"
+        :axis-start="axisStartMin"
+        :axis-end="axisEndMin"
         :drag-over-key="dragOverKey"
         :drag-guid="dragGuid"
         :helpers="tlHelpers"
@@ -83,11 +85,28 @@ export default {
     },
     // 时间轴每小时像素高：窗口宽度 >700 → 48，否则（≤700）→ 60
     hourH() { return this.winW > 700 ? 48 : 60; },
-    // 当前时间线：仅当「现在」落在时间轴区间（07:00–24:00）内才显示，跨度像素用 yForMin 对齐刻度
+    // 时间轴显示窗口起始小时（整点，0–23），来自设置
+    tlStartHour() {
+      const s = this.plugin && this.plugin.settings;
+      const v = (s && Number.isFinite(s.timelineStartHour)) ? s.timelineStartHour : 0;
+      return Math.max(0, Math.min(23, Math.round(v)));
+    },
+    // 时间轴显示窗口结束小时（整点，1–24），须晚于起始
+    tlEndHour() {
+      const s = this.plugin && this.plugin.settings;
+      let v = (s && Number.isFinite(s.timelineEndHour)) ? s.timelineEndHour : 24;
+      v = Math.max(1, Math.min(24, Math.round(v)));
+      if (v <= this.tlStartHour) v = this.tlStartHour + 1;
+      if (v > 24) v = 24;
+      return v;
+    },
+    axisStartMin() { return this.tlStartHour * 60; },
+    axisEndMin() { return this.tlEndHour * 60; },
+    // 当前时间线：仅当「现在」落在时间轴显示窗口内才显示
     nowTop() {
       const d = new Date(this.now);
       const min = d.getHours() * 60 + d.getMinutes();
-      if (min < 7 * 60 || min >= 24 * 60) return null;
+      if (min < this.axisStartMin || min >= this.axisEndMin) return null;
       return this.yForMin(min);
     },
     // 本周时间轴基准日期（周一 ~ 周日，跟随 weekOffset 偏移）
@@ -144,7 +163,6 @@ export default {
         dragEnd: () => s.$emit('drag-end'),
         dragOver: (key, e) => s.handleDragOver(key, e),
         dropAllDay: (key) => s.onDropAllDay(key),
-        dropEarly: (key) => s.onDropEarly(key),
         dropTimeline: (key, e) => s.onDropTimeline(key, e),
         // 手柄拖动调时间：resize 实时改本地（触发重排），resizeCommit 落盘
         resize: (t, startMin, endMin) => s.resizeTaskLive(t, startMin, endMin),
@@ -181,9 +199,26 @@ export default {
         md: (d.getMonth() + 1) + '/' + d.getDate(),
         tasks,
         allDay: tasks.filter((t) => t.dueAllDay),
-        early: tasks.filter((t) => !t.dueAllDay && this.isEarly(t)),
-        blocks: this.layoutBlocks(tasks.filter((t) => !t.dueAllDay && !this.isEarly(t)))
+        // 定时任务（含凌晨）进入同一时间轴，但仅显示落在时间轴窗口内的
+        blocks: this.layoutBlocks(tasks.filter((t) => !t.dueAllDay && this.inTimeline(t))),
+        // 窗口之外的定时任务（早于开始 / 晚于结束）归入「其他时间」格子
+        other: tasks.filter((t) => !t.dueAllDay && this.inOther(t))
       };
+    },
+    // 定时任务是否与时间轴显示窗口有重叠（按起止时刻判断）
+    inTimeline(t) {
+      if (!t.dueAt || t.dueAllDay) return false;
+      const s = this.axisStartMin, e = this.axisEndMin;
+      const d = new Date(t.dueAt);
+      const start = d.getHours() * 60 + d.getMinutes();
+      let end = t.dueEndAt ? (new Date(t.dueEndAt).getHours() * 60 + new Date(t.dueEndAt).getMinutes()) : start + 60;
+      if (end <= start) end = start + 60; // 跨天/异常，按 +60 分钟
+      return start < e && end > s; // 与窗口 [s, e) 重叠则进入时间轴
+    },
+    // 定时任务是否完全在时间轴窗口之外（早于开始 / 晚于结束），归入「其他时间」
+    inOther(t) {
+      if (!t.dueAt || t.dueAllDay) return false;
+      return !this.inTimeline(t);
     },
     // 周/月视图统一入口：开启「仅显示待办」时过滤掉已完成与已取消任务
     visibleTasks(list) {
@@ -256,38 +291,32 @@ export default {
         color: 'var(--ink)'
       };
     },
-    // 任务是否落在 00:00–07:00（此区间不在时间轴显示，改为列表）
-    isEarly(t) {
-      if (!t.dueAt || t.dueAllDay) return false;
-      const d = new Date(t.dueAt);
-      return d.getHours() * 60 + d.getMinutes() < 7 * 60;
-    },
-    // 时间(分钟) → 像素：时间轴从 07:00 起，07:00 对应 0，24:00 对应 17×h
+    // 时间(分钟) → 像素：相对时间轴窗口起点；窗口外钳制到顶/底
     yForMin(min) {
       const h = this.hourH;
-      const e = 7 * 60; // 07:00
-      if (min <= e) return 0;                          // 00:00–07:00 不在时间轴（列表显示）
-      if (min >= 24 * 60) return 17 * h;
-      return ((min - e) / 60) * h;                     // 07:00 之后
+      const s = this.axisStartMin, e = this.axisEndMin;
+      if (min <= s) return 0;                           // 窗口起点（顶部）
+      if (min >= e) return (e - s) / 60 * h;            // 窗口终点（底部）
+      return ((min - s) / 60) * h;
     },
-    // 像素 → 分钟（yForMin 的逆映射）：时间轴从 07:00 起
+    // 像素 → 分钟（yForMin 的逆映射）：相对时间轴窗口起点
     minForY(y) {
       const h = this.hourH;
-      const e = 7 * 60;
-      if (y <= 0) return e;                     // 07:00 起点
-      if (y >= 17 * h) return 23 * 60;
-      return e + (y / h) * 60;                  // 07:00–24:00
+      const s = this.axisStartMin, e = this.axisEndMin;
+      if (y <= 0) return s;                              // 窗口起点
+      if (y >= (e - s) / 60 * h) return e - 1;           // 窗口终点（最后一分钟）
+      return s + (y / h) * 60;
     },
     // 时间轴拖拽预览：当前悬停列、吸附到整点/半点的落点位置与时刻
     // 时间段任务预览同时显示结束时刻（保持与原时长一致）
     dropInfo(key) {
       if (!this.dragTask || this.dragOverKey !== key || this.dropY < 0) return null;
       let min = this.minForY(this.dropY);
-      min = Math.max(0, Math.min(23 * 60, Math.round(min / 30) * 30)); // 整点 / 半点
+      min = Math.max(this.axisStartMin, Math.min(this.axisEndMin - 1, Math.round(min / 30) * 30)); // 整点 / 半点，限制在窗口内
       const hh = Math.floor(min / 60), mm = min % 60;
       const dur = this.dragDuration();
       let endMin = min + dur;
-      if (endMin > 23 * 60 + 59) endMin = 23 * 60 + 59; // 不超出当天，必要时收缩时长
+      if (endMin > this.axisEndMin - 1) endMin = this.axisEndMin - 1; // 不超出窗口，必要时收缩时长
       const eh = Math.floor(endMin / 60), em = endMin % 60;
       const label = dur > 0 ? pad(hh) + ':' + pad(mm) + '–' + pad(eh) + ':' + pad(em) : pad(hh) + ':' + pad(mm);
       return { top: this.yForMin(min), label };
@@ -321,14 +350,14 @@ export default {
         y = e.clientY - rect.top;
       }
       let min = this.minForY(y);
-      min = Math.max(0, Math.min(23 * 60, Math.round(min / 30) * 30)); // 吸附到整点 / 半点
+      min = Math.max(this.axisStartMin, Math.min(this.axisEndMin - 1, Math.round(min / 30) * 30)); // 吸附到整点 / 半点，限制在窗口内
       const hh = Math.floor(min / 60), mm = min % 60;
       const dueAt = new Date(dayKey + 'T' + pad(hh) + ':' + pad(mm) + ':00').getTime();
       const payload = { summary: t.summary, description: t.description, dueAt, dueAllDay: false };
       const dur = this.dragDuration(t);
       if (dur > 0) {
         let endMin = min + dur;
-        if (endMin > 23 * 60 + 59) endMin = 23 * 60 + 59; // 收缩结束，避免跨天丢失
+        if (endMin > this.axisEndMin - 1) endMin = this.axisEndMin - 1; // 收缩结束，避免跨窗口丢失
         const eh = Math.floor(endMin / 60), em = endMin % 60;
         payload.dueEndAt = new Date(dayKey + 'T' + pad(eh) + ':' + pad(em) + ':00').getTime();
       }
@@ -359,25 +388,6 @@ export default {
         this.$emit('saved');
       } catch (err) {
         this.$emit('error', this.$t('app.resizeFail') + (err && err.message || err));
-      }
-    },
-    // 凌晨列表放置：落入 00:00–07:00 区间，默认置 06:00
-    async onDropEarly(dayKey) {
-      const t = this.dragTask;
-      this.$emit('drag-end');
-      if (!t) return;
-      if (t.dueAt && ymd(new Date(t.dueAt)) === dayKey && this.isEarly(t)) return; // 原地放下
-      const dueAt = new Date(dayKey + 'T06:00:00').getTime();
-      try {
-        await Tasks.updateTask(t.guid, {
-          summary: t.summary,
-          description: t.description,
-          dueAt,
-          dueAllDay: false
-        });
-        this.$emit('saved');
-      } catch (err) {
-        this.$emit('error', this.$t('app.rescheduleFail') + (err && err.message || err));
       }
     },
     // 拖到「全天」格子：无论原是否定时，都转为该日全天任务

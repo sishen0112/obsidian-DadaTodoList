@@ -181,6 +181,15 @@ export default class DadaTodoPlugin extends Plugin {
       dailyLoadWindow: data.dailyLoadWindow || 'all',
       // 任务块配色方案：default（默认）/ morandi（莫兰迪）/ jelly（卡通果冻），默认 default
       colorScheme: data.colorScheme || 'default',
+      // 日 / 周视图时间轴显示范围（整点小时）：开始 0–23、结束 1–24，结束须晚于开始；默认 0–24（全天）
+      timelineStartHour: Math.max(0, Math.min(23, Math.round(Number.isFinite(data.timelineStartHour) ? data.timelineStartHour : 0))),
+      timelineEndHour: (() => {
+        const s = Math.max(0, Math.min(23, Math.round(Number.isFinite(data.timelineStartHour) ? data.timelineStartHour : 0)));
+        let v = Math.max(1, Math.min(24, Math.round(Number.isFinite(data.timelineEndHour) ? data.timelineEndHour : 24)));
+        if (v <= s) v = s + 1;
+        if (v > 24) v = 24;
+        return v;
+      })(),
     };
     // 启动即用已保存的配色方案初始化（视图重载时会按此重算颜色）
     setColorScheme(this.settings.colorScheme);

@@ -41,26 +41,26 @@
       </div>
     </div>
 
-    <!-- 凌晨任务（00:00–07:00）：以列表显示，不进时间轴 -->
-    <div class="tk-tl-early">
-      <div class="tk-tl-gutter">00:00<br>–07:00</div>
-      <div v-for="col in cols" :key="col.key" class="tk-tl-earlycol"
-           :class="{ today: col.key === todayKey, 'drop-target': dragOverKey === col.key }"
-           @dragover.prevent="handlers.dragOver(col.key, $event)"
-           @drop.prevent="handlers.dropEarly(col.key)">
-        <div v-for="t in col.early" :key="t.guid" class="tk-tl-aditem"
+    <!-- 其他时间：早于或晚于时间轴显示范围的定时任务，统一归到时间轴上方的单独格子 -->
+    <div v-if="hasOther" class="tk-tl-other">
+      <div class="tk-tl-gutter">{{ $t('app.otherTime') }}</div>
+      <div v-for="col in cols" :key="col.key" class="tk-tl-othercol"
+           :class="{ today: col.key === todayKey }">
+        <div v-for="t in col.other" :key="t.guid" class="tk-tl-aditem tk-tl-other-item"
              :class="{ done: t.completed || t.cancelled, dragging: dragGuid === t.guid }"
              :style="helpers.itemColor(t)"
              draggable="true" :title="helpers.dragHint(t)"
              @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd" @click="handlers.open(t, $event)">
           <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, helpers.statusIcon(t)]" @click.stop.prevent="handlers.toggle(t)"></i>
-          <span class="tk-tl-sum" :class="{ done: t.completed || t.cancelled }" v-html="helpers.richSummaryNoTags(t)" @click="helpers.richClick"></span>
-          <span class="tk-tl-time">{{ helpers.timeText(t) }}</span>
+          <div class="tk-tl-other-body">
+            <span class="tk-tl-sum" :class="{ done: t.completed || t.cancelled }" v-html="helpers.richSummaryNoTags(t)" @click="helpers.richClick"></span>
+            <span class="tk-tl-time">{{ helpers.timeText(t) }}</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 时间轴主体：整点刻度 + 日列 -->
+    <!-- 时间轴主体：整点刻度 + 日列（按设置的时间轴窗口连续显示） -->
     <div class="tk-tl-grid">
       <div class="tk-tl-axis">
         <div v-for="(r, i) in axisRows" :key="i" class="tk-tl-tick" :style="{ height: r.height + 'px' }">
@@ -102,9 +102,7 @@
 </template>
 
 <script>
-// 时间轴范围与吸附步长（分钟）：07:00 起、23:59 止，整点/半点吸附
-const AXIS_START = 7 * 60;
-const AXIS_END = 23 * 60 + 59;
+// 时间轴范围（分钟）由父级经 props 传入（默认 00:00–24:00）；吸附步长整点/半点
 const SNAP = 30;
 // 单时间任务在时间轴上的绘制时长（分钟），与 WeekDayView.layoutBlocks 的 DEFAULT_MIN 一致
 const DEFAULT_MIN = 60;
@@ -119,20 +117,29 @@ export default {
     dragGuid: { type: String, default: '' },
     helpers: { type: Object, required: true },
     handlers: { type: Object, required: true },
-    isWeek: { type: Boolean, default: false }
+    isWeek: { type: Boolean, default: false },
+    // 时间轴显示窗口（分钟）：开始 / 结束，由父级按设置传入
+    axisStart: { type: Number, default: 0 },
+    axisEnd: { type: Number, default: 24 * 60 }
   },
   data() {
     return { resizing: null, selectedGuid: '' };
   },
   computed: {
-    // 时间轴刻度：从 07:00 起逐整点（00:00–07:00 不作为时间轴，改用列表显示）
+    // 时间轴刻度：按显示窗口逐整点（小时数由 axisStart / axisEnd 决定）
     axisRows() {
       const h = this.hourH;
+      const sH = this.axisStart / 60;
+      const eH = this.axisEnd / 60;
       const rows = [];
-      for (let hh = 7; hh <= 23; hh++) {
-        rows.push({ label: (hh < 10 ? '0' : '') + hh + ':00', top: (hh - 7) * h, height: h });
+      for (let hh = sH; hh < eH; hh++) {
+        rows.push({ label: (hh < 10 ? '0' : '') + hh + ':00', height: h });
       }
       return rows;
+    },
+    // 是否存在「其他时间」任务（窗口之外的定时任务），决定是否渲染该格子
+    hasOther() {
+      return this.cols.some((c) => c.other && c.other.length);
     }
   },
   beforeDestroy() {
@@ -146,10 +153,10 @@ export default {
       const d = new Date(ms);
       return d.getHours() * 60 + d.getMinutes();
     },
-    // 像素 Y（相对列顶，07:00 对应 0）→ 当日分钟，吸附 SNAP 并限制在时间轴范围内
+    // 像素 Y（相对列顶，窗口起点对应 0）→ 当日分钟，吸附 SNAP 并限制在窗口内
     yToMin(y) {
-      const min = AXIS_START + (y / this.hourH) * 60;
-      return Math.max(AXIS_START, Math.min(AXIS_END, Math.round(min / SNAP) * SNAP));
+      const min = this.axisStart + (y / this.hourH) * 60;
+      return Math.max(this.axisStart, Math.min(this.axisEnd, Math.round(min / SNAP) * SNAP));
     },
     // 单击任务：Ctrl/⌘ 时直接跳转到任务所在笔记并高亮；否则选中并显示拖动柄
     onBlockClick(t, e) {
@@ -202,22 +209,22 @@ export default {
           // 时间段任务：结束固定，拖动上方手柄调整开始
           startMin = r.startMin + deltaMin;
           if (startMin > r.endMin - SNAP) startMin = r.endMin - SNAP;
-          startMin = Math.max(AXIS_START, Math.min(AXIS_END - SNAP, startMin));
+          startMin = Math.max(this.axisStart, Math.min(this.axisEnd - SNAP, startMin));
         } else {
           // 单时间任务：把「原时间 + 1 小时」视为结束锚点（即该任务在时间轴上的绘制底边），
           // 上方手柄只调整开始时间；块底边不动，呈拉伸效果。
           endMin = r.startMin + DEFAULT_MIN;
-          startMin = Math.max(AXIS_START, Math.min(endMin - SNAP, r.startMin + deltaMin));
+          startMin = Math.max(this.axisStart, Math.min(endMin - SNAP, r.startMin + deltaMin));
         }
       } else if (r.endMin != null) {
         endMin = r.endMin + deltaMin;
         if (endMin < r.startMin + SNAP) endMin = r.startMin + SNAP;
-        endMin = Math.min(AXIS_END, endMin);
+        endMin = Math.min(this.axisEnd, endMin);
       } else {
         // 单时间任务：向下拖动底部 → 生成时间段。
         // 结束初始 = 开始 + 1 小时（与时间轴上的绘制底边一致，避免一动手就先缩回半小时），
         // 之后随拖动量增减；最小不小于开始 + SNAP，最多到当天 23:59。
-        endMin = Math.min(AXIS_END, r.startMin + DEFAULT_MIN + deltaMin);
+        endMin = Math.min(this.axisEnd, r.startMin + DEFAULT_MIN + deltaMin);
         if (endMin < r.startMin + SNAP) endMin = r.startMin + SNAP;
       }
       this.handlers.resize(r.t, startMin, endMin);
@@ -292,15 +299,19 @@ export default {
 .tk-tl-aditem .tk-tl-time { margin-left: auto; padding-left: 6px; }
 /* 全天 / 凌晨项：已完成、已取消置灰（与月视图 .cel-task.done 一致） */
 .tk-tl-aditem.done { color: var(--ink-soft); opacity: .6; }
-
-/* 凌晨任务行（00:00–07:00）：列表形式，不进时间轴 */
-.tk-tl-early {
+/* 其他时间行：早于 / 晚于时间轴窗口的定时任务，归到时间轴上方的单独格子 */
+.tk-tl-other {
   display: grid; grid-template-columns: 54px repeat(var(--tl-cols, 7), minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
 }
-.tk-tl-early .tk-tl-gutter { line-height: 1.25; text-align: right; }
-.tk-tl-earlycol { display: flex; flex-direction: column; gap: 3px; min-height: 34px; padding: 4px; border-left: 1px solid var(--line); }
-.tk-tl-earlycol.today { background: transparent; }
-.tk-tl-earlycol.drop-target { box-shadow: none; }
+.tk-tl-other .tk-tl-gutter { white-space: pre-line; line-height: 1.25; text-align: right; }
+.tk-tl-othercol { display: flex; flex-direction: column; gap: 3px; min-height: 34px; padding: 4px; border-left: 1px solid var(--line); }
+.tk-tl-othercol.today { background: transparent; }
+/* 其他时间任务项：标题在上、时间在标题下方 */
+.tk-tl-other-item { align-items: flex-start; line-height: 1.3; padding: 3px 6px; }
+.tk-tl-other-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.tk-tl-aditem.tk-tl-other-item .tk-tl-sum { white-space: nowrap; }
+.tk-tl-aditem.tk-tl-other-item .tk-tl-time { margin-left: 0; padding-left: 0; }
 
 /* 主体：整点刻度 + 日列（小时线用重复渐变绘制） */
 .tk-tl-grid { display: grid; grid-template-columns: 54px repeat(var(--tl-cols, 7), minmax(0, 1fr)); position: relative; }
@@ -386,9 +397,6 @@ export default {
   .tk-tl-week .tk-tl-aditem .tk-tl-sum,
   .tk-tl-week .tk-tl-bt .tk-tl-sum { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; white-space: normal; word-break: break-word; line-height: 1; text-overflow: ellipsis; text-align: justify; }
   .tk-tl-week .tk-tl-time { margin-left: 0; }
-  /* 凌晨(00:00–07:00)任务：名称换行后，时间落到新行显示 */
-  .tk-tl-week .tk-tl-early .tk-tl-aditem { flex-wrap: wrap; }
-  .tk-tl-week .tk-tl-early .tk-tl-time { flex-basis: 100%; }
 }
 /* 周视图进一步收窄（面板 ≤480px，等价于窗口或面板 ≤480）：任务时间文字再小一些 */
 @container (max-width: 480px) {
