@@ -72,6 +72,39 @@ export function hasDailyNotesConfig() {
   return !!dailyNotesConfig();
 }
 
+// 解析日记模板的整份内容（核心 Daily Notes 的「模板文件位置」或 Periodic Notes 的 daily.templateFile）。
+// 返回模板文件的原始全文（含 frontmatter）；无模板文件返回 ''。
+// 用途：原生插件创建日记失败时，由我们整份复制模板到新日记，确保 frontmatter 与正文都生效。
+async function dailyTemplateContent() {
+  try {
+    let tplPath = null;
+    // 1) 核心 Daily Notes 的「模板文件位置」
+    const ip = plugin.app.internalPlugins;
+    let inst = null;
+    try { inst = (ip.getEnabledPluginById && ip.getEnabledPluginById('daily-notes')) || null; } catch (e) { inst = null; }
+    if (!inst && ip.getPluginById) {
+      const core = ip.getPluginById('daily-notes');
+      inst = (core && core.enabled === true && core.instance) || null;
+    }
+    if (inst && inst.options && typeof inst.options.template === 'string' && inst.options.template) {
+      tplPath = inst.options.template;
+    }
+    // 2) Periodic Notes 的 daily.templateFile
+    if (!tplPath) {
+      const pn = plugin.app.plugins && plugin.app.plugins.getPlugin('periodic-notes');
+      const d = pn && pn.settings && pn.settings.daily;
+      if (d && typeof d.templateFile === 'string' && d.templateFile) tplPath = d.templateFile;
+    }
+    if (!tplPath) return '';
+    const file = vault().getAbstractFileByPath(tplPath);
+    if (!(file instanceof TFile)) return '';
+    const raw = (await vault().cachedRead(file)) || '';
+    return raw.replace(/\s+$/, ''); // 去尾部空白，统一在末尾追加一个空行
+  } catch (e) {
+    return '';
+  }
+}
+
 function inboxPath() {
   const p = String((plugin.settings && plugin.settings.inboxFile) || 'DadaTodoList.md').replace(/^\/+|\/+$/g, '');
   return p || 'DadaTodoList.md';
@@ -190,6 +223,65 @@ async function ensureFolder(pathWithoutFile) {
     cur = cur ? `${cur}/${seg}` : seg;
     if (!v.getAbstractFileByPath(cur)) await v.createFolder(cur);
   }
+}
+
+// 通过原生插件创建每日笔记并套用其配置的模板。
+// 优先核心「日记」插件；若不可用但启用了社区 Periodic Notes（daily 已配置），则改用其 createPeriodicNote；
+// 都不可用或失败则返回 null（由调用方回退默认 frontmatter 创建）。
+async function createDailyNoteViaPlugin(dateKey) {
+  const m = moment(dateKey, 'YYYY-MM-DD', true);
+  if (!m.isValid()) return null;
+  // 1) 核心「日记」插件（与 dailyNotesConfig 一致：优先取核心日记配置）
+  try {
+    const ip = plugin.app.internalPlugins;
+    let inst = null;
+    try { inst = (ip.getEnabledPluginById && ip.getEnabledPluginById('daily-notes')) || null; } catch (e) { inst = null; }
+    if (!inst && ip.getPluginById) {
+      const core = ip.getPluginById('daily-notes');
+      inst = (core && core.enabled === true && core.instance) || null;
+    }
+    if (inst && typeof inst.createDailyNote === 'function') {
+      return await inst.createDailyNote(m);
+    }
+  } catch (e) {
+    console.warn('[myLife] 调用日记插件创建日记失败', e);
+  }
+  // 2) 社区 Periodic Notes（daily 已配置时，用其原生创建以套用模板）
+  try {
+    const pn = plugin.app.plugins && plugin.app.plugins.getPlugin('periodic-notes');
+    const d = pn && pn.settings && pn.settings.daily;
+    if (pn && d && typeof pn.createPeriodicNote === 'function') {
+      const f = await pn.createPeriodicNote('daily', m);
+      if (f) return f;
+    }
+  } catch (e) {
+    console.warn('[myLife] 调用 Periodic Notes 创建日记失败，回退默认创建', e);
+  }
+  return null;
+}
+
+// 确保任务文件存在：有日期任务且启用日记插件时，走原生创建以套用日记模板；
+// 其余（收件箱 / 清单 / 插件不可用）用默认 frontmatter 创建。
+async function ensureTaskFile(dateKey, path) {
+  const v = vault();
+  if (v.getAbstractFileByPath(path)) return true;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+  if (m && dailyNotesConfig()) {
+    // 原生创建可能在某些 Obsidian 版本下取不到 createDailyNote / createPeriodicNote 而静默失败，
+    // 故成功（返回文件）才采用；否则自行创建并由我们补套模板正文，确保模板始终生效。
+    const f = await createDailyNoteViaPlugin(dateKey);
+    if (f) return true;
+    if (v.getAbstractFileByPath(path)) return true; // 插件已建但返回非标准值，不再重复创建
+    const tmpl = await dailyTemplateContent();
+    await ensureFolder(path.split('/').slice(0, -1).join('/'));
+    // 有模板则整份复制（frontmatter + 正文都生效）；无模板则退化为最小 frontmatter
+    await v.create(path, tmpl ? tmpl + '\n' : DAILY_HEAD);
+    return true;
+  }
+  await ensureFolder(path.split('/').slice(0, -1).join('/'));
+  const head = (dateKey === INBOX_KEY || isListKey(dateKey)) ? INBOX_HEAD : DAILY_HEAD;
+  await v.create(path, head);
+  return true;
 }
 
 // 加载窗口（天）：'all' 或数字，控制每日笔记的读取范围（以今天为中心的对称窗口，默认 'all'，大库可调小）
@@ -353,6 +445,8 @@ export async function createTask(task) {
   const dateKey = listKey || (t.dueAt ? todayKey(Number(t.dueAt)) : INBOX_KEY);
   const path = taskFilePath(dateKey);
   if (!path) return res(400, { ok: false, reason: 'bad_date' });
+  // 先确保文件存在：日记走 Obsidian 原生创建以套用日记模板（如已配置），其余用默认 frontmatter
+  await ensureTaskFile(dateKey, path);
   const doc = await readTasks(path, dateKey);
   const node = nodeFromTask(t, dateKey);
   // 清单文件没有「文件日期」，任务日期写进行内 📅 标记
@@ -372,6 +466,7 @@ export async function createChecklistTask(listKey, groupTitle, task) {
   if (!isListKey(listKey)) return res(400, { ok: false, reason: 'bad_list' });
   const path = taskFilePath(listKey);
   if (!path) return res(400, { ok: false, reason: 'bad_list' });
+  await ensureTaskFile(listKey, path);
   const doc = await readTasks(path, listKey);
   const node = nodeFromTask(t, listKey);
   if (t.dueAt) node.due = todayKey(Number(t.dueAt));
@@ -543,6 +638,7 @@ export async function updateTask(guid, patch) {
   await writeTasks(path, doc.head, keep);
   const dstPath = taskFilePath(targetKey);
   if (!dstPath) return res(400, { ok: false, reason: 'bad_date' });
+  await ensureTaskFile(targetKey, dstPath);
   const dst = await readTasks(dstPath, targetKey);
   const { out, lineNo } = appendLines(dst.lines, node, '');
   await writeTasks(dstPath, dst.head, out);
