@@ -72,6 +72,9 @@
     <!-- 任务块右键菜单（单例，teleport 到 body；日/周/月/日程/清单 共用） -->
     <task-context-menu />
 
+    <!-- 底部悬浮胶囊视图切换（日/周/月/日程/清单/全部） -->
+    <view-pill :view="view" @switch-view="switchView" />
+
     <!-- 编辑器与完成日历改用 Obsidian 原生 Modal 外壳（Vue-in-Modal 桥），不再内嵌页面 -->
   </div>
 </template>
@@ -100,6 +103,7 @@ import TaskMonthView from '../components/tasks/TaskMonthView.vue';
 import TaskAgendaView from '../components/tasks/TaskAgendaView.vue';
 import TaskListView from '../components/tasks/TaskListView.vue';
 import TaskContextMenu from '../components/tasks/TaskContextMenu.vue';
+import ViewPill from '../components/ViewPill.vue';
 import { ConfirmModal } from '../ui/modals.js';
 import { getTaskViewPref, setTaskViewPref, getClMainViewPref, setClMainViewPref } from '../composables/viewPrefs.js';
 import { useListState } from '../composables/useListState.js';
@@ -112,7 +116,7 @@ export default {
   name: 'TasksApp',
   components: {
     TaskRow, ChecklistCardGrid, ChecklistView,
-    TaskMonthView, TaskAgendaView, TaskListView, TaskTopBar, WeekDayView, TaskContextMenu
+    TaskMonthView, TaskAgendaView, TaskListView, TaskTopBar, WeekDayView, TaskContextMenu, ViewPill
   },
   setup() {
     // 列表视图状态域（筛选 / 清单 / 分桶 / 顺延）抽离至 useListState；
@@ -672,6 +676,8 @@ export default {
   padding: 10px;
   border-radius: 10px;
   overflow: hidden;
+  position: relative;
+  container-type: inline-size;
   color: var(--ink);
   background: var(--paper);
 }

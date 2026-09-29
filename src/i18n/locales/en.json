@@ -41,6 +41,8 @@
     "viewAgenda": "Agenda",
     "viewCl": "Checklists",
     "viewAll": "List",
+    "collapseViews": "Collapse switcher",
+    "expandViews": "Expand switcher",
     "lunarDay": "Day {{day}}",
     "allDay": "All day",
     "otherTime": "Other\ntimes",

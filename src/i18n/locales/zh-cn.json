@@ -41,6 +41,8 @@
     "viewAgenda": "日程",
     "viewCl": "清单",
     "viewAll": "列表",
+    "collapseViews": "收起视图切换",
+    "expandViews": "展开视图切换",
     "lunarDay": "Day {{day}}",
     "allDay": "全天",
     "otherTime": "其他\n时间",

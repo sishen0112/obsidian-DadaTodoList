@@ -190,28 +190,6 @@
 /* 按钮内计数徽标（无日期/所有待办 等） */
 .task-app button.tk-btn .cnt { font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 8px; background: rgba(0, 0, 0, .06); font-variant-numeric: tabular-nums; }
 .task-app button.tk-btn.on .cnt { background: transparent; color: var(--text-on-accent); }
-/* 视图切换下拉（自实现，不 teleport，样式随 .task-app 作用域） */
-.task-app .tk-dropdown { position: relative; display: inline-flex; z-index: 60; }
-.task-app .tk-dropdown .tk-view-trigger { position: relative; z-index: 55; }
-.task-app .tk-dropdown-menu {
-  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
-  width: 120px; padding: 4px;
-  display: flex; flex-direction: column; gap: 2px;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, .22);
-}
-.task-app .tk-dropdown-item {
-  display: flex; align-items: center; gap: 9px;
-  width: 100%; text-align: left;
-  padding: 8px 10px; font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1;
-  background: transparent; color: var(--ink-soft);
-  border: none; border-radius: 7px; cursor: pointer;
-}
-.task-app .tk-dropdown-item:hover, .task-app .tk-dropdown-item:focus { background: var(--gold-bg); color: var(--ink); outline: none; }
-.task-app .tk-dropdown-item.on { color: var(--interactive-accent); }
-.task-app .tk-dropdown-item.on i { color: var(--interactive-accent); }
-.task-app .tk-dropdown-item i { width: 18px; text-align: center; font-size: 15px; color: var(--interactive-accent); }
-.task-app .tk-dd-backdrop { position: fixed; inset: 0; z-index: 50; }
 /* ===== 待办侧栏顶部分段切换（无日期 / 所有待办）：复用 .tk-btn-group 统一样式 ===== */
 /* 去掉外框与填充底纹：按钮本身 border:none，非选中段透明、仅选中段金填充成胶囊，
    做成干净的分段切换，不再出现「方块边框」 */

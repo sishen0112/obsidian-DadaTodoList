@@ -48,23 +48,7 @@
       </template>
     </div>
 
-    <div class="tk-views">
-      <div class="tk-dropdown" :class="{ open: ddOpen }">
-        <button class="tk-btn tk-view-trigger" type="button"
-                :aria-expanded="ddOpen" @click="ddOpen = !ddOpen">
-          <i :class="currentView.icon"></i><span>{{ $t(currentView.labelKey) }}</span>
-          <i class="la la-angle-down tk-dd-caret" :class="{ open: ddOpen }"></i>
-        </button>
-        <div v-show="ddOpen" class="tk-dropdown-menu">
-          <button v-for="v in views" :key="v.key" type="button"
-                  class="tk-dropdown-item" :class="{ on: view === v.key }"
-                  @click="pick(v)">
-            <i :class="v.icon"></i><span>{{ $t(v.labelKey) }}</span>
-          </button>
-        </div>
-        <div v-if="ddOpen" class="tk-dd-backdrop" @click="ddOpen = false"></div>
-      </div>
-    </div>
+    <!-- 视图切换已迁至底部悬浮胶囊菜单 <view-pill />（见 TasksApp.vue） -->
   </div>
 </template>
 
@@ -83,36 +67,14 @@ export default {
     hideDone: { type: Boolean, default: false },
     clMainView: { type: String, default: 'cols' }
   },
-  emits: ['navigate', 'switch-view', 'toggle-todo-panel', 'toggle-hide-done', 'set-cl-main-view', 'back-to-today'],
-  data() {
-    return {
-      ddOpen: false,
-      views: [
-        { key: 'day', labelKey: 'app.viewDay', icon: 'la la-sun-o' },
-        { key: 'four', labelKey: 'app.viewWeek', icon: 'la la-stream' },
-        { key: 'month', labelKey: 'app.viewMonth', icon: 'la la-calendar-alt' },
-        { key: 'agenda', labelKey: 'app.viewAgenda', icon: 'la la-list-alt' },
-        { key: 'cl', labelKey: 'app.viewCl', icon: 'la la-tasks' },
-        { key: 'all', labelKey: 'app.viewAll', icon: 'la la-list' }
-      ]
-    };
-  },
+  emits: ['navigate', 'toggle-todo-panel', 'toggle-hide-done', 'set-cl-main-view', 'back-to-today'],
   computed: {
-    currentView() {
-      return this.views.find((x) => x.key === this.view) || this.views[0];
-    },
     // 周/日/月共用的导航文案（i18n key）；其余视图返回 null 走各自分支
     nav() {
       if (this.view === 'four') return { current: 'app.thisWeek', prev: 'app.prevWeekTitle', next: 'app.nextWeekTitle' };
       if (this.view === 'day') return { current: 'app.today', prev: 'app.prevDayTitle', next: 'app.nextDayTitle' };
       if (this.view === 'month') return { current: 'app.thisMonth', prev: 'app.prevMonthTitle', next: 'app.nextMonthTitle' };
       return null;
-    }
-  },
-  methods: {
-    pick(v) {
-      this.$emit('switch-view', v.key);
-      this.ddOpen = false;
     }
   }
 };
@@ -127,16 +89,6 @@ export default {
 .tk-range { font-size: 16px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 /* 清单视图无日期区间，单独把「列表/分栏 + 仅显示待办」推到右侧贴近视图切换 */
 .tk-cl-hide { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
-.tk-views {
-  order: 2;
-  flex: none;
-  margin-left: auto;
-  position: relative;
-  display: inline-flex;
-}
-/* 视图下拉箭头：保持小号（11px），展开时旋转 */
-.tk-btn i.tk-dd-caret { font-size: 11px; opacity: .8; transition: transform .2s ease; }
-.tk-btn i.tk-dd-caret.open { transform: rotate(180deg); }
 
 /* ===== 入场动画 ===== */
 @keyframes tkTopbarRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -152,6 +104,6 @@ export default {
   .tk-tb-todo { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tk-topbar, .tk-views { animation: none !important; }
+  .tk-topbar { animation: none !important; }
 }
 </style>
