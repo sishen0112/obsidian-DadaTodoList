@@ -4,7 +4,7 @@ import { t } from '../i18n/index.js';
 import {
   loadAll, loadChecklists, loadByList, loadByDate, getDetail,
   loadChecklistGroups,
-  createTask, createChecklistTask, updateTask, deleteTask, toggleTask, createSubtask, listSubtasks,
+  createTask, createChecklistTask, updateTask, deleteTask, toggleTask, setChecklistStatus, createSubtask, listSubtasks,
   moveChecklistTask
 } from '../api/tasks.js';
 
@@ -55,6 +55,7 @@ const api = {
   async updateTask(guid, patch) { return (await unwrap(updateTask(guid, patch))).task; },
   async deleteTask(guid) { await unwrap(deleteTask(guid)); },
   async toggleComplete(guid, done) { return (await unwrap(toggleTask(guid, done))).task; },
+  async setChecklistStatus(guid, status) { return (await unwrap(setChecklistStatus(guid, status))).task; },
   async listSubtasks(parentGuid) { return (await unwrap(listSubtasks(parentGuid))).items || []; },
   async createSubtask(parentGuid, task) { return (await unwrap(createSubtask(parentGuid, task))).task; },
   async moveChecklistTask(listKey, guid, targetGroupTitle) { return await unwrap(moveChecklistTask(listKey, guid, targetGroupTitle)); }

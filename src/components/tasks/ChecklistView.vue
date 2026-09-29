@@ -51,10 +51,11 @@
                   <i class="la la-plus"></i>
                 </button>
               </div>
-              <div class="tk-cl-rows">
+              <transition-group class="tk-cl-rows" tag="div" name="tk-clmove">
                 <div v-for="t in g.tasks" :key="t.guid" class="tk-cl-row"
                      :class="{ done: t.completed, cancel: t.cancelled }" :style="{ '--cl-depth': t.indent || 0 }" @click="onTaskClick(t, $event)" :title="$t('app.rowJumpTip')"
-                     draggable="true" @dragstart="onDragStart($event, t)" @dragend="onDragEnd">
+                     draggable="true" @dragstart="onDragStart($event, t)" @dragend="onDragEnd"
+                     @contextmenu.prevent="onContextMenu(t, $event)">
                   <i class="tk-check" :class="[{ done: t.completed }, statusIcon(t)]"
                      @click.stop.prevent="onToggle(t)"></i>
                   <div class="tk-cl-row-main">
@@ -64,8 +65,8 @@
                   <span v-if="t.dueAt" class="tk-cl-date"><i class="tk-date-ico la la-calendar"></i>{{ dateText(t) }}<template v-if="timeText(t) && !t.dueAllDay"><i class="tk-date-ico tk-date-ico-sep la la-clock"></i>{{ timeText(t) }}</template></span>
                   <span v-if="t.subtaskCount" class="tk-cl-sub"><i class="la la-list-ul"></i>{{ t.subtaskCount }}</span>
                 </div>
-                <div v-if="!g.tasks.length" class="tk-cl-gempty">{{ $t('app.noTasks') }}</div>
-              </div>
+                <div v-if="!g.tasks.length" key="__empty" class="tk-cl-gempty">{{ $t('app.noTasks') }}</div>
+              </transition-group>
             </div>
           </div>
 
@@ -84,11 +85,12 @@
                 <i class="la la-plus"></i>
               </button>
             </div>
-            <div class="tk-cl-rows">
+            <transition-group class="tk-cl-rows" tag="div" name="tk-clmove">
               <div v-for="t in g.tasks" :key="t.guid" class="tk-cl-row"
                    :class="{ done: t.completed, cancel: t.cancelled }" :style="{ '--cl-depth': t.indent || 0 }" @click="onTaskClick(t, $event)"
                    :title="$t('app.rowJumpTip')"
-                   draggable="true" @dragstart="onDragStart($event, t)" @dragend="onDragEnd">
+                   draggable="true" @dragstart="onDragStart($event, t)" @dragend="onDragEnd"
+                   @contextmenu.prevent="onContextMenu(t, $event)">
                 <i class="tk-check" :class="[{ done: t.completed }, statusIcon(t)]"
                    @click.stop.prevent="onToggle(t)"></i>
                 <div class="tk-cl-row-main">
@@ -98,13 +100,16 @@
                 </div>
                 <span v-if="t.subtaskCount" class="tk-cl-sub"><i class="la la-list-ul"></i>{{ t.subtaskCount }}</span>
               </div>
-              <div v-if="!g.tasks.length" class="tk-cl-gempty">{{ $t('app.noTasks') }}</div>
-            </div>
+              <div v-if="!g.tasks.length" key="__empty" class="tk-cl-gempty">{{ $t('app.noTasks') }}</div>
+            </transition-group>
             </div>
           </div>
         </template>
       </template>
     </section>
+
+    <!-- 任务行右键菜单（统一单例组件，teleport 到 body；与日/周/月/日程视图共用） -->
+    <task-context-menu />
   </div>
 </template>
 
@@ -115,6 +120,8 @@ import { statusIcon, dateText, timeText, richSummaryNoTags } from '../../composa
 import { VueModal } from '../../ui/VueModal.js';
 import TaskEditorModal from '../TaskEditorModal.vue';
 import { openTaskInFile } from '../../utils/openTaskInFile.js';
+import { openCtxMenu } from '../../composables/useTaskCtxMenu.js';
+import TaskContextMenu from './TaskContextMenu.vue';
 
 export default {
   name: 'ChecklistView',
@@ -126,6 +133,7 @@ export default {
     // 与日/周/月/日程共享的「仅显示待办」开关（由 TasksApp 的 hideDone 传入）
     hideDone: { type: Boolean, default: false }
   },
+  components: { TaskContextMenu },
   data() {
     return {
       lists: [],
@@ -143,11 +151,21 @@ export default {
   computed: {
     // 隐藏已完成/已取消：仅显示真正的待办（未完成且未取消），并去掉因此变空的组
     visibleGroups() {
-      if (!this.hideDone) return this.groups;
+      // 稳定排序：未完成在上，已完成/已取消在下方；每组内保持原相对顺序
+      const sortTasks = (tasks) => {
+        const rank = (t) => (t.completed || t.cancelled) ? 1 : 0;
+        return tasks
+          .map((t, i) => ({ t, i }))
+          .sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i)
+          .map((x) => x.t);
+      };
+      if (!this.hideDone) {
+        return this.groups.map((g) => ({ title: g.title, tasks: sortTasks(g.tasks) }));
+      }
       return this.groups
-        .map((g) => ({ title: g.title, tasks: g.tasks.filter((t) => !(t.completed || t.cancelled)) }))
+        .map((g) => ({ title: g.title, tasks: sortTasks(g.tasks).filter((t) => !(t.completed || t.cancelled)) }))
         .filter((g) => g.tasks.length);
-    }
+    },
   },
   watch: {
     // 清单列表随父级自动刷新（外部改 tags / 增删清单文件触发重载）后同步本地副本。
@@ -208,11 +226,26 @@ export default {
         if (c) c.done += done ? 1 : -1; // lists 与父级 checklists 共享引用，进度同步
       } catch (e) { this.error = this.$t('app.opFail') + (e && e.message || e); }
     },
-    openEdit(t) { this.openEditor(t, ''); },
+    // 右键任务行：打开统一右键菜单（写文件 + 就地更新字段由单例处理；重算进度经 onAfterApply 回调）
+    onContextMenu(t, e) {
+      openCtxMenu(t, e, { onAfterApply: this.recalcProgress, onAfterDelete: () => this.loadGroups(this.activeKey) });
+    },
+    // 从本地 groups 重新计算当前清单的 total / done，并同步侧栏进度
+    recalcProgress() {
+      let total = 0, done = 0;
+      for (const g of this.groups) for (const t of g.tasks) {
+        total += 1;
+        if (t.completed && !t.cancelled) done += 1;
+      }
+      this.activeTotal = total;
+      this.activeDone = done;
+      const c = this.lists.find((x) => x.key === this.activeKey);
+      if (c) { c.total = total; c.done = done; }
+    },
     // 任务行点击：Ctrl/⌘ 直接跳转高亮，否则打开编辑器
     onTaskClick(t, e) {
       if (e && (e.metaKey || e.ctrlKey)) this.openTask(t);
-      else this.openEdit(t);
+      else this.openEditor(t);
     },
     // Ctrl/Cmd + 点击任务项：直接跳转到任务所在笔记并高亮（不打开编辑器）
     async openTask(t) {
@@ -362,6 +395,15 @@ export default {
 .tk-cl-gplain { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 .tk-cl-gcnt { font-size: 11px; font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .tk-cl-rows { display: flex; flex-direction: column; }
+/* 清单任务排序动画：勾选完成/取消后平滑沉到组底（FLIP 位移），并给增删一个轻微淡入淡出 */
+/* 用 .tk-cl-rows 后代选择器提高特异性，压过 .tk-cl-row 自带的 transition（否则 transform 不被过渡，位移动画失效） */
+.tk-cl-rows .tk-clmove-move { transition: transform .3s cubic-bezier(.4, 0, .2, 1); }
+.tk-cl-rows .tk-clmove-enter-active,
+.tk-cl-rows .tk-clmove-leave-active { transition: opacity .2s ease; }
+.tk-cl-rows .tk-clmove-enter-from,
+.tk-cl-rows .tk-clmove-enter { opacity: 0; }
+.tk-cl-rows .tk-clmove-leave-to,
+.tk-cl-rows .tk-clmove-leave { opacity: 0; }
 
 .tk-cl-row {
   display: flex; align-items: flex-start; gap: 11px;
@@ -459,3 +501,6 @@ export default {
   .tk-cl-date { display: none; }
 }
 </style>
+
+<!-- 右键菜单 teleport 到 body，scoped 样式无法命中，这里用全局（非 scoped）样式确保生效 -->
+

@@ -34,7 +34,8 @@
                  :title="ctx.dragHint(t)" draggable="true"
                  @dragstart="ctx.onDragStart(t, $event)"
                  @dragend="ctx.onDragEnd"
-                 @click.stop="ctx.onTaskClick(t, $event)">
+                 @click.stop="ctx.onTaskClick(t, $event)"
+                 @contextmenu.prevent="ctx.openCtx(t, $event)">
               <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, ctx.statusIcon(t)]" @click.stop.prevent="ctx.toggle(t)"></i>
               <span class="cel-task-sum" v-html="ctx.richSummary(t)" @click="ctx.onRichClick"></span>
               <span v-if="ctx.taskTime(t)" class="cel-task-time">{{ ctx.taskTime(t) }}</span>

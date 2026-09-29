@@ -678,3 +678,35 @@ export async function toggleTask(guid, done) {
   await writeTasks(path, doc.head, lines);
   return res(200, { ok: true, task: toRecord(g.dateKey, node) });
 }
+
+// 设定任务状态：status ∈ 'todo' | 'done' | 'cancelled'（右键菜单用）
+export async function setChecklistStatus(guid, status) {
+  noteSelfWrite();
+  const g = parseGuid(guid);
+  if (!g) return res(400, { ok: false, reason: 'bad_guid' });
+  const path = taskFilePath(g.dateKey);
+  if (!path) return res(400, { ok: false, reason: 'bad_guid' });
+  const doc = await readTasks(path, g.dateKey);
+  const node = locateNode(doc.roots, { lineNo: g.lineNo });
+  if (!node) return res(404, { ok: false, reason: 'not_found' });
+  if (status === 'done') {
+    node.completed = true;
+    node.done = node.done || todayKey();
+    node.cancelMark = false;
+    node.cancelled = '';
+  } else if (status === 'cancelled') {
+    node.completed = false;
+    node.done = '';
+    node.cancelMark = true;
+    node.cancelled = node.cancelled || todayKey();
+  } else { // todo（未完成）：清除已完成与已取消态
+    node.completed = false;
+    node.done = '';
+    node.cancelMark = false;
+    node.cancelled = '';
+  }
+  const lines = doc.lines.slice();
+  lines.splice(node.lineNo, 1, serializeTaskLine(node, node.indentStr));
+  await writeTasks(path, doc.head, lines);
+  return res(200, { ok: true, task: toRecord(g.dateKey, node) });
+}

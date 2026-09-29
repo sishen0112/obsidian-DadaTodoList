@@ -16,7 +16,9 @@
    （覆盖阴影令牌，关掉所有投影），贴合原生观感。
    ============================================================ */
 .task-app,
-.mylife-vue-modal {
+.mylife-vue-modal,
+/* 右键菜单挂到 <body>（在 .task-app 之外），需在此声明令牌，否则 var(--paper)/--gold 等解析不到 */
+.tk-ctx {
   --gold: var(--interactive-accent);
   --gold-soft: var(--interactive-accent-hover);
   --gold-bg: var(--background-modifier-hover);

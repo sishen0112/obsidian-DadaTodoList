@@ -69,6 +69,9 @@
       </transition>
     </div>
 
+    <!-- 任务块右键菜单（单例，teleport 到 body；日/周/月/日程/清单 共用） -->
+    <task-context-menu />
+
     <!-- 编辑器与完成日历改用 Obsidian 原生 Modal 外壳（Vue-in-Modal 桥），不再内嵌页面 -->
   </div>
 </template>
@@ -76,6 +79,9 @@
 <script>
 import { getCurrentInstance } from 'vue';
 import { Tasks } from '../composables/useTasks.js';
+import {
+  setCtxI18n, setCtxOpenTask, setCtxError, setCtxDelete, openCtxMenu, closeCtxMenu, ctxMenuContains
+} from '../composables/useTaskCtxMenu.js';
 import { isExternalChange } from '../api/tasks.js';
 import {
   renderInlineHtml, plainInline,
@@ -93,6 +99,8 @@ import ChecklistView from '../components/tasks/ChecklistView.vue';
 import TaskMonthView from '../components/tasks/TaskMonthView.vue';
 import TaskAgendaView from '../components/tasks/TaskAgendaView.vue';
 import TaskListView from '../components/tasks/TaskListView.vue';
+import TaskContextMenu from '../components/tasks/TaskContextMenu.vue';
+import { ConfirmModal } from '../ui/modals.js';
 import { getTaskViewPref, setTaskViewPref, getClMainViewPref, setClMainViewPref } from '../composables/viewPrefs.js';
 import { useListState } from '../composables/useListState.js';
 import { VueModal } from '../ui/VueModal.js';
@@ -104,7 +112,7 @@ export default {
   name: 'TasksApp',
   components: {
     TaskRow, ChecklistCardGrid, ChecklistView,
-    TaskMonthView, TaskAgendaView, TaskListView, TaskTopBar, WeekDayView
+    TaskMonthView, TaskAgendaView, TaskListView, TaskTopBar, WeekDayView, TaskContextMenu
   },
   setup() {
     // 列表视图状态域（筛选 / 清单 / 分桶 / 顺延）抽离至 useListState；
@@ -281,6 +289,11 @@ export default {
     };
   },
   created() {
+    // 右键菜单单例：注入 i18n / 打开文件 / 错误上报 / 删除任务（全局只此一处设置）
+    setCtxI18n(this.$t);
+    setCtxOpenTask((t) => this.openTask(t));
+    setCtxError((m) => { this.error = m; });
+    setCtxDelete((t) => this.ctxDelete(t));
     this._todoPanels = new Set();
     try { this.onboardDismissed = localStorage.getItem('dada:onboardDismissed') === '1'; } catch (e) { /* 忽略 */ }
     this.load();
@@ -303,11 +316,24 @@ export default {
     ];
     for (const [emitter, evt, fn] of this._extHandlers) emitter.on(evt, fn);
   },
+  mounted() {
+    // 右键菜单全局关闭监听：点击/右键落在菜单外、或按 Esc 时关闭
+    this._ctxDocClick = (e) => { if (ctxMenuContains(e.target)) return; closeCtxMenu(); };
+    this._ctxDocCtx = (e) => { if (ctxMenuContains(e.target)) return; closeCtxMenu(); };
+    this._ctxKey = (e) => { if (e.key === 'Escape') closeCtxMenu(); };
+    window.addEventListener('click', this._ctxDocClick, true);
+    window.addEventListener('contextmenu', this._ctxDocCtx, true);
+    window.addEventListener('keydown', this._ctxKey);
+  },
   beforeUnmount() {
     for (const [emitter, evt, fn] of this._extHandlers || []) emitter.off(evt, fn);
     clearTimeout(this._extTimer);
     clearInterval(this._dayTimer);
     clearInterval(this._dailyTimer);
+    // 右键菜单全局关闭监听
+    window.removeEventListener('click', this._ctxDocClick, true);
+    window.removeEventListener('contextmenu', this._ctxDocCtx, true);
+    window.removeEventListener('keydown', this._ctxKey);
   },
   methods: {
     // ---------- 弹窗（Obsidian 原生 Modal 外壳 + Vue 组件内容） ----------
@@ -488,6 +514,26 @@ export default {
     // Ctrl/Cmd + 点击任务项：直接跳转到任务所在笔记并高亮（不打开编辑器）
     async openTask(t) {
       await openTaskInFile(this.plugin, t);
+    },
+    // 任务块右键：打开统一右键菜单（日/周/月/日程/清单 共用）
+    openCtx(t, e) { openCtxMenu(t, e, {}); },
+    // 右键菜单「删除任务」：原生确认弹窗（危险操作）→ API 删除 → 重载并刷新待办侧栏
+    ctxDelete(t) {
+      if (!t) return;
+      new ConfirmModal(this.plugin.app, {
+        title: this.$t('editor.delTitle'),
+        message: this.$t('editor.delMsg', { name: plainInline(t.summary) || this.$t('editor.thatTask') }),
+        confirmText: this.$t('common.delete'),
+        danger: true,
+        onConfirm: async () => {
+          try {
+            await Tasks.deleteTask(t.guid);
+            await this.onDeleted(t.guid);
+          } catch (e) {
+            this.error = this.$t('app.opFail') + (e && e.message || e);
+          }
+        }
+      }).open();
     },
     // 任务项点击（含修饰键判断）：Ctrl/Cmd 直接跳转高亮，否则打开编辑器
     onTaskClick(t, e) {

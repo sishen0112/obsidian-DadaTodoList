@@ -36,6 +36,7 @@
 import TaskTimeline from './TaskTimeline.vue';
 import TodoSidePanel from './TodoSidePanel.vue';
 import { Tasks } from '../composables/useTasks.js';
+import { openCtxMenu } from '../composables/useTaskCtxMenu.js';
 import {
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf,
   statusIcon, timeText, richSummaryNoTags, plainInline, weekdayShort
@@ -168,7 +169,9 @@ export default {
         resize: (t, startMin, endMin) => s.resizeTaskLive(t, startMin, endMin),
         resizeCommit: (t) => s.resizeTaskCommit(t),
         // 双击时间轴空白处：在落点时刻新增任务
-        addAt: (key, min) => s.$emit('open-new-at', key, min)
+        addAt: (key, min) => s.$emit('open-new-at', key, min),
+        // 任务块右键：打开统一右键菜单
+        ctx: (t, e) => s.openCtx(t, e)
       };
     }
   },
@@ -187,6 +190,8 @@ export default {
   methods: {
     // 窗口尺寸变化：更新 winW，驱动 hourH（时间轴格子高度）响应式变化
     onWinResize() { this.winW = window.innerWidth; },
+    // 任务块右键：打开统一右键菜单（日/周视图，时间轴内渲染）
+    openCtx(t, e) { openCtxMenu(t, e, {}); },
     // 构建「一天一列」结构（周视图 7 列 / 日视图 1 列共用）：全天 / 凌晨 / 定时分开
     buildCol(key, isToday) {
       const d = new Date(key + 'T00:00:00');

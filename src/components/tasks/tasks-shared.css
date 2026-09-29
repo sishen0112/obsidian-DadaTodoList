@@ -237,3 +237,30 @@
 .task-app .tk-side-sum { flex: 1 1 auto; min-width: 0; word-break: break-word; }
 .task-app .tk-side-tip { flex: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 11.5px; color: var(--ink-soft); }
 .task-app .tk-side-tip i { margin-right: 3px; }
+
+/* ===== 任务块右键菜单（teleport 到 body，故用全局无前缀选择器；样式由各处任务块共用） ===== */
+.tk-ctx {
+  position: fixed; z-index: 1000;
+  background: var(--panel);
+  border: none; border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .18); padding: 4px;
+}
+.tk-ctx-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 7px 12px; border: none; color: var(--text-normal);
+  font-family: inherit; font-size: 13px; text-align: left; border-radius: 7px;
+  cursor: pointer; user-select: none;
+  background: none !important; box-shadow: none !important;
+}
+/* hover：强制无背景、无阴影（仅保留文字/图标主题色变化作为反馈） */
+.tk-ctx-item:hover { background: none !important; box-shadow: none !important; color: var(--gold); }
+.tk-ctx-item:hover i { color: var(--gold); }
+.tk-ctx-item i { font-size: 14px; width: 16px; text-align: center; flex: none; color: var(--text-muted); }
+/* 删除任务：危险项，默认红色，hover 仍无背景/阴影仅变深红 */
+.tk-ctx-danger { color: var(--text-error, #e0524a); }
+.tk-ctx-danger i { color: var(--text-error, #e0524a); }
+.tk-ctx-danger:hover { background: none !important; box-shadow: none !important; color: var(--text-error-hover, #c0392b); }
+.tk-ctx-danger:hover i { color: var(--text-error-hover, #c0392b); }
+.tk-ctx-sep { height: 1px; margin: 4px 2px; background: var(--background-modifier-border); }
+.tk-ctx-fade-enter-active, .tk-ctx-fade-leave-active { transition: opacity .12s ease; }
+.tk-ctx-fade-enter-from, .tk-ctx-fade-leave-to { opacity: 0; }

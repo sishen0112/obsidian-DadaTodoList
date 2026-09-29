@@ -32,7 +32,8 @@
         <div v-for="t in g.tasks" :key="t.guid" class="tk-ag-row"
              :class="{ done: t.completed || t.cancelled, dragging: ctx.dragGuid === t.guid }"
              draggable="true" :title="ctx.dragHint(t)"
-             @dragstart="ctx.onDragStart(t, $event)" @dragend="ctx.onDragEnd" @click="ctx.onTaskClick(t, $event)">
+             @dragstart="ctx.onDragStart(t, $event)" @dragend="ctx.onDragEnd" @click="ctx.onTaskClick(t, $event)"
+             @contextmenu.prevent="ctx.openCtx(t, $event)">
           <span class="tk-ag-time">{{ ctx.agendaWhen(t, g.kind) }}</span>
           <span class="tk-ag-axis">
             <i class="tk-ag-dot" :class="[t.cancelled ? 'la la-minus-circle' : (t.completed ? 'la la-check-circle' : 'la la-circle-o'), { done: t.completed || t.cancelled, cancel: t.cancelled }]"

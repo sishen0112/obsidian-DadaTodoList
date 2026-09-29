@@ -34,7 +34,8 @@
              :class="{ done: t.completed || t.cancelled, dragging: dragGuid === t.guid }"
              :style="helpers.itemColor(t)"
              draggable="true" :title="helpers.dragHint(t)"
-             @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd" @click="handlers.open(t, $event)">
+             @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd" @click="handlers.open(t, $event)"
+             @contextmenu.prevent="handlers.ctx(t, $event)">
           <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, helpers.statusIcon(t)]" @click.stop.prevent="handlers.toggle(t)"></i>
           <span class="tk-tl-sum" :class="{ done: t.completed || t.cancelled }" v-html="helpers.richSummaryNoTags(t)" @click="helpers.richClick"></span>
         </div>
@@ -50,7 +51,8 @@
              :class="{ done: t.completed || t.cancelled, dragging: dragGuid === t.guid }"
              :style="helpers.itemColor(t)"
              draggable="true" :title="helpers.dragHint(t)"
-             @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd" @click="handlers.open(t, $event)">
+             @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd" @click="handlers.open(t, $event)"
+             @contextmenu.prevent="handlers.ctx(t, $event)">
           <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, helpers.statusIcon(t)]" @click.stop.prevent="handlers.toggle(t)"></i>
           <div class="tk-tl-other-body">
             <span class="tk-tl-sum" :class="{ done: t.completed || t.cancelled }" v-html="helpers.richSummaryNoTags(t)" @click="helpers.richClick"></span>
@@ -81,7 +83,8 @@
              :style="helpers.blockStyle(b)"
              :draggable="!resizing" :title="helpers.dragHint(b.t)"
              @dragstart="onBlockDragStart(b.t, $event)" @dragend="handlers.dragEnd"
-             @click.stop="onBlockClick(b.t, $event)" @dblclick.stop="handlers.open(b.t)">
+             @click.stop="onBlockClick(b.t, $event)" @dblclick.stop="handlers.open(b.t)"
+             @contextmenu.prevent="handlers.ctx(b.t, $event)">
           <div class="tk-tl-rsz tk-tl-rsz-top" :title="$t('app.resizeStartTip')"
                @pointerdown.stop.prevent="onResizeDown('top', b, $event)" @mousedown.stop.prevent @click.stop.prevent
                @dragstart.stop.prevent></div>
