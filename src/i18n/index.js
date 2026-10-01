@@ -2,6 +2,7 @@ import { reactive } from 'vue';
 import i18next from 'i18next';
 import { I18n as LunarI18n } from 'lunar-javascript';
 import zhCN from './locales/zh-cn.json';
+import zhTW from './locales/zh-tw.json';
 import en from './locales/en.json';
 
 // ============================================================================
@@ -47,7 +48,12 @@ function detectObsidianLang(app) {
   const uiSources = candidates.filter(([src]) => src !== 'navigator.language');
   const pool = uiSources.length ? uiSources : candidates;
   for (const [, v] of pool) {
-    if (v.toLowerCase().indexOf('zh') === 0) return 'zh-cn';
+    const lc = v.toLowerCase();
+    if (lc.indexOf('zh') === 0) {
+      // 繁体（台湾 / 香港 / 澳门 / 泛指 hant）走 zh-tw，其余（大陆 / 新加坡等）走 zh-cn
+      if (/(tw|hk|mo|hant|hant-)/.test(lc)) return 'zh-tw';
+      return 'zh-cn';
+    }
   }
   return 'en';
 }
@@ -64,6 +70,7 @@ export async function initI18n(app) {
     lowerCaseLng: true,
     resources: {
       'zh-cn': { translation: zhCN },
+      'zh-tw': { translation: zhTW },
       en: { translation: en },
     },
     // Vue 已处理文本渲染，关闭 i18next 的 HTML 转义以免破坏模板
@@ -74,12 +81,12 @@ export async function initI18n(app) {
 
   i18nState.lang = lang;
   // lunar-javascript 内置词表（节气 / 节日等）随界面语言切换：
-  //   - 注意其语言码为 'chs' / 'en'，与本项目 'zh-cn' / 'en' 不同；
+  //   - 注意其语言码为 'chs' / 'en'，与本项目 'zh-cn' / 'zh-tw' / 'en' 不同；
   //   - 必须在任何 Lunar / HolidayUtil 实例化之前调用（实例会缓存计算结果，切换不影响旧实例）。
-  LunarI18n.setLanguage(lang === 'zh-cn' ? 'chs' : 'en');
+  LunarI18n.setLanguage(lang.indexOf('zh') === 0 ? 'chs' : 'en');
   i18next.on('languageChanged', (lng) => {
     i18nState.lang = lng;
-    LunarI18n.setLanguage(lng === 'zh-cn' ? 'chs' : 'en');
+    LunarI18n.setLanguage(lng.indexOf('zh') === 0 ? 'chs' : 'en');
   });
   return lang;
 }

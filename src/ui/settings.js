@@ -159,6 +159,10 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         dd.addOption('default', t('settings.schemeDefault'));
         dd.addOption('morandi', t('settings.schemeMorandi'));
         dd.addOption('jelly', t('settings.schemeJelly'));
+        dd.addOption('spring', t('settings.schemeSpring'));
+        dd.addOption('summer', t('settings.schemeSummer'));
+        dd.addOption('autumn', t('settings.schemeAutumn'));
+        dd.addOption('winter', t('settings.schemeWinter'));
         dd.setValue(this.plugin.settings.colorScheme || 'default');
         dd.onChange(async (value) => {
           this.plugin.settings.colorScheme = value;

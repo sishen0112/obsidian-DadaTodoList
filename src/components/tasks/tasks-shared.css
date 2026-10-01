@@ -162,6 +162,8 @@
 .task-app .tk-side-h .tk-pool-ic { color: var(--gold); font-size: 16px; flex: none; }
 /* 待办池标题下的数据来源小字说明 */
 .task-app .tk-side-sub { font-size: 11px; line-height: 1.4; color: var(--ink-soft); margin: -4px 0 10px; }
+/* 标题与说明下方虚线分隔，和内容区做出区分 */
+.task-app .tk-side-sub { padding-bottom: 10px; border-bottom: 1px dashed var(--line); }
 /* ===== 自实现按钮（不依赖 Element Plus，避免 Obsidian 对原生 button 的全局样式污染）=====
    直接用 <button class="tk-btn"> 完全自绘；class 选择器优先级高于 Obsidian 的 button 元素选择器。
    放到共享样式（非 scoped）下，确保 TasksApp 与子视图（如月视图 TaskMonthView）按钮一致。 */
