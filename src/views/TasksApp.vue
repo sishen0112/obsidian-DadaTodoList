@@ -149,8 +149,8 @@ export default {
       dragGuid: '',
       dragOverKey: '',
       dragTask: null,
-      // 待办侧栏（周/日/月视图共用，状态在 TodoSidePanel 内）
-      todoPanelOpen: false,
+      // 待办侧栏（周/日/月视图共用）：默认展开，localStorage 记忆用户选择（缺省展开）
+      todoPanelOpen: (() => { try { const v = localStorage.getItem('dada:todoPanelOpen'); return v === null ? true : v === '1'; } catch (e) { return true; } })(),
       // 首次使用引导（用户点「知道了」后不再显示，localStorage 记忆）
       onboardDismissed: false,
       // 日记插件是否「未启用」（响应式；由轮询 refreshDailyState 更新，供横幅实时显示/隐藏并触发任务重载）
@@ -166,6 +166,10 @@ export default {
       // 清单主区视图（列表 / 分栏）：与顶栏切换按钮联动，持久化到 localStorage
       clMainView: getClMainViewPref()
     };
+  },
+  watch: {
+    // 待办池展开状态持久化到本机（默认展开，用户收起后也记住）
+    todoPanelOpen(v) { try { localStorage.setItem('dada:todoPanelOpen', v ? '1' : '0'); } catch (e) { /* 忽略 */ } }
   },
   computed: {
     // 顶栏区间文案：随当前视图取对应标签（周区间 / 日日期 / 月份 / 日程区间）

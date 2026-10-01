@@ -1,11 +1,6 @@
 <template>
   <div class="tk-monthview">
     <div class="tk-month-wrap">
-      <!-- 左侧待办列表：默认隐藏，展开后可拖到日历改期（与周/日视图共用 TodoSidePanel） -->
-      <todo-side-panel :open="ctx.todoPanelOpen" :tasks="ctx.tasks" :checklists="ctx.checklists"
-                       :drag-guid="ctx.dragGuid" @toggle="ctx.toggle" @open-task="ctx.onTaskClick"
-                       @drag-start="ctx.onDragStart" @drag-end="ctx.onDragEnd" @rich-click="ctx.onRichClick" />
-
       <div class="tk-month-card">
       <div class="tk-month-weekdays">
         <span v-for="w in ctx.weekdayLabels" :key="w" class="tk-month-wd">{{ w }}</span>
@@ -44,6 +39,11 @@
         </div>
       </div>
       </div>
+      <!-- 右侧待办池：默认展开，可拖到日历改期，也可把日历任务拖回（清除日期） -->
+      <todo-side-panel :open="ctx.todoPanelOpen" :tasks="ctx.tasks" :checklists="ctx.checklists"
+                       :drag-guid="ctx.dragGuid" :drag-task="ctx.dragTask" @toggle="ctx.toggle" @open-task="ctx.onTaskClick"
+                       @drag-start="ctx.onDragStart" @drag-end="ctx.onDragEnd" @rich-click="ctx.onRichClick"
+                       @saved="ctx.onSaved" @error="ctx.setError" />
     </div>
   </div>
 </template>

@@ -1,15 +1,6 @@
 <template>
   <div class="tk-tlview">
     <div class="tk-tl-wrap">
-      <!-- 左侧待办列表：默认隐藏，展开后可拖到日历改期（与月视图共用 TodoSidePanel） -->
-      <todo-side-panel :open="todoPanelOpen" :tasks="tasks" :checklists="checklists"
-                       :drag-guid="dragGuid"
-                       @toggle="(t) => $emit('toggle', t)"
-                       @open-task="(t, e) => $emit('open-task', t, e)"
-                       @drag-start="(t, e) => $emit('drag-start', t, e)"
-                       @drag-end="$emit('drag-end')"
-                       @rich-click="richClick" />
-
       <task-timeline
         :cols="tlCols"
         :today-key="todayKey"
@@ -22,6 +13,17 @@
         :helpers="tlHelpers"
         :handlers="tlHandlers"
         :is-week="view === 'four'" />
+
+      <!-- 右侧待办池：默认展开，可拖到日历改期，也可把日历任务拖回（清除日期） -->
+      <todo-side-panel :open="todoPanelOpen" :tasks="tasks" :checklists="checklists"
+                       :drag-guid="dragGuid" :drag-task="dragTask"
+                       @toggle="(t) => $emit('toggle', t)"
+                       @open-task="(t, e) => $emit('open-task', t, e)"
+                       @drag-start="(t, e) => $emit('drag-start', t, e)"
+                       @drag-end="$emit('drag-end')"
+                       @rich-click="richClick"
+                       @saved="$emit('saved')"
+                       @error="(m) => $emit('error', m)" />
     </div>
   </div>
 </template>

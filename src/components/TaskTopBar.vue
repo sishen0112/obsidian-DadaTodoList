@@ -7,8 +7,8 @@
         <button class="tk-btn tk-tb-todo" type="button" :class="{ on: todoPanelOpen }"
                 :title="todoPanelOpen ? $t('app.collapseTodo') : $t('app.expandTodo')"
                 @click="$emit('toggle-todo-panel')">
-          <i class="la la-list"></i><span>{{ $t('common.todo') }}</span>
-          <i class="la la-angle-left tk-side-caret" :class="{ collapsed: !todoPanelOpen }"></i>
+          <i class="la la-list"></i><span>{{ $t('app.todoPool') }}</span>
+          <i class="la tk-side-caret" :class="todoPanelOpen ? 'la-angle-right' : 'la-angle-left'"></i>
         </button>
         <div class="tk-btn-group">
           <button class="tk-btn ico" type="button" @click="$emit('navigate', 'prev')" :title="$t(nav.prev)"><i class="la la-angle-left"></i></button>
