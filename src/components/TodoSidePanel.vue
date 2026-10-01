@@ -110,9 +110,10 @@ export default {
     };
   },
   computed: {
-    // 独立事项：任务池内无日期、未完成且未取消的项（即收件箱文件中的待办）
+    // 独立事项：任务池内无日期、未完成且未取消的项（即收件箱文件中的待办）；
+    // 仅显示顶层任务，排除子任务（子任务 indent > 0，随父任务一起管理）
     poolTasks() {
-      return this.tasks.filter((t) => !t.dueAt && !t.completed && !t.cancelled);
+      return this.tasks.filter((t) => !t.dueAt && !t.completed && !t.cancelled && !(t.indent > 0));
     },
     // 是否还有任何待办（控制空态显隐）
     hasAny() {
@@ -187,7 +188,7 @@ export default {
             .map((g) => ({
               id: g.title || '__ungrouped',
               title: g.title,
-              tasks: g.tasks.filter((t) => !t.dueAt && !t.completed && !t.cancelled)
+              tasks: g.tasks.filter((t) => !t.dueAt && !t.completed && !t.cancelled && !(t.indent > 0))
             }))
             .filter((g) => g.tasks.length);
           const total = groups.reduce((s, g) => s + g.tasks.length, 0);
