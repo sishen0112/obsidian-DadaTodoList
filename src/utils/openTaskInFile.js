@@ -26,11 +26,13 @@ function findBlockIdAtLine(cache, line) {
 
 // 打开任务所在笔记并定位。
 //   plugin：插件实例（plugin.app 提供 Obsidian App）
-//   task：任务记录（需 task.date 与 task.lineNo）
+//   task：任务记录（需 task.date、task.lineNo；多日记文件场景下需 task.file 指向真实文件）
 export async function openTaskInFile(plugin, task) {
   const dateKey = task && task.date; // YYYY-MM-DD / inbox / cl:清单名
   if (!dateKey || !plugin) return;
-  const path = taskFilePath(dateKey);
+  // 同一日期可能存在多个日记文件：优先用任务自带的所属文件（task.file），
+  // 否则回落到单文件定位（收件箱 / 清单 / 旧记录无 file 段）；未命中时再退化为按日期算核心配置路径
+  const path = (task && task.file) || taskFilePath(dateKey);
   if (!path) { new Notice(t('app.locateFail')); return; }
   const app = plugin.app;
   const file = app.vault.getAbstractFileByPath(path);

@@ -9,9 +9,12 @@ import {
 } from '../api/tasks.js';
 
 // ---------- 纯函数 ----------
+import { getWeekStart } from './tasks-logic.js';
+
 export function startOfWeek(d) {
   const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const day = (date.getDay() + 6) % 7; // 周一=0 ... 周日=6
+  const ws = getWeekStart(); // 0=周日 … 6=周六
+  const day = (date.getDay() - ws + 7) % 7; // 回退到本周起始日
   date.setDate(date.getDate() - day);
   return date;
 }

@@ -89,9 +89,9 @@ import { isExternalChange } from '../api/tasks.js';
 import {
   renderInlineHtml, plainInline,
   dateText, timeText, statusIcon, plainTitle, richSummaryNoTags, doneDay,
-  colorOf, itemColor, lunarDayText, lunarTagText, holidayOf, weekdayLong
+  colorOf, itemColor, lunarDayText, lunarTagText, holidayOf, weekdayLong,
+  getWeekStart
 } from '../composables/tasks-logic.js';
-import { hasDailyNotesConfig } from '../api/tasks.js';
 import TaskEditorModal from '../components/TaskEditorModal.vue';
 import TaskTopBar from '../components/TaskTopBar.vue';
 import WeekDayView from '../components/WeekDayView.vue';
@@ -153,8 +153,8 @@ export default {
       todoPanelOpen: (() => { try { const v = localStorage.getItem('dada:todoPanelOpen'); return v === null ? true : v === '1'; } catch (e) { return true; } })(),
       // 首次使用引导（用户点「知道了」后不再显示，localStorage 记忆）
       onboardDismissed: false,
-      // 日记插件是否「未启用」（响应式；由轮询 refreshDailyState 更新，供横幅实时显示/隐藏并触发任务重载）
-      dailyDisabled: !hasDailyNotesConfig(),
+      // 日记任务不再依赖日记插件（按设置的日记文件夹扫描），故恒可用
+      dailyDisabled: false,
       // 周/月视图：隐藏已办（界面记忆，存 localStorage）
       hideDone: tv.hideDone,
       // 日程视图：已延期 / 更远 默认折叠
@@ -285,8 +285,14 @@ export default {
       const d = this.currentMonth;
       return d.getFullYear() + '-' + pad(d.getMonth() + 1);
     },
-    // 月视图表头周几（随界面语言，周一起始）
-    weekdayLabels() { return this.$t('app.weekdaysShort', { returnObjects: true }); }
+    // 月视图表头周几（随界面语言，并按「每周开始日」设置旋转首列）
+    weekdayLabels() {
+      const arr = this.$t('app.weekdaysShort', { returnObjects: true });
+      if (!Array.isArray(arr) || arr.length !== 7) return arr;
+      const ws = getWeekStart(); // 0=周日 … 6=周六；weekdaysShort 为周一为首（0=周一…6=周日）
+      const idx = (ws + 6) % 7;
+      return arr.slice(idx).concat(arr.slice(0, idx));
+    }
   },
   provide() {
     return {
@@ -308,10 +314,6 @@ export default {
     // 跨零点检测：每 30 秒对比系统日期，翻日时刷新「今天」锚点（todayKey / weekStart），
     // 避免「挂机过夜后点『今天』仍回到昨天」的问题
     this._dayTimer = setInterval(() => this.refreshTodayAnchor(), 30000);
-    // 日记插件启用状态实时检测：每 2 秒轮询，开关日记插件后顶部提醒条即时出现/消失，
-    // 且翻转时触发任务重载（关→开 加载有日期任务；开→关 剔除不可用的有日期任务）
-    this.refreshDailyState();
-    this._dailyTimer = setInterval(() => this.refreshDailyState(), 2000);
     // 外部变更自动刷新：编辑器内改笔记 / 同步写入 / 其他插件改动 → 防抖 500ms 静默重载。
     // 插件自身写操作（api 层 noteSelfWrite 标记）引起的变更会在 1.2s 内被跳过，避免重复加载。
     const mc = this.plugin.app.metadataCache;
@@ -389,16 +391,6 @@ export default {
     },
     // 核心「日记」插件是否可用（读取响应式 dailyDisabled；不可用时任务池必然不含日期任务）
     canUseDaily() { return !this.dailyDisabled; },
-    // 实时检测日记插件启用状态（每 2 秒轮询）：开关日记插件后顶部提醒条即时出现/消失，
-    // 并在启用状态翻转时重载任务池（关→开 加载有日期任务；开→关 剔除不可用的有日期任务）
-    refreshDailyState() {
-      const enabled = hasDailyNotesConfig();
-      const nowDisabled = !enabled;
-      if (nowDisabled !== this.dailyDisabled) {
-        this.dailyDisabled = nowDisabled;
-        this.reload().catch(() => { /* 重载失败不阻断（错误已由 load 写入 this.error） */ });
-      }
-    },
     // 外部变更 → 防抖 500ms 静默重载（自身写操作 1.2s 内跳过）
     onExternalChange() {
       if (!isExternalChange()) return;

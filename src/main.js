@@ -12,7 +12,7 @@ import 'element-plus/es/components/radio-group/style/css';
 import 'element-plus/es/components/radio-button/style/css';
 import TasksApp from './views/TasksApp.vue';
 import { initTasksApi, ensureInboxFile } from './api/tasks.js';
-import { setColorScheme } from './composables/tasks-logic.js';
+import { setColorScheme, setWeekStart } from './composables/tasks-logic.js';
 import { setupDevReload } from './dev/devReload.js';
 import { DadaTodoSettingTab } from './ui/settings.js';
 import { initI18n, t } from './i18n/index.js';
@@ -113,11 +113,6 @@ export default class DadaTodoPlugin extends Plugin {
 
     this.addSettingTab(new DadaTodoSettingTab(this.app, this));
 
-    // 启动 Obsidian 后自动打开本插件面板（需在 workspace 布局就绪后操作）
-    this.app.workspace.onLayoutReady(() => {
-      if (this.settings.autoOpen) this.activateView();
-    });
-
     console.log('[DadaTodo] 插件已加载');
 
     // 开发期热更新（生产构建下 __DADA_DEV__ 为 false，整段会被摇掉）
@@ -169,12 +164,17 @@ export default class DadaTodoPlugin extends Plugin {
     this.settings = {
       // 打开位置：左侧栏 / 主工作区标签页 / 右侧栏
       openLocation: data.openLocation || 'main',
-      // 启动 Obsidian 后是否自动打开本插件面板
-      autoOpen: data.autoOpen ?? false,
       // 是否显示农历与节假日（日 / 周 / 月视图表头与日历格）
       showLunar: data.showLunar ?? true,
       // 无日期任务的存放文件（相对库根目录）
       inboxFile: data.inboxFile || 'DadaTodoList.md',
+      // 日记（有日期任务）所在文件夹：相对库根目录，默认 '/' = 库根；扫描其及子目录下文件名含日期的笔记
+      journalFolder: data.journalFolder || '/',
+      // 日记文件宽松匹配：默认开；开启时从文件名任意位置抽取日期（兼容各种个性化命名），
+      // 关闭时仅当文件名以日期（或「星期-日期」）开头才视为日记，避免误判含日期的普通笔记
+      journalLooseMatch: data.journalLooseMatch ?? true,
+      // 每周起始日：0=周日 … 6=周六，默认 1（周一）
+      weekStart: data.weekStart ?? 1,
       // 清单识别标记：frontmatter tags 含任一标签的笔记即清单文件
       checklistTags,
       // 每日笔记加载窗口（天）：以今天为中心的对称窗口（前后各 N 天），默认 'all'；大库可调小以提升加载性能
@@ -191,8 +191,9 @@ export default class DadaTodoPlugin extends Plugin {
         return v;
       })(),
     };
-    // 启动即用已保存的配色方案初始化（视图重载时会按此重算颜色）
+    // 启动即用已保存的配色方案 / 每周起始日初始化（视图重载时会按此重算）
     setColorScheme(this.settings.colorScheme);
+    setWeekStart(this.settings.weekStart);
   }
 
   async saveSettings() {

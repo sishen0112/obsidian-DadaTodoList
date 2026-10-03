@@ -48,7 +48,7 @@
 <script>
 // 清单完成日历：按完成日期（✅ 标记）展示清单内已完成任务的分布，
 // 打开时可定位到指定任务完成的那天（参考学习模块的学习日历）。
-import { plainTitle } from '../../composables/tasks-logic.js';
+import { plainTitle, getWeekStart } from '../../composables/tasks-logic.js';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 function ymd(d) {
@@ -77,11 +77,19 @@ export default {
     title() {
       return this.$t('app.calTitle', { name: this.listName || this.$t('app.viewCl') });
     },
+    // 每周起始日（0=周日 … 6=周六），跟随全局设置
+    weekStart() { return getWeekStart(); },
     monthLabel() {
       const d = this.calMonth;
       return this.$t('app.monthLabel', { y: d.getFullYear(), m: d.getMonth() + 1 });
     },
-    weekdayLabels() { return this.$t('app.weekdaysShort', { returnObjects: true }); },
+    weekdayLabels() {
+      const arr = this.$t('app.weekdaysShort', { returnObjects: true });
+      if (!Array.isArray(arr) || arr.length !== 7) return arr;
+      const ws = this.weekStart; // 0=周日 … 6=周六；weekdaysShort 为周一为首（0=周一…6=周日）
+      const idx = (ws + 6) % 7;
+      return arr.slice(idx).concat(arr.slice(0, idx));
+    },
     doneItems() {
       return (this.tasks || []).filter((t) => t.completed && t.completedAt);
     },
@@ -102,7 +110,7 @@ export default {
       const base = new Date(this.calMonth.getFullYear(), this.calMonth.getMonth(), 1);
       const year = base.getFullYear(), month = base.getMonth() + 1;
       const dim = new Date(year, month, 0).getDate();
-      const startOffset = (base.getDay() + 6) % 7;
+      const startOffset = (base.getDay() - this.weekStart + 7) % 7;
       const cells = [];
       for (let i = startOffset; i > 0; i--) {
         const d = new Date(year, month - 1, 1 - i);

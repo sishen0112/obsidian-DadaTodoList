@@ -52,6 +52,7 @@
 // 月视图：日历网格 + 左侧「待办」拖拽面板（面板与周视图共用，样式在 tasks-shared.css）。
 // 只读父级共享状态/方法（通过 ctx），自身只持有月网格计算。
 import TodoSidePanel from '../TodoSidePanel.vue';
+import { getWeekStart } from '../../composables/tasks-logic.js';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -71,7 +72,7 @@ export default {
       const base = new Date(ctx.currentMonth.getFullYear(), ctx.currentMonth.getMonth(), 1);
       const year = base.getFullYear(), month = base.getMonth() + 1;
       const dim = new Date(year, month, 0).getDate();
-      const startOffset = (base.getDay() + 6) % 7; // 周一为首列
+      const startOffset = (base.getDay() - getWeekStart() + 7) % 7; // 首列 = 每周开始日
       const cells = [];
       for (let i = startOffset; i > 0; i--) {
         const d = new Date(year, month - 1, 1 - i);

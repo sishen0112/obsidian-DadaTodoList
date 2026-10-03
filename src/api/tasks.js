@@ -1,7 +1,7 @@
 // 任务数据层（Obsidian vault 版）。
 // 数据来源：每日笔记正文中的 Markdown 复选框（- [ ] / - [x]）。
 // 三个数据位置均为动态解析：
-//   1. 每日笔记：跟随核心「日记」插件的 folder / format 配置（社区 Periodic Notes 兜底）
+//   1. 每日笔记：跟随「日记文件夹」设置（journalFolder，默认库根 /）扫描文件名含日期的 .md；
 //   2. 收件箱（无日期任务）：设置项 inboxFile，默认库根目录 DadaTodoList.md
 //   3. 清单：设置项 checklistTag（默认 todoList）——frontmatter tags 含该标签的笔记即清单文件
 // 与网页版 tasks-server.js 语义一致：guid = `日期键#行号`，日期跨文件移动整块。
@@ -32,44 +32,60 @@ const listNameOf = (k) => listRelOf(k).split('/').pop();
 
 const normFolder = (p) => String(p || '').replace(/^\/+|\/+$/g, '');
 
-// 核心插件「日记」配置（folder + format）；社区 Periodic Notes 兜底；均不可用返回 null
-function dailyNotesConfig() {
+// 取核心「日记 / Daily Notes」内部插件实例；非硬依赖，异常或缺失时返回 null。
+function legacyDailyNotesInstance() {
   try {
     const ip = plugin.app.internalPlugins;
-    let inst = null;
-    // 首选 getEnabledPluginById：仅在插件处于「启用」状态时返回实例（未启用返回 undefined 或抛错）。
-    // 注意不能只判 getPluginById().instance —— 未启用的内部插件其 instance 也存在。
-    try { inst = (ip.getEnabledPluginById && ip.getEnabledPluginById('daily-notes')) || null; } catch (e) { inst = null; }
-    // 版本差异兜底：wrapper.enabled 明确为真时才采用 instance
-    if (!inst && ip.getPluginById) {
+    if (ip.getEnabledPluginById) {
+      const inst = ip.getEnabledPluginById('daily-notes');
+      if (inst) return inst;
+    }
+    if (ip.getPluginById) {
       const core = ip.getPluginById('daily-notes');
-      inst = (core && core.enabled === true && core.instance) || null;
-    }
-    const o = inst && inst.options;
-    if (o) {
-      return {
-        folder: typeof o.folder === 'string' ? normFolder(o.folder) : '',
-        format: typeof o.format === 'string' && o.format ? o.format : 'YYYY-MM-DD'
-      };
+      if (core && core.enabled === true && core.instance) return core.instance;
     }
   } catch (e) { /* 忽略 */ }
-  try {
-    const pn = plugin.app.plugins && plugin.app.plugins.getPlugin('periodic-notes');
-    const d = pn && pn.settings && pn.settings.daily;
-    if (d) {
-      return {
-        folder: typeof d.folder === 'string' ? normFolder(d.folder) : '',
-        format: typeof d.format === 'string' && d.format ? d.format : 'YYYY-MM-DD'
-      };
-    }
-  } catch (e) { /* 忽略 */ }
-  // 均不可用：视为未启用日记插件（有日期任务不可用，面板顶部提醒条引导开启）
   return null;
 }
 
-/** 核心日记插件是否可用（决定有日期任务的读写能力） */
-export function hasDailyNotesConfig() {
-  return !!dailyNotesConfig();
+// 取 Periodic Notes 插件的 daily 配置段；缺失时返回 null。
+function periodicDailyConfig() {
+  try {
+    const pn = plugin.app.plugins && plugin.app.plugins.getPlugin('periodic-notes');
+    return (pn && pn.settings && pn.settings.daily) || null;
+  } catch (e) { return null; }
+}
+
+// 兼容性兜底：读取核心「日记」插件 / Periodic Notes 配置的日记文件夹（仅作未配置时的兜底，非硬依赖）
+function legacyDailyFolder() {
+  const o = legacyDailyNotesInstance() && legacyDailyNotesInstance().options;
+  if (o && typeof o.folder === 'string' && o.folder) return normFolder(o.folder);
+  const d = periodicDailyConfig();
+  if (d && typeof d.folder === 'string' && d.folder) return normFolder(d.folder);
+  return '';
+}
+
+// 兼容性兜底：读取核心「日记」插件 / Periodic Notes 配置的日记文件名格式（如 'YYYY-MM-DD'、'YYYY-MM-DD-ddd'）。
+// 仅作未匹配到已有文件时的命名兜底，非硬依赖；未配置或格式非法时返回 ''。
+function legacyDailyFormat() {
+  const o = legacyDailyNotesInstance() && legacyDailyNotesInstance().options;
+  let fmt = (o && typeof o.format === 'string' && o.format) ? o.format : '';
+  if (!fmt) {
+    const d = periodicDailyConfig();
+    if (d && typeof d.format === 'string' && d.format) fmt = d.format;
+  }
+  if (!fmt) return '';
+  // 校验格式可用，避免 moment 报错
+  const probe = moment('2026-10-03', 'YYYY-MM-DD', true).format(fmt);
+  return probe && probe !== 'Invalid date' ? fmt : '';
+}
+
+// 用户配置的「日记文件夹」（设置项 journalFolder，默认 '/' = 库根目录）；归一化为相对路径（库根为 ''）。
+// 未显式配置（仍为默认 '/'）时，沿用日记插件的文件夹作为兼容兜底，避免老用户升级后日记丢失。
+function journalFolder() {
+  const set = String((plugin.settings && plugin.settings.journalFolder) || '/').trim();
+  if (set && set !== '/') return normFolder(set) || '';
+  return legacyDailyFolder();
 }
 
 // 解析日记模板的整份内容（核心 Daily Notes 的「模板文件位置」或 Periodic Notes 的 daily.templateFile）。
@@ -79,20 +95,13 @@ async function dailyTemplateContent() {
   try {
     let tplPath = null;
     // 1) 核心 Daily Notes 的「模板文件位置」
-    const ip = plugin.app.internalPlugins;
-    let inst = null;
-    try { inst = (ip.getEnabledPluginById && ip.getEnabledPluginById('daily-notes')) || null; } catch (e) { inst = null; }
-    if (!inst && ip.getPluginById) {
-      const core = ip.getPluginById('daily-notes');
-      inst = (core && core.enabled === true && core.instance) || null;
-    }
+    const inst = legacyDailyNotesInstance();
     if (inst && inst.options && typeof inst.options.template === 'string' && inst.options.template) {
       tplPath = inst.options.template;
     }
     // 2) Periodic Notes 的 daily.templateFile
     if (!tplPath) {
-      const pn = plugin.app.plugins && plugin.app.plugins.getPlugin('periodic-notes');
-      const d = pn && pn.settings && pn.settings.daily;
+      const d = periodicDailyConfig();
       if (d && typeof d.templateFile === 'string' && d.templateFile) tplPath = d.templateFile;
     }
     if (!tplPath) return '';
@@ -156,7 +165,56 @@ export async function migrateInboxTasks(fromPath, toPath) {
 const DAILY_HEAD = '---\ntags:\n  - journal\n---\n\n';
 const INBOX_HEAD = '---\ntags:\n  - task\n---\n\n';
 
-const DATE_FILE_RE = /^\d{4}-\d{2}-\d{2}\.md$/;
+// 从日记文件名解析规范日期键（YYYY-MM-DD）；无法解析返回 null。
+// 不依赖日记插件：先用一组常见日期格式严格解析（涵盖 YYYY-MM-DD、YYYY-MM-DD-ddd/Sat、前后缀星期、
+// 美式 MM-DD-YYYY、YYYY年MM月DD日 等），再用宽松数字抽取兜底（兼容中文星期 / 任意文字前后缀）。
+function parseDailyKey(name) {
+  const base = String(name || '').replace(/\.md$/i, '');
+  if (!base) return null;
+  const fmts = [
+    'YYYY-MM-DD', 'YYYY.MM.DD', 'YYYY_MM_DD', 'YYYY/MM/DD', 'YYYY-MM-DD-ddd', 'YYYY-MM-DD-dddd',
+    'ddd-YYYY-MM-DD', 'dddd-YYYY-MM-DD', 'MM-DD-YYYY', 'DD-MM-YYYY', 'MM/DD/YYYY', 'MM.DD.YYYY',
+    'DD.MM.YYYY', 'YYYY-DD-MM', 'YYYY/DD/MM', 'YYYY年MM月DD日'
+  ];
+  for (const f of fmts) {
+    const m = moment(base, f, true);
+    if (m.isValid()) return m.format('YYYY-MM-DD');
+  }
+  // 宽松兜底：从文件名任意位置抽取数字日期（兼容中文星期 / 任意文字前后缀）
+  const p2 = (x) => String(x).padStart(2, '0');
+  let mm = /(\d{4})[-._/](\d{1,2})[-._/](\d{1,2})/.exec(base);
+  if (mm) {
+    const m = moment(`${mm[1]}-${p2(mm[2])}-${p2(mm[3])}`, 'YYYY-MM-DD', true);
+    if (m.isValid()) return m.format('YYYY-MM-DD');
+  }
+  mm = /(\d{1,2})[-._/](\d{1,2})[-._/](\d{4})/.exec(base);
+  if (mm) {
+    const m = moment(`${mm[3]}-${p2(mm[1])}-${p2(mm[2])}`, 'YYYY-MM-DD', true);
+    if (m.isValid()) return m.format('YYYY-MM-DD');
+  }
+  return null;
+}
+
+// 严格模式：文件名须以日期（或「星期-日期」）开头，避免把含日期的普通笔记误判为日记
+function isStrictDailyName(base) {
+  // 去掉扩展名后，允许开头是英文星期缩写/全称或中文星期，后接分隔符，再是日期；否则日期须直接开头
+  const stripped = base.replace(/^(?:[A-Za-z]{3,9}|[一-龥]{2,3})[-_.\s]+/, '');
+  const rest = stripped.length !== base.length ? stripped : base;
+  // rest 须以 YYYY-MM-DD 等可解析日期开头（年在前或在后均可）
+  return /^\d{4}[-._/]\d{1,2}[-._/]\d{1,2}/.test(rest) || /^\d{1,2}[-._/]\d{1,2}[-._/]\d{4}/.test(rest);
+}
+
+// 文件名 → 日期键：受「宽松匹配」开关控制。
+//   - 宽松（默认开）：parseDailyKey 从文件名任意位置抽取日期，兼容各种个性化命名与前后缀。
+//   - 严格（关）：仅当文件名以日期（或「星期-日期」）开头才视为日记，避免误判含日期的普通笔记。
+function fileDateKey(name) {
+  const key = parseDailyKey(name);
+  if (!key) return null;
+  const loose = (plugin.settings && plugin.settings.journalLooseMatch) !== false; // 默认开
+  if (loose) return key;
+  const base = String(name || '').replace(/\.md$/i, '');
+  return isStrictDailyName(base) ? key : null;
+}
 
 function defaultHead(dateKey) {
   return (dateKey === INBOX_KEY || isListKey(dateKey)) ? INBOX_HEAD : DAILY_HEAD;
@@ -165,6 +223,12 @@ function defaultHead(dateKey) {
 function res(status, body) { return { status, body }; }
 
 function vault() { return plugin.app.vault; }
+
+// 某日期的默认日记文件名（含 .md）：优先用核心日记插件的 format 命名，否则退化为 YYYY-MM-DD.md
+function dailyBaseName(dateKey) {
+  const fmt = legacyDailyFormat();
+  return (fmt ? moment(dateKey, 'YYYY-MM-DD', true).format(fmt) : dateKey) + '.md';
+}
 
 // 某日期（或收件箱 / 清单）对应的 vault 内路径；非法键返回 null
 export function taskFilePath(dateKey) {
@@ -176,13 +240,42 @@ export function taskFilePath(dateKey) {
   if (dateKey === INBOX_KEY) return inboxPath();
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
   if (!m) return null;
-  // 每日笔记路径 = 日记插件 folder + moment(dateKey).format(日记格式)
-  // （格式中可含字面量目录，如 YYYY/Daily/MM/YYYY-MM-DD）
-  const cfg = dailyNotesConfig();
-  if (!cfg) return null; // 未启用日记插件：有日期任务不可用
-  const rel = moment(dateKey).format(cfg.format);
-  const full = rel.indexOf(dateKey) >= 0 ? rel : `${rel}/${dateKey}`;
-  return cfg.folder ? `${cfg.folder}/${full}.md` : `${full}.md`;
+  // 日记文件不再依赖日记插件：在用户配置的日记文件夹（含子目录）内查找该日期已有文件
+  // （命名可任意：YYYY-MM-DD、YYYY-MM-DD-Sat、含中文星期、美式 MM-DD-YYYY、任意前后缀等），复用之；
+  // 若目录下无该日期文件，则落在默认 YYYY-MM-DD.md（日记文件夹下）。
+  const folder = journalFolder();
+  const hit = vault().getMarkdownFiles().find((f) =>
+    (folder ? f.path.indexOf(folder + '/') === 0 : f.path.indexOf('/') < 0) && fileDateKey(f.name) === dateKey);
+  if (hit) return hit.path;
+  const base = dailyBaseName(dateKey);
+  return folder ? `${folder}/${base}` : base;
+}
+
+// 核心日记插件配置下的「单一」日记文件路径（文件夹 + format 命名）。
+// 仅用于「新增 / 移动任务」等写操作——不论用户实际有多少同名日期的日记文件，
+// 新任务一律落到核心插件约定的这一份，避免散落到多个文件中。无日期键返回 null。
+function canonicalDailyPath(dateKey) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+  if (!m) return null;
+  const folder = journalFolder();
+  const base = dailyBaseName(dateKey);
+  return folder ? `${folder}/${base}` : base;
+}
+
+// 某日期对应的「所有」日记文件路径（用于读取 / 展示）：在日记文件夹（含子目录）内，
+// 文件名能解析为该日期的全部 .md 笔记，可能有多个；若无任何匹配，则退化为核心插件配置的那一份。
+function dailyFilesForDate(dateKey) {
+  const folder = journalFolder();
+  const matches = vault().getMarkdownFiles().filter((f) =>
+    (folder ? f.path.indexOf(folder + '/') === 0 : f.path.indexOf('/') < 0) && fileDateKey(f.name) === dateKey);
+  if (matches.length) return matches.map((f) => f.path);
+  const canon = canonicalDailyPath(dateKey);
+  return canon ? [canon] : [];
+}
+
+// 由 guid 解析出真实文件路径：记录自带所属文件则直接用，否则回落到 taskFilePath 单文件定位
+function pathOf(g) {
+  return g.file ? g.file : taskFilePath(g.dateKey);
 }
 
 function splitDoc(raw) {
@@ -225,62 +318,15 @@ async function ensureFolder(pathWithoutFile) {
   }
 }
 
-// 通过原生插件创建每日笔记并套用其配置的模板。
-// 优先核心「日记」插件；若不可用但启用了社区 Periodic Notes（daily 已配置），则改用其 createPeriodicNote；
-// 都不可用或失败则返回 null（由调用方回退默认 frontmatter 创建）。
-async function createDailyNoteViaPlugin(dateKey) {
-  const m = moment(dateKey, 'YYYY-MM-DD', true);
-  if (!m.isValid()) return null;
-  // 1) 核心「日记」插件（与 dailyNotesConfig 一致：优先取核心日记配置）
-  try {
-    const ip = plugin.app.internalPlugins;
-    let inst = null;
-    try { inst = (ip.getEnabledPluginById && ip.getEnabledPluginById('daily-notes')) || null; } catch (e) { inst = null; }
-    if (!inst && ip.getPluginById) {
-      const core = ip.getPluginById('daily-notes');
-      inst = (core && core.enabled === true && core.instance) || null;
-    }
-    if (inst && typeof inst.createDailyNote === 'function') {
-      return await inst.createDailyNote(m);
-    }
-  } catch (e) {
-    console.warn('[myLife] 调用日记插件创建日记失败', e);
-  }
-  // 2) 社区 Periodic Notes（daily 已配置时，用其原生创建以套用模板）
-  try {
-    const pn = plugin.app.plugins && plugin.app.plugins.getPlugin('periodic-notes');
-    const d = pn && pn.settings && pn.settings.daily;
-    if (pn && d && typeof pn.createPeriodicNote === 'function') {
-      const f = await pn.createPeriodicNote('daily', m);
-      if (f) return f;
-    }
-  } catch (e) {
-    console.warn('[myLife] 调用 Periodic Notes 创建日记失败，回退默认创建', e);
-  }
-  return null;
-}
-
-// 确保任务文件存在：有日期任务且启用日记插件时，走原生创建以套用日记模板；
-// 其余（收件箱 / 清单 / 插件不可用）用默认 frontmatter 创建。
+// 确保任务文件存在：不依赖日记插件。优先复制用户「日记」插件的模板文件内容（若已配置），
+// 否则退化为最小 frontmatter，在对应路径创建。
 async function ensureTaskFile(dateKey, path) {
   const v = vault();
   if (v.getAbstractFileByPath(path)) return true;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
-  if (m && dailyNotesConfig()) {
-    // 原生创建可能在某些 Obsidian 版本下取不到 createDailyNote / createPeriodicNote 而静默失败，
-    // 故成功（返回文件）才采用；否则自行创建并由我们补套模板正文，确保模板始终生效。
-    const f = await createDailyNoteViaPlugin(dateKey);
-    if (f) return true;
-    if (v.getAbstractFileByPath(path)) return true; // 插件已建但返回非标准值，不再重复创建
-    const tmpl = await dailyTemplateContent();
-    await ensureFolder(path.split('/').slice(0, -1).join('/'));
-    // 有模板则整份复制（frontmatter + 正文都生效）；无模板则退化为最小 frontmatter
-    await v.create(path, tmpl ? tmpl + '\n' : DAILY_HEAD);
-    return true;
-  }
+  const tmpl = await dailyTemplateContent();
   await ensureFolder(path.split('/').slice(0, -1).join('/'));
-  const head = (dateKey === INBOX_KEY || isListKey(dateKey)) ? INBOX_HEAD : DAILY_HEAD;
-  await v.create(path, head);
+  // 有模板则整份复制（frontmatter + 正文都生效）；无模板则退化为最小 frontmatter
+  await v.create(path, tmpl ? tmpl + '\n' : DAILY_HEAD);
   return true;
 }
 
@@ -292,21 +338,24 @@ function loadWindowDays() {
   return Number.isFinite(n) && n > 0 ? n : 'all';
 }
 
-// 收集全部每日笔记：日记文件夹（含子目录）下、文件名为 YYYY-MM-DD.md 的笔记，
-// 且日期落在以今天为中心的对称窗口内 [今天-win天, 今天+win天]（设置 dailyLoadWindow，默认全部；大库可调小避免全量读取）
+// 收集全部日记笔记：在用户配置的日记文件夹（含子目录）下，文件名能解析出日期的 .md 笔记，
+// 且日期落在以今天为中心的对称窗口内 [今天-win天, 今天+win天]（设置 dailyLoadWindow，默认全部；大库可调小避免全量读取）。
+// 文件名匹配宽松：支持 YYYY-MM-DD 及 . _ / 等分隔、前后缀文字、星期（Sat / 周六）、美式 MM-DD-YYYY 等。
+// 同一日期可能有多个文件，全部保留（不再去重），读取时各自的任务都会被聚合展示。
 function listDailyFiles() {
-  const cfg = dailyNotesConfig();
-  if (!cfg) return [];
-  const folder = cfg.folder;
-  const re = /^\d{4}-\d{2}-\d{2}\.md$/;
+  const folder = journalFolder();
   const win = loadWindowDays();
   const lower = win === 'all' ? null : todayKey(Date.now() - Number(win) * 86400000);
   const upper = win === 'all' ? null : todayKey(Date.now() + Number(win) * 86400000);
-  const all = vault().getMarkdownFiles()
-    .filter((f) => (folder ? f.path.indexOf(folder + '/') === 0 : f.path.indexOf('/') < 0) && re.test(f.name))
-    .map((f) => ({ key: f.name.replace(/\.md$/, ''), path: f.path }));
-  const filtered = all.filter((e) => (lower == null || (e.key >= lower && e.key <= upper)));
-  return filtered;
+  const out = [];
+  for (const f of vault().getMarkdownFiles()) {
+    if (folder ? f.path.indexOf(folder + '/') !== 0 : f.path.indexOf('/') >= 0) continue;
+    const key = fileDateKey(f.name);
+    if (!key) continue;
+    if (lower != null && (key < lower || key > upper)) continue;
+    out.push({ key, path: f.path });
+  }
+  return out;
 }
 
 // 全库扫描：frontmatter tags 含任一「清单标记」的 md 文件 → [{ key: 'cl:<相对路径>', path, name }]
@@ -380,9 +429,10 @@ async function listTasks(opts = {}) {
     if (!path) return res(400, { ok: false, reason: 'bad_list' });
     files = [{ key: opts.list, path }];
   } else if (opts.date) {
-    const path = taskFilePath(opts.date);
-    if (!path) return res(400, { ok: false, reason: 'bad_date' });
-    files = [{ key: opts.date, path }];
+    // 该日期下可能有多个日记文件，全部读取并聚合展示
+    const paths = dailyFilesForDate(opts.date);
+    if (!paths.length) return res(400, { ok: false, reason: 'bad_date' });
+    files = paths.map((p) => ({ key: opts.date, path: p }));
   } else {
     files = listDailyFiles();
     files.push({ key: INBOX_KEY, path: taskFilePath(INBOX_KEY) });
@@ -394,7 +444,8 @@ async function listTasks(opts = {}) {
     const doc = await readTasks(f.path, f.key);
     for (const node of doc.roots) {
       if (f.aggregateOnly && !node.due) continue;
-      items.push(toRecord(f.key, node));
+      // 带上所属文件，确保同日期多文件下 guid 唯一、后续操作能定位到正确文件
+      items.push(toRecord(f.key, node, { file: f.path }));
     }
   }
   return res(200, { ok: true, count: items.length, items });
@@ -416,12 +467,12 @@ export const loadChecklists = () => listChecklists();
 export async function listSubtasks(parentGuid) {
   const g = parseGuid(parentGuid);
   if (!g) return res(400, { ok: false, reason: 'bad_guid' });
-  const path = taskFilePath(g.dateKey);
+  const path = pathOf(g);
   if (!path) return res(400, { ok: false, reason: 'bad_guid' });
   const doc = await readTasks(path, g.dateKey);
   const node = locateNode(doc.roots, { lineNo: g.lineNo });
   if (!node) return res(404, { ok: false, reason: 'not_found' });
-  const items = node.children.map((c) => toRecord(g.dateKey, c, { parentGuid }));
+  const items = node.children.map((c) => toRecord(g.dateKey, c, { parentGuid, file: g.file }));
   return res(200, { ok: true, count: items.length, items });
 }
 
@@ -443,7 +494,10 @@ export async function createTask(task) {
   if (!String(t.summary || '').trim()) return res(400, { ok: false, reason: 'missing_summary' });
   const listKey = isListKey(t.list) ? String(t.list) : '';
   const dateKey = listKey || (t.dueAt ? todayKey(Number(t.dueAt)) : INBOX_KEY);
-  const path = taskFilePath(dateKey);
+  // 新增任务：清单 / 收件箱走原路径；有日期则只落在核心日记插件配置的那一份（忽略用户的多个日记文件）
+  const path = (dateKey === INBOX_KEY || isListKey(dateKey))
+    ? taskFilePath(dateKey)
+    : canonicalDailyPath(dateKey);
   if (!path) return res(400, { ok: false, reason: 'bad_date' });
   // 先确保文件存在：日记走 Obsidian 原生创建以套用日记模板（如已配置），其余用默认 frontmatter
   await ensureTaskFile(dateKey, path);
@@ -453,7 +507,7 @@ export async function createTask(task) {
   if (listKey && t.dueAt) node.due = todayKey(Number(t.dueAt));
   const { out, lineNo } = appendLines(doc.lines, node, '');
   await writeTasks(path, doc.head, out);
-  return res(201, { ok: true, task: toRecord(dateKey, Object.assign({}, node, { lineNo })) });
+  return res(201, { ok: true, task: toRecord(dateKey, Object.assign({}, node, { lineNo }), { file: path }) });
 }
 
 // 在清单指定分组的最后一行追加任务。
@@ -541,7 +595,7 @@ export async function createSubtask(parentGuid, task) {
   if (!g) return res(400, { ok: false, reason: 'bad_guid' });
   const t = task || {};
   if (!String(t.summary || '').trim()) return res(400, { ok: false, reason: 'missing_summary' });
-  const path = taskFilePath(g.dateKey);
+  const path = pathOf(g);
   if (!path) return res(400, { ok: false, reason: 'bad_guid' });
   const doc = await readTasks(path, g.dateKey);
   const parent = locateNode(doc.roots, { lineNo: g.lineNo });
@@ -555,7 +609,7 @@ export async function createSubtask(parentGuid, task) {
   lines.splice(insertAt, 0, serializeTaskLine(child, child.indentStr));
   await writeTasks(path, doc.head, lines);
   const created = Object.assign({}, child, { lineNo: insertAt });
-  return res(201, { ok: true, task: toRecord(g.dateKey, created, { parentGuid }) });
+  return res(201, { ok: true, task: toRecord(g.dateKey, created, { parentGuid, file: path }) });
 }
 
 // 修改任务（标题/描述/完成态/日期）。日期跨文件时移动整块。
@@ -564,7 +618,7 @@ export async function updateTask(guid, patch) {
   const g = parseGuid(guid);
   if (!g) return res(400, { ok: false, reason: 'bad_guid' });
   const p = patch || {};
-  const path = taskFilePath(g.dateKey);
+  const path = pathOf(g);
   if (!path) return res(400, { ok: false, reason: 'bad_guid' });
   const doc = await readTasks(path, g.dateKey);
   const node = locateNode(doc.roots, { lineNo: g.lineNo, summary: p.expectSummary, completed: p.expectCompleted });
@@ -631,18 +685,21 @@ export async function updateTask(guid, patch) {
   if (targetKey === g.dateKey) {
     keep.splice(node.lineNo, 0, ...serializeBlock(node, node.indentStr));
     await writeTasks(path, doc.head, keep);
-    return res(200, { ok: true, task: toRecord(g.dateKey, node) });
+    return res(200, { ok: true, task: toRecord(g.dateKey, node, { file: path }) });
   }
 
   // 跨文件移动：先写回源文件，再追加到目标文件末尾
   await writeTasks(path, doc.head, keep);
-  const dstPath = taskFilePath(targetKey);
+  // 目标为日期时，只落到核心日记插件配置的那一份（忽略用户的多个日记文件）
+  const dstPath = (targetKey === INBOX_KEY || isListKey(targetKey))
+    ? taskFilePath(targetKey)
+    : canonicalDailyPath(targetKey);
   if (!dstPath) return res(400, { ok: false, reason: 'bad_date' });
   await ensureTaskFile(targetKey, dstPath);
   const dst = await readTasks(dstPath, targetKey);
   const { out, lineNo } = appendLines(dst.lines, node, '');
   await writeTasks(dstPath, dst.head, out);
-  return res(200, { ok: true, task: toRecord(targetKey, Object.assign({}, node, { lineNo })) });
+  return res(200, { ok: true, task: toRecord(targetKey, Object.assign({}, node, { lineNo }), { file: dstPath }) });
 }
 
 // 删除任务（连同其描述行与子任务）
@@ -650,7 +707,7 @@ export async function deleteTask(guid) {
   noteSelfWrite();
   const g = parseGuid(guid);
   if (!g) return res(400, { ok: false, reason: 'bad_guid' });
-  const path = taskFilePath(g.dateKey);
+  const path = pathOf(g);
   if (!path) return res(400, { ok: false, reason: 'bad_guid' });
   const doc = await readTasks(path, g.dateKey);
   const node = locateNode(doc.roots, { lineNo: g.lineNo });
@@ -665,7 +722,7 @@ export async function toggleTask(guid, done) {
   noteSelfWrite();
   const g = parseGuid(guid);
   if (!g) return res(400, { ok: false, reason: 'bad_guid' });
-  const path = taskFilePath(g.dateKey);
+  const path = pathOf(g);
   if (!path) return res(400, { ok: false, reason: 'bad_guid' });
   const doc = await readTasks(path, g.dateKey);
   const node = locateNode(doc.roots, { lineNo: g.lineNo });
@@ -676,7 +733,7 @@ export async function toggleTask(guid, done) {
   const lines = doc.lines.slice();
   lines.splice(node.lineNo, 1, serializeTaskLine(node, node.indentStr));
   await writeTasks(path, doc.head, lines);
-  return res(200, { ok: true, task: toRecord(g.dateKey, node) });
+  return res(200, { ok: true, task: toRecord(g.dateKey, node, { file: path }) });
 }
 
 // 设定任务状态：status ∈ 'todo' | 'done' | 'cancelled'（右键菜单用）
@@ -684,7 +741,7 @@ export async function setChecklistStatus(guid, status) {
   noteSelfWrite();
   const g = parseGuid(guid);
   if (!g) return res(400, { ok: false, reason: 'bad_guid' });
-  const path = taskFilePath(g.dateKey);
+  const path = pathOf(g);
   if (!path) return res(400, { ok: false, reason: 'bad_guid' });
   const doc = await readTasks(path, g.dateKey);
   const node = locateNode(doc.roots, { lineNo: g.lineNo });
@@ -708,5 +765,5 @@ export async function setChecklistStatus(guid, status) {
   const lines = doc.lines.slice();
   lines.splice(node.lineNo, 1, serializeTaskLine(node, node.indentStr));
   await writeTasks(path, doc.head, lines);
-  return res(200, { ok: true, task: toRecord(g.dateKey, node) });
+  return res(200, { ok: true, task: toRecord(g.dateKey, node, { file: path }) });
 }

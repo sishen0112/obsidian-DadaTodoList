@@ -60,19 +60,30 @@ export function msToTime(ms) {
   return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
 }
 
-// 记录唯一标识：`日期#行号`（日期为 YYYY-MM-DD 或 'inbox'），仅模块内部使用
-function makeGuid(dateKey, lineNo) {
-  return dateKey + '#' + lineNo;
+// 记录唯一标识：`日期#行号#文件相对路径`（日期为 YYYY-MM-DD 或 'inbox' 等）。
+// 同一日期可能存在多个日记文件，行号在不同文件内会重复，故把所属文件编入 guid 以唯一标识。
+// Obsidian 笔记名不允许含 '#'，故以 '#' 作为分隔安全无歧义。仍兼容旧格式 `日期#行号`（无文件段）。
+function makeGuid(dateKey, lineNo, file) {
+  const f = file || '';
+  return f ? `${dateKey}#${lineNo}#${f}` : `${dateKey}#${lineNo}`;
 }
 
 export function parseGuid(guid) {
   const s = String(guid == null ? '' : guid);
-  const i = s.lastIndexOf('#');
+  const i = s.indexOf('#'); // 第一个 '#' 分隔 dateKey 与余下部分
   if (i <= 0) return null;
   const dateKey = s.slice(0, i);
-  const lineNo = Number(s.slice(i + 1));
+  const rest = s.slice(i + 1);
+  const j = rest.indexOf('#'); // 第二个 '#' 分隔 lineNo 与文件（文件不含 '#'）
+  if (j < 0) {
+    const lineNo = Number(rest);
+    if (!dateKey || !Number.isFinite(lineNo) || lineNo < 0) return null;
+    return { dateKey, lineNo, file: '' };
+  }
+  const lineNo = Number(rest.slice(0, j));
+  const file = rest.slice(j + 1);
   if (!dateKey || !Number.isFinite(lineNo) || lineNo < 0) return null;
-  return { dateKey, lineNo };
+  return { dateKey, lineNo, file };
 }
 
 // 任务行正文（去掉 "- [ ] " 之后的部分）→ 结构化字段，仅模块内部使用
@@ -306,8 +317,11 @@ export function toRecord(dateKey, node, opts = {}) {
   const baseDate = node.due || (dateKey === INBOX_KEY || String(dateKey || '').indexOf('cl:') === 0 ? null : dateKey);
   const dueAt = baseDate ? dateToMs(baseDate, node.time) : null;
   const inline = parseInline(node.summary);
+  // 所属文件（相对库根路径）：用于唯一标识同一日期下多个日记文件中的任务；
+  // 空串表示单一文件键（收件箱 / 清单），后续操作回落到 taskFilePath 定位
+  const file = opts.file || '';
   return {
-    guid: makeGuid(dateKey, node.lineNo),
+    guid: makeGuid(dateKey, node.lineNo, file),
     summary: node.summary,
     remind: node.summary.indexOf(MUTE_MARK) < 0, // 🔕 标记 = 到点提醒关闭，默认提醒
     tags: inline.tags,
@@ -326,6 +340,7 @@ export function toRecord(dateKey, node, opts = {}) {
     // 内部字段（前端可透传回服务端用于定位）
     date: dateKey,
     lineNo: node.lineNo,
+    file,
     time: node.time,
     timeEnd: node.timeEnd || '',
     parentGuid: opts.parentGuid || ''
@@ -560,6 +575,17 @@ export const COLOR_SCHEMES = {
 let activeColorScheme = 'default';
 export function setColorScheme(name) {
   activeColorScheme = COLOR_SCHEMES[name] ? name : 'default';
+}
+
+// 每周起始日：0 = 周日 … 6 = 周六。由 main.js 在加载设置、以及设置变更时调用 setWeekStart 更新。
+// 周视图 / 月视图 / 日历格据此重排首列与周范围；视图在设置变更后通过 reloadOpenViews() 重载。
+let weekStartDay = 0;
+export function setWeekStart(n) {
+  const v = Number(n);
+  weekStartDay = Number.isFinite(v) && v >= 0 && v <= 6 ? v : 0;
+}
+export function getWeekStart() {
+  return weekStartDay;
 }
 
 // 时间轴任务块配色：按标题哈希取色（浅底深字）

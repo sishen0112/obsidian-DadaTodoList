@@ -1,7 +1,7 @@
-import { PluginSettingTab, Notice, Setting, AbstractInputSuggest } from 'obsidian';
+import { PluginSettingTab, Notice, Setting, AbstractInputSuggest, TFolder } from 'obsidian';
 import { t } from '../i18n/index.js';
 import { countInboxTasks, migrateInboxTasks } from '../api/tasks.js';
-import { setColorScheme } from '../composables/tasks-logic.js';
+import { setColorScheme, setWeekStart } from '../composables/tasks-logic.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
 class MarkdownFileSuggest extends AbstractInputSuggest {
@@ -28,6 +28,32 @@ class MarkdownFileSuggest extends AbstractInputSuggest {
   }
 }
 
+// 日记文件夹输入补全：输入时浮层建议库内文件夹（含库根 /）
+class FolderSuggest extends AbstractInputSuggest {
+  constructor(app, inputEl, onPick) {
+    super(app, inputEl);
+    this.onPick = onPick;
+  }
+
+  getSuggestions(query) {
+    const q = String(query || '').toLowerCase().replace(/^\/+/, '');
+    return this.app.vault.getAllLoadedFiles()
+      .filter((f) => f instanceof TFolder && f.path.toLowerCase().includes(q))
+      .slice(0, 30);
+  }
+
+  renderSuggestion(folder, el) {
+    el.setText(folder.path || '/');
+  }
+
+  selectSuggestion(folder) {
+    const v = folder.path || '/';
+    this.setValue(v);
+    if (this.onPick) this.onPick(v);
+    this.close();
+  }
+}
+
 // ============================================================================
 // Dada Todo · 设置页
 // ----------------------------------------------------------------------------
@@ -47,6 +73,9 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     containerEl.empty();
     containerEl.createEl('h2', { text: t('settings.title') });
 
+    // 分组：面板与外观
+    new Setting(containerEl).setHeading().setName(t('settings.groupAppearance'));
+
     new Setting(containerEl)
       .setName(t('settings.openLocation'))
       .setDesc(t('settings.openLocationDesc'))
@@ -62,6 +91,94 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           await this.plugin.applyOpenLocation();
         });
       });
+
+    new Setting(containerEl)
+      .setName(t('settings.colorScheme'))
+      .setDesc(t('settings.colorSchemeDesc'))
+      .addDropdown((dd) => {
+        dd.addOption('default', t('settings.schemeDefault'));
+        dd.addOption('morandi', t('settings.schemeMorandi'));
+        dd.addOption('jelly', t('settings.schemeJelly'));
+        dd.addOption('spring', t('settings.schemeSpring'));
+        dd.addOption('summer', t('settings.schemeSummer'));
+        dd.addOption('autumn', t('settings.schemeAutumn'));
+        dd.addOption('winter', t('settings.schemeWinter'));
+        dd.setValue(this.plugin.settings.colorScheme || 'default');
+        dd.onChange(async (value) => {
+          this.plugin.settings.colorScheme = value;
+          await this.plugin.saveSettings();
+          // 立即生效：切换到对应配色方案并刷新已打开的面板
+          setColorScheme(value);
+          this.plugin.reloadOpenViews();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t('settings.showLunar'))
+      .setDesc(t('settings.showLunarDesc'))
+      .addToggle((tg) => {
+        tg.setValue(this.plugin.settings.showLunar !== false);
+        tg.onChange(async (value) => {
+          this.plugin.settings.showLunar = value;
+          await this.plugin.saveSettings();
+          // 立即生效：刷新已打开的面板（农历渲染非响应式，靠重载触发重算）
+          this.plugin.reloadOpenViews();
+        });
+      });
+
+    // 分组：日记设置（日记文件夹 / 每日笔记加载范围）
+    new Setting(containerEl).setHeading().setName(t('settings.groupJournal'));
+
+    new Setting(containerEl)
+      .setName(t('settings.journalFolder'))
+      .setDesc(t('settings.journalFolderDesc'))
+      .addText((tx) => {
+        tx.setPlaceholder('/');
+        tx.setValue(this.plugin.settings.journalFolder || '/');
+        tx.onChange((value) => {
+          this.plugin.settings.journalFolder = (value || '/').trim() || '/';
+          this.plugin.saveSettings();
+        });
+        // 输入时浮层建议库内文件夹（含库根 /）
+        new FolderSuggest(this.app, tx.inputEl, (path) => {
+          this.plugin.settings.journalFolder = (path || '/').trim() || '/';
+          this.plugin.saveSettings();
+        });
+      });
+
+    // 日记文件宽松匹配：默认打开；暂不在设置页暴露开关，待用户反馈后再决定是否保留
+    // new Setting(containerEl)
+    //   .setName(t('settings.journalLooseMatch'))
+    //   .setDesc(t('settings.journalLooseMatchDesc'))
+    //   .addToggle((tg) => {
+    //     tg.setValue(this.plugin.settings.journalLooseMatch !== false); // 默认开
+    //     tg.onChange(async (value) => {
+    //       this.plugin.settings.journalLooseMatch = value;
+    //       await this.plugin.saveSettings();
+    //       this.plugin.reloadOpenViews();
+    //     });
+    //   });
+
+    new Setting(containerEl)
+      .setName(t('settings.dailyWindow'))
+      .setDesc(t('settings.dailyWindowDesc'))
+      .addDropdown((dd) => {
+        dd.addOption('30', t('settings.days30'));
+        dd.addOption('90', t('settings.days90'));
+        dd.addOption('180', t('settings.days180'));
+        dd.addOption('365', t('settings.days365'));
+        dd.addOption('all', t('settings.daysAll'));
+        dd.setValue(this.plugin.settings.dailyLoadWindow || 'all');
+        dd.onChange(async (value) => {
+          this.plugin.settings.dailyLoadWindow = value;
+          await this.plugin.saveSettings();
+          // 立即生效：加载范围影响每日笔记读取集合，刷新已打开的面板
+          this.plugin.reloadOpenViews();
+        });
+      });
+
+    // 分组：收件箱与清单（无日期任务文件 / 清单识别标记）
+    new Setting(containerEl).setHeading().setName(t('settings.groupInbox'));
 
     new Setting(containerEl)
       .setName(t('settings.inboxFile'))
@@ -110,65 +227,27 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     });
     renderChips();
 
+    // 分组：视图与日程（周起始 / 时间轴范围）
+    new Setting(containerEl).setHeading().setName(t('settings.groupViews'));
+
     new Setting(containerEl)
-      .setName(t('settings.dailyWindow'))
-      .setDesc(t('settings.dailyWindowDesc'))
+      .setName(t('settings.weekStart'))
+      .setDesc(t('settings.weekStartDesc'))
       .addDropdown((dd) => {
-        dd.addOption('30', t('settings.days30'));
-        dd.addOption('90', t('settings.days90'));
-        dd.addOption('180', t('settings.days180'));
-        dd.addOption('365', t('settings.days365'));
-        dd.addOption('all', t('settings.daysAll'));
-        dd.setValue(this.plugin.settings.dailyLoadWindow || 'all');
+        dd.addOption('0', t('settings.weekSun'));
+        dd.addOption('1', t('settings.weekMon'));
+        dd.addOption('2', t('settings.weekTue'));
+        dd.addOption('3', t('settings.weekWed'));
+        dd.addOption('4', t('settings.weekThu'));
+        dd.addOption('5', t('settings.weekFri'));
+        dd.addOption('6', t('settings.weekSat'));
+        dd.setValue(String(this.plugin.settings.weekStart ?? 1)); // 默认周一
         dd.onChange(async (value) => {
-          this.plugin.settings.dailyLoadWindow = value;
+          const n = parseInt(value, 10) || 0;
+          this.plugin.settings.weekStart = n;
           await this.plugin.saveSettings();
-          // 立即生效：加载范围影响每日笔记读取集合，刷新已打开的面板
-          this.plugin.reloadOpenViews();
-        });
-      });
-
-    new Setting(containerEl)
-      .setName(t('settings.autoOpen'))
-      .setDesc(t('settings.autoOpenDesc'))
-      .addToggle((tg) => {
-        tg.setValue(this.plugin.settings.autoOpen);
-        tg.onChange(async (value) => {
-          this.plugin.settings.autoOpen = value;
-          await this.plugin.saveSettings();
-        });
-      });
-
-    new Setting(containerEl)
-      .setName(t('settings.showLunar'))
-      .setDesc(t('settings.showLunarDesc'))
-      .addToggle((tg) => {
-        tg.setValue(this.plugin.settings.showLunar !== false);
-        tg.onChange(async (value) => {
-          this.plugin.settings.showLunar = value;
-          await this.plugin.saveSettings();
-          // 立即生效：刷新已打开的面板（农历渲染非响应式，靠重载触发重算）
-          this.plugin.reloadOpenViews();
-        });
-      });
-
-    new Setting(containerEl)
-      .setName(t('settings.colorScheme'))
-      .setDesc(t('settings.colorSchemeDesc'))
-      .addDropdown((dd) => {
-        dd.addOption('default', t('settings.schemeDefault'));
-        dd.addOption('morandi', t('settings.schemeMorandi'));
-        dd.addOption('jelly', t('settings.schemeJelly'));
-        dd.addOption('spring', t('settings.schemeSpring'));
-        dd.addOption('summer', t('settings.schemeSummer'));
-        dd.addOption('autumn', t('settings.schemeAutumn'));
-        dd.addOption('winter', t('settings.schemeWinter'));
-        dd.setValue(this.plugin.settings.colorScheme || 'default');
-        dd.onChange(async (value) => {
-          this.plugin.settings.colorScheme = value;
-          await this.plugin.saveSettings();
-          // 立即生效：切换到对应配色方案并刷新已打开的面板
-          setColorScheme(value);
+          // 立即生效：更新全局周起始并刷新已打开的面板（周 / 月视图与日历格首列重排）
+          setWeekStart(n);
           this.plugin.reloadOpenViews();
         });
       });
