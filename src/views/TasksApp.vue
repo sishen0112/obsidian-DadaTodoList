@@ -340,10 +340,20 @@ export default {
     window.addEventListener('click', this._ctxDocClick, true);
     window.addEventListener('contextmenu', this._ctxDocCtx, true);
     window.addEventListener('keydown', this._ctxKey);
-    // 窄面板（手机端）监听：待办池打开时面板一旦变窄，直接隐藏避免遮挡视图
+    // 窄面板（手机端）：待办池打开时面板一旦变窄到 ≤480px 直接隐藏，避免遮挡视图主体。
+    // 与顶栏「展开待办」按钮的隐藏规则（@media / @container max-width:480px）保持同一宽度，
+    // 故同时用窗口级 matchMedia 与面板级 ResizeObserver 两套检测：
+    //   - 窗口 ≤480（@media）：Obsidian 主窗口很窄时收起；
+    //   - 面板 ≤480（@container）：Obsidian 侧栏比主窗口窄时，窗口级不触发，故直接监听顶栏（=面板宽度）。
     this._narrowMQ = window.matchMedia('(max-width: 480px)');
     this._narrowMQHandler = () => { if (this._narrowMQ.matches) this.todoPanelOpen = false; };
     this._narrowMQ.addEventListener('change', this._narrowMQHandler);
+    this._narrowRO = new ResizeObserver((entries) => {
+      const w = entries[0] && entries[0].contentRect && entries[0].contentRect.width;
+      if (w && w <= 480) this.todoPanelOpen = false;
+    });
+    const tb = this.$el && this.$el.querySelector && this.$el.querySelector('.tk-topbar');
+    if (tb) this._narrowRO.observe(tb);
   },
   beforeUnmount() {
     for (const [emitter, evt, fn] of this._extHandlers || []) emitter.off(evt, fn);
@@ -355,6 +365,7 @@ export default {
     window.removeEventListener('contextmenu', this._ctxDocCtx, true);
     window.removeEventListener('keydown', this._ctxKey);
     if (this._narrowMQ) this._narrowMQ.removeEventListener('change', this._narrowMQHandler);
+    if (this._narrowRO) this._narrowRO.disconnect();
   },
   methods: {
     // ---------- 弹窗（Obsidian 原生 Modal 外壳 + Vue 组件内容） ----------
