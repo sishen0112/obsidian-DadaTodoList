@@ -33,7 +33,6 @@ export function getTaskViewPref() {
   const s = readAll();
   return {
     view: s.view || 'day',
-    listView: s.listView || 'list',
     hideDone: typeof s.hideDone === 'boolean' ? s.hideDone : true
   };
 }

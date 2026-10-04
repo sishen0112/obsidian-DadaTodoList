@@ -1,6 +1,6 @@
 {
   "name": "obsidian-dada-todo-list",
-  "version": "0.3.8",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "scripts": {

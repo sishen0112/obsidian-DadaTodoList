@@ -1,7 +1,7 @@
 // 列表视图状态域（自 TasksApp.vue 抽离）：
 //   - 左侧筛选状态（日期 / 标签 / 清单 / 状态视图）与互斥清空逻辑
-//   - 选中清单的任务加载、列表/卡片视图数据源与分组 computed
-//   - 待办分桶、过期顺延（ConfirmModal）、完成日历入口
+//   - 选中清单的任务加载、列表数据源与分组 computed
+//   - 待办分桶、过期顺延（ConfirmModal）
 // 依赖经 hooks 注入（tasks / view / plugin 取自宿主实例，错误与偏好持久化回调宿主），
 // 返回 ref / computed / methods 的平铺对象，供 Options API 组件在 setup() 中展开绑定。
 import { computed, ref } from 'vue';
@@ -11,8 +11,6 @@ import { weekdayLong, weekdayShort } from './tasks-logic.js';
 import { t } from '../i18n/index.js';
 import { taskFilePath } from '../api/tasks.js';
 import { ConfirmModal } from '../ui/modals.js';
-import { VueModal } from '../ui/VueModal.js';
-import ChecklistDoneCalendar from '../components/tasks/ChecklistDoneCalendar.vue';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -31,10 +29,8 @@ function today0() {
  * @param {() => object} hooks.plugin 插件实例（打开 vault 文件 / Obsidian Modal）
  * @param {(msg: string) => void} hooks.setError 错误写回宿主
  * @param {() => Promise<void>} hooks.reloadTasks 静默重载任务池（顺延落盘后由宿主执行）
- * @param {() => void} hooks.persistTaskView 任务视图偏好持久化（宿主）
- * @param {string} [hooks.listViewInit] 列表/卡片模式初始值（localStorage 记忆）
  */
-export function useListState({ tasks, checklists, view, plugin, setError, reloadTasks, persistTaskView, listViewInit = 'list' }) {
+export function useListState({ tasks, checklists, view, plugin, setError, reloadTasks }) {
   // ---------- 状态 ----------
   const dateFilter = ref('');
   const tagFilter = ref('');
@@ -53,9 +49,6 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
   const selectedGuid = ref('');
   const quick = ref('');
   const adding = ref(false);
-  // 清单视图模式：列表 / 卡片（界面记忆，存 localStorage）
-  const listView = ref(listViewInit);
-  const cardShowDone = ref(false);
   // 顺延（原生 ConfirmModal 防重入）
   const postponing = ref(false);
   // 日期筛选入口（今天 / 明天 / 最近 7 天）；labelKey 由渲染方经 $t 翻译
@@ -151,15 +144,6 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
     if (statusView.value === 'done') return t('app.listDone');
     if (statusView.value === 'cancelled') return t('app.listCancelled');
     return t('app.listTasks');
-  });
-  // 卡片视图数据：保持文件中的章节顺序，「显示已完成」关闭时滤掉已完成
-  const cardTasks = computed(() => {
-    const list = activeList.value ? checklistTasks.value : [];
-    return cardShowDone.value ? list : list.filter((t) => !t.completed);
-  });
-  // 当前清单是否存在已完成项（控制「完成日历」入口显隐）
-  const clHasDone = computed(() => {
-    return (activeList.value ? checklistTasks.value : []).some((t) => t.completed && t.completedAt);
   });
   // 日期筛选（今天 / 明天 / 最近 7 天，均按本地零点计算）；选中清单时以清单任务为基础
   const filteredTasks = computed(() => {
@@ -292,17 +276,6 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
     if (!path) { new Notice(t('app.checklistFileMissing')); return; }
     plugin().app.workspace.openLinkText(path, '', false);
   }
-  // 完成日历弹窗（Obsidian 原生 Modal 外壳）
-  function openClCal(t) {
-    new VueModal(plugin().app, ChecklistDoneCalendar, {
-      visible: true,
-      listName: activeListName.value,
-      tasks: activeList.value ? checklistTasks.value : [],
-      focus: (t && t.completedAt)
-        ? { guid: t.guid, day: ymd(new Date(Number(t.completedAt))) }
-        : null
-    }, { modalClass: 'cl-cal-modal' }).open();
-  }
   // 顺延确认（Obsidian 原生 Modal）
   function openPostpone() {
     if (postponing.value || !overdueTasks.value.length) return;
@@ -346,8 +319,6 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
   // 列表视图写回：子组件通过 ctx 调用（prop 只读，不可直接赋值）
   function setQuick(v) { quick.value = v; }
   function setAdding(v) { adding.value = v; }
-  function setListView(v) { listView.value = v; persistTaskView(); }
-  function toggleCardShowDone() { cardShowDone.value = !cardShowDone.value; }
   function toggleShowCompleted() { showCompleted.value = !showCompleted.value; }
   function toggleShowCancelled() { showCancelled.value = !showCancelled.value; }
 
@@ -355,15 +326,15 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
     // 状态
     dateFilter, tagFilter, statusView, dayCollapsed, todoCollapsed,
     showCompleted, showCancelled, activeList, checklistTasks,
-    selectedGuid, quick, adding, listView, cardShowDone, postponing, dateFilters,
+    selectedGuid, quick, adding, postponing, dateFilters,
     // computed
     tagTree, activeListName, statusList, statusGroups, statusCounts,
-    listTitle, cardTasks, clHasDone, filteredTasks, listSource,
+    listTitle, filteredTasks, listSource,
     listIncomplete, listCompleted, listCancelled, todoBuckets, overdueTasks,
     // 方法
     loadChecklistTasks, clearFiltersExcept, selectDate, selectStatus,
     toggleDay, toggleBucket, matchTag, toggleTagFilter, selectList,
-    openListFile, openClCal, openPostpone, doPostpone,
-    setQuick, setAdding, setListView, toggleCardShowDone, toggleShowCompleted, toggleShowCancelled
+    openListFile, openPostpone, doPostpone,
+    setQuick, setAdding, toggleShowCompleted, toggleShowCancelled
   };
 }

@@ -6,6 +6,7 @@
         <i class="la la-inbox tk-pool-ic"></i>
         <span>{{ $t('app.todoPool') }}</span>
         <span class="cnt">{{ totalCount }}</span>
+        <button class="tk-side-close" type="button" :title="$t('app.collapseTodo')" @click="$emit('toggle-panel')"><i class="la la-times"></i></button>
       </div>
       <div class="tk-side-sub">{{ $t('app.todoPoolSource') }}</div>
 
@@ -91,7 +92,7 @@ export default {
     // 正在拖拽的任务对象（落点清日期用）
     dragTask: { type: Object, default: null }
   },
-  emits: ['toggle', 'open-task', 'drag-start', 'drag-end', 'rich-click', 'saved', 'error'],
+  emits: ['toggle-panel', 'open-task', 'drag-start', 'drag-end', 'rich-click', 'saved', 'error'],
   // 注册进宿主的侧栏注册表：任务落盘后宿主经 refreshIfVisible 广播刷新缓存。
   // 本组件实例分布在 WeekDayView / TaskMonthView 内，父级 $refs 直达不可靠，故走 provide/inject。
   // plugin 由根 vueApp provide，用于读取收件箱文件路径（独立事项来源说明）。

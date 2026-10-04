@@ -33,7 +33,7 @@
                      :tasks="tasks" :tasks-by-day="tasksByDay" :today-key="todayKey" :hide-done="hideDone"
                      :drag-guid="dragGuid" :drag-over-key="dragOverKey" :drag-task="dragTask"
                      :checklists="checklists" :todo-panel-open="todoPanelOpen"
-                     @toggle="toggle" @open-task="onTaskClick" @open-new="openNew" @open-new-at="openNewAt"
+                     @toggle="toggle" @toggle-panel="todoPanelOpen = false" @open-task="onTaskClick" @open-new="openNew" @open-new-at="openNewAt"
                      @drag-start="onDragStart" @drag-end="onDragEnd" @drag-over="onDragOver"
                      @saved="onSaved" @error="setError" />
 
@@ -97,7 +97,7 @@ import TaskTopBar from '../components/TaskTopBar.vue';
 import WeekDayView from '../components/WeekDayView.vue';
 import TaskRow from '../components/tasks/TaskRow.vue';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
-import ChecklistCardGrid from '../components/tasks/ChecklistCardGrid.vue';
+
 import ChecklistView from '../components/tasks/ChecklistView.vue';
 import TaskMonthView from '../components/tasks/TaskMonthView.vue';
 import TaskAgendaView from '../components/tasks/TaskAgendaView.vue';
@@ -115,7 +115,7 @@ function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + p
 export default {
   name: 'TasksApp',
   components: {
-    TaskRow, ChecklistCardGrid, ChecklistView,
+    TaskRow, ChecklistView,
     TaskMonthView, TaskAgendaView, TaskListView, TaskTopBar, WeekDayView, TaskContextMenu, ViewPill
   },
   setup() {
@@ -128,9 +128,7 @@ export default {
       view: () => self.view,
       plugin: () => self.plugin,
       setError: (v) => { self.error = v; },
-      reloadTasks: () => self.load(true),
-      persistTaskView: () => self.persistTaskView(),
-      listViewInit: getTaskViewPref().listView
+      reloadTasks: () => self.load(true)
     });
   },
   data() {
@@ -149,8 +147,16 @@ export default {
       dragGuid: '',
       dragOverKey: '',
       dragTask: null,
-      // 待办侧栏（周/日/月视图共用）：默认展开，localStorage 记忆用户选择（缺省展开）
-      todoPanelOpen: (() => { try { const v = localStorage.getItem('dada:todoPanelOpen'); return v === null ? true : v === '1'; } catch (e) { return true; } })(),
+      // 待办侧栏（周/日/月视图共用）：localStorage 记忆用户选择（缺省展开）；
+      // 窄面板（手机端）默认收起，避免遮挡视图主体——顶栏的「展开待办」按钮在窄屏被隐藏，故窄屏不应默认展开
+      todoPanelOpen: (() => {
+        try {
+          const narrow = typeof window !== 'undefined' && window.matchMedia('(max-width: 480px)').matches;
+          if (narrow) return false;
+          const v = localStorage.getItem('dada:todoPanelOpen');
+          return v === null ? true : v === '1';
+        } catch (e) { return true; }
+      })(),
       // 首次使用引导（用户点「知道了」后不再显示，localStorage 记忆）
       onboardDismissed: false,
       // 日记任务不再依赖日记插件（按设置的日记文件夹扫描），故恒可用
@@ -334,6 +340,10 @@ export default {
     window.addEventListener('click', this._ctxDocClick, true);
     window.addEventListener('contextmenu', this._ctxDocCtx, true);
     window.addEventListener('keydown', this._ctxKey);
+    // 窄面板（手机端）监听：待办池打开时面板一旦变窄，直接隐藏避免遮挡视图
+    this._narrowMQ = window.matchMedia('(max-width: 480px)');
+    this._narrowMQHandler = () => { if (this._narrowMQ.matches) this.todoPanelOpen = false; };
+    this._narrowMQ.addEventListener('change', this._narrowMQHandler);
   },
   beforeUnmount() {
     for (const [emitter, evt, fn] of this._extHandlers || []) emitter.off(evt, fn);
@@ -344,6 +354,7 @@ export default {
     window.removeEventListener('click', this._ctxDocClick, true);
     window.removeEventListener('contextmenu', this._ctxDocCtx, true);
     window.removeEventListener('keydown', this._ctxKey);
+    if (this._narrowMQ) this._narrowMQ.removeEventListener('change', this._narrowMQHandler);
   },
   methods: {
     // ---------- 弹窗（Obsidian 原生 Modal 外壳 + Vue 组件内容） ----------
@@ -501,8 +512,10 @@ export default {
     setError(v) { this.error = v; },
     // 把当前任务视图偏好写到本机 localStorage（不再写 data.json，避免反复触发云盘同步）
     persistTaskView() {
-      setTaskViewPref({ view: this.view, listView: this.listView, hideDone: this.hideDone });
+      setTaskViewPref({ view: this.view, hideDone: this.hideDone });
     },
+    // 任务池（待办侧栏）关闭：供日/周/月视图内嵌的待办池关闭按钮调用
+    closeTodoPanel() { this.todoPanelOpen = false; },
     toggleHideDone() { this.hideDone = !this.hideDone; this.persistTaskView(); },
     // 清单主区视图切换（列表 / 分栏）；状态提升到父组件，持久化在父组件
     setClMainView(v) { this.clMainView = v; setClMainViewPref(v); },
@@ -764,30 +777,7 @@ export default {
    确保水平溢出只在内部 .tk-cl-cols 滚动，不会把整个页面（含左栏）带出去 */
 .tk-clview-wrap { flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; overflow: hidden; }
 
-/* ===== 清单视图切换 + 卡片视图（样式参考学习模块章节卡片） ===== */
-.tk-title-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
-.tk-mode-seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; }
-.tk-mode-seg button {
-  display: inline-flex; align-items: center; gap: 5px;
-  border: none; background: transparent; color: var(--ink-soft);
-  font-family: inherit; font-size: 12px; font-weight: 600;
-  padding: 4px 10px; border-radius: 7px; cursor: pointer;
-  box-shadow: none;
-  transition: background .15s ease, color .15s ease;
-}
-.tk-mode-seg button:hover { color: var(--ink); }
-.tk-mode-seg button.on { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
-.tk-mode-seg button i { font-size: 11px; }
-.tk-done-chip {
-  width: 30px; height: 30px; flex: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft);
-  font-size: 15px; border-radius: 9px; cursor: pointer;
-  box-shadow: none;
-  transition: background .18s ease, color .18s ease, border-color .18s ease;
-}
-.tk-done-chip:hover { background: var(--gold-bg); color: var(--ink); }
-.tk-done-chip.on { background: var(--gold); color: var(--text-on-accent); border-color: transparent; box-shadow: var(--shadow-s); }
+
 
 
 .tk-card {

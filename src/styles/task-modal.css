@@ -205,8 +205,6 @@
 }
 /* 组件自带的 × 关闭钮与原生 Modal 的重复，隐藏 */
 .mylife-vue-modal .mylife-vue-host .tk-close { display: none; }
-/* 完成日历弹窗需要更宽 */
-.mylife-vue-modal.cl-cal-modal { width: min(920px, 92vw); }
 
 /* ============================================================
    Element Plus 日期 / 时间选择器：贴合 Obsidian 主题变量

@@ -17,7 +17,7 @@
       <!-- 右侧待办池：默认展开，可拖到日历改期，也可把日历任务拖回（清除日期） -->
       <todo-side-panel :open="todoPanelOpen" :tasks="tasks" :checklists="checklists"
                        :drag-guid="dragGuid" :drag-task="dragTask"
-                       @toggle="(t) => $emit('toggle', t)"
+                       @toggle-panel="$emit('toggle-panel')"
                        @open-task="(t, e) => $emit('open-task', t, e)"
                        @drag-start="(t, e) => $emit('drag-start', t, e)"
                        @drag-end="$emit('drag-end')"
@@ -69,7 +69,7 @@ export default {
     checklists: { type: Array, default: () => [] },
     todoPanelOpen: { type: Boolean, default: false }
   },
-  emits: ['toggle', 'open-task', 'open-new', 'open-new-at', 'drag-start', 'drag-end', 'drag-over', 'saved', 'error'],
+  emits: ['toggle', 'toggle-panel', 'open-task', 'open-new', 'open-new-at', 'drag-start', 'drag-end', 'drag-over', 'saved', 'error'],
   data() {
     return {
       // 窗口宽度（响应式：决定时间轴每小时像素高 hourH）

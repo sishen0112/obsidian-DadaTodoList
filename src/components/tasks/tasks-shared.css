@@ -1,8 +1,7 @@
 /* 任务模块跨组件共享样式原语。
    由 TasksApp.vue 以「非 scoped」方式引入一次。
    原因：scoped 样式无法作用于子组件内部元素与 v-html 注入内容，
-   因此 TaskRow / ChecklistCardGrid / ChecklistDoneCalendar
-   等子组件与父容器共用的原语类必须全局可用。
+   因此 TaskRow / TodoSidePanel 等子组件与父容器共用的原语类必须全局可用。
    所有类名均以 tk- 前缀限定，并挂在 .task-app 容器下，避免全局污染。
    设计令牌（--gold 等）定义在 .task-app 上，经 CSS 变量继承到子组件。 */
 
@@ -158,6 +157,15 @@
   flex: none; display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
   font-size: 15px; font-weight: 700; color: var(--ink);
 }
+/* 任务池右上角关闭按钮：推到标题最右，点击收起待办池 */
+.task-app .tk-side-close {
+  margin-left: auto; flex: none;
+  width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft);
+  font-size: 14px; border-radius: 8px; cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.task-app .tk-side-close:hover { background: var(--gold-bg); color: var(--ink); border-color: var(--gold-soft); }
 /* 待办池标题前的图标 */
 .task-app .tk-side-h .tk-pool-ic { color: var(--gold); font-size: 16px; flex: none; }
 /* 待办池标题下的数据来源小字说明 */

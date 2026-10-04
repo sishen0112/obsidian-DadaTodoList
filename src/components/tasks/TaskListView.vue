@@ -13,25 +13,6 @@
       <section class="tk-card tk-list">
         <div class="tk-card-title">
           {{ ctx.listTitle }}<span class="cnt">{{ ctx.listSource.length }}</span>
-          <span v-if="ctx.activeList" class="tk-title-actions">
-            <!-- 清单完成日历 -->
-            <el-tooltip v-if="ctx.clHasDone" :content="$t('app.clCal')" placement="top">
-              <button class="tk-done-chip" type="button" @click="ctx.openClCal()">
-                <i class="la la-calendar"></i>
-              </button>
-            </el-tooltip>
-            <!-- 卡片视图：显示 / 隐藏已完成（仅图标 + tooltip） -->
-            <el-tooltip v-if="ctx.listView === 'card'" :content="ctx.cardShowDone ? $t('app.hideCompleted') : $t('app.showCompletedTip')" placement="top">
-              <button class="tk-done-chip" type="button" :class="{ on: ctx.cardShowDone }" @click="ctx.toggleCardShowDone()">
-                <i class="la" :class="ctx.cardShowDone ? 'la-eye' : 'la-eye-slash'"></i>
-              </button>
-            </el-tooltip>
-            <!-- 卡片 / 列表切换 -->
-            <span class="tk-mode-seg">
-              <button type="button" :class="{ on: ctx.listView === 'list' }" @click="ctx.setListView('list')"><i class="la la-list"></i>{{ $t('app.list') }}</button>
-              <button type="button" :class="{ on: ctx.listView === 'card' }" @click="ctx.setListView('card')"><i class="la la-th-large"></i>{{ $t('app.card') }}</button>
-            </span>
-          </span>
         </div>
         <div class="tk-quick">
           <input ref="quickInput" :value="ctx.quick" class="tk-quick-input" type="text"
@@ -39,12 +20,6 @@
                  :disabled="ctx.adding" @keyup.enter="quickAdd" @input="ctx.setQuick($event.target.value)" />
           <button class="tk-quick-btn" type="button" :disabled="ctx.adding || !ctx.quick.trim()" @click="quickAdd" :title="$t('common.save')"><i class="la la-save"></i></button>
         </div>
-
-        <!-- 卡片视图（仅清单）：样式参考学习模块的章节卡片 -->
-        <checklist-card-grid v-if="ctx.activeList && ctx.listView === 'card'"
-                             :tasks="ctx.cardTasks" :selected-guid="ctx.selectedGuid"
-                             :empty-text="ctx.cardShowDone ? $t('app.clEmpty') : $t('app.clAllDone')"
-                             @select="ctx.openEdit" @toggle="ctx.toggle" @open-cal="ctx.openClCal" />
 
         <!-- 状态视图（已完成 / 已取消）：按日期分组倒序，日期头可折叠 -->
         <div v-if="ctx.statusView" class="tk-groups">
@@ -134,11 +109,10 @@
 import { Tasks } from '../../composables/useTasks.js';
 import TaskFilters from './TaskFilters.vue';
 import TaskRow from './TaskRow.vue';
-import ChecklistCardGrid from './ChecklistCardGrid.vue';
 
 export default {
   name: 'TaskListView',
-  components: { TaskFilters, TaskRow, ChecklistCardGrid },
+  components: { TaskFilters, TaskRow },
   props: {
     ctx: { type: Object, required: true },
     plugin: { type: Object, default: null }
@@ -170,30 +144,6 @@ export default {
 .tk-listview { flex: 1 1 auto; min-height: 0; display: flex; }
 .tk-split { display: flex; gap: 0; align-items: stretch; flex: 1 1 auto; min-height: 0; }
 
-/* ===== 清单视图切换 + 卡片视图（样式参考学习模块章节卡片） ===== */
-.tk-title-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
-.tk-mode-seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--panel-2); border-radius: 9px; }
-.tk-mode-seg button {
-  display: inline-flex; align-items: center; gap: 5px;
-  border: none; background: transparent; color: var(--ink-soft);
-  font-family: inherit; font-size: 12px; font-weight: 600;
-  padding: 4px 10px; border-radius: 7px; cursor: pointer;
-  box-shadow: none;
-  transition: background .15s ease, color .15s ease;
-}
-.tk-mode-seg button:hover { color: var(--ink); }
-.tk-mode-seg button.on { background: var(--panel); color: var(--ink); box-shadow: none; }
-.tk-mode-seg button i { font-size: 11px; }
-.tk-done-chip {
-  width: 30px; height: 30px; flex: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--panel); color: var(--ink-soft);
-  font-size: 15px; border-radius: 9px; cursor: pointer;
-  box-shadow: none;
-  transition: background .18s ease, color .18s ease;
-}
-.tk-done-chip:hover { background: var(--gold-bg); color: var(--ink); }
-.tk-done-chip.on { background: var(--gold); color: var(--text-on-accent); box-shadow: none; }
 
 /* 右侧主区：与清单视图 .tk-cl-main 一致——无卡片边框，靠标题底部分隔线区隔 */
 .tk-card {

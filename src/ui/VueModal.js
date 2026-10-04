@@ -34,7 +34,7 @@ export class VueModal extends Modal {
     if (this.opts.width) this.modalEl.style.width = this.opts.width;
     const host = this.contentEl.createDiv('mylife-vue-host');
     this.vueApp = createApp(this.component, this.props);
-    // i18n：VueModal 是独立于主视图的 Vue 应用（TaskEditorModal / ChecklistDoneCalendar），
+    // i18n：VueModal 是独立于主视图的 Vue 应用（TaskEditorModal 等），
     // $t / provide('t') 必须在此单独注入，否则弹窗内 $t 不存在
     this.vueApp.config.globalProperties.$t = t;
     this.vueApp.provide('t', t);
