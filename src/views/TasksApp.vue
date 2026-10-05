@@ -83,14 +83,14 @@
 import { getCurrentInstance } from 'vue';
 import { Tasks } from '../composables/useTasks.js';
 import {
-  setCtxI18n, setCtxOpenTask, setCtxError, setCtxDelete, openCtxMenu, closeCtxMenu, ctxMenuContains
+  setCtxI18n, setCtxOpenTask, setCtxEdit, setCtxError, setCtxDelete, openCtxMenu, closeCtxMenu, ctxMenuContains
 } from '../composables/useTaskCtxMenu.js';
 import { isExternalChange } from '../api/tasks.js';
 import {
   renderInlineHtml, plainInline,
-  dateText, timeText, statusIcon, plainTitle, richSummaryNoTags, doneDay,
+  dateText, timeText, statusIcon, plainTitle, richSummaryNoTags, doneDay, spanDateText,
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf, weekdayLong,
-  getWeekStart
+  getWeekStart, spansDays
 } from '../composables/tasks-logic.js';
 import TaskEditorModal from '../components/TaskEditorModal.vue';
 import TaskTopBar from '../components/TaskTopBar.vue';
@@ -213,12 +213,21 @@ export default {
     // 按天预分组：避免周/月视图每次渲染都对全量任务逐格过滤（上千任务 × 42 格）
     tasksByDay() {
       const rank = (t) => (t.cancelled ? 2 : t.completed ? 1 : 0); // 未完成→已完成→已取消
+      const DAY = 86400000;
       const map = {};
       for (const t of this.tasks) {
         if (!t.dueAt) continue;
-        const k = ymd(new Date(t.dueAt));
-        if (!map[k]) map[k] = [];
-        map[k].push(t);
+        // 跨日期任务（开始日早于到期日）铺满开始日→到期日的每一天；逆序/单日只点到期日
+        const startMs = spansDays(t) ? Number(t.startAt) : Number(t.dueAt);
+        let cur = new Date(startMs);
+        let guard = 0;
+        while (guard++ < 400) {
+          const k = ymd(cur);
+          if (!map[k]) map[k] = [];
+          map[k].push(t);
+          if (cur.getTime() >= t.dueAt) break;
+          cur = new Date(cur.getTime() + DAY);
+        }
       }
       for (const k of Object.keys(map)) {
         map[k].sort((a, b) => rank(a) - rank(b) || (a.dueAt || 0) - (b.dueAt || 0));
@@ -241,11 +250,20 @@ export default {
     // 日程日期导航：按到期日统计每天任务数（受「仅显示待办」影响），供迷你日历打点
     dueCountMap() {
       const m = new Map();
+      const DAY = 86400000;
       const list = this.hideDone ? this.tasks.filter((t) => !t.completed && !t.cancelled) : this.tasks;
       for (const t of list) {
         if (!t.dueAt) continue;
-        const k = ymd(new Date(t.dueAt));
-        m.set(k, (m.get(k) || 0) + 1);
+        // 跨日期任务在跨度内每一天都计数；逆序/单日只计到期日，迷你日历才能正确打点
+        const startMs = spansDays(t) ? Number(t.startAt) : Number(t.dueAt);
+        let cur = new Date(startMs);
+        let guard = 0;
+        while (guard++ < 400) {
+          const k = ymd(cur);
+          m.set(k, (m.get(k) || 0) + 1);
+          if (cur.getTime() >= t.dueAt) break;
+          cur = new Date(cur.getTime() + DAY);
+        }
       }
       return m;
     },
@@ -312,6 +330,7 @@ export default {
     // 右键菜单单例：注入 i18n / 打开文件 / 错误上报 / 删除任务（全局只此一处设置）
     setCtxI18n(this.$t);
     setCtxOpenTask((t) => this.openTask(t));
+    setCtxEdit((t) => this.openEdit(t));
     setCtxError((m) => { this.error = m; });
     setCtxDelete((t) => this.ctxDelete(t));
     this._todoPanels = new Set();
@@ -497,7 +516,7 @@ export default {
       if (!task.dueAt) return '';
       const d = new Date(task.dueAt);
       let hm = task.dueAllDay ? '' : pad(d.getHours()) + ':' + pad(d.getMinutes());
-      if (!task.dueAllDay && task.dueEndAt) {
+      if (!task.dueAllDay && task.dueEndAt && Number(task.dueEndAt) > Number(task.dueAt)) {
         const e = new Date(task.dueEndAt);
         hm += '-' + pad(e.getHours()) + ':' + pad(e.getMinutes());
       }
@@ -507,6 +526,8 @@ export default {
     },
     // 列表中的日期：非本年时在日期前补上年份，避免跨年混淆
     dateText(t) { return dateText(t); },
+    // 跨日期任务才返回起止区间文本（如 10/2-10/7），供月/日程视图右侧小字统一调用
+    spanRange(t) { return spanDateText(t); },
     timeText(t) { return timeText(t); },
     // 卡片视图：完成日期（YYYY-MM-DD）
     doneDay(t) { return doneDay(t); },
@@ -564,6 +585,37 @@ export default {
       if (e && (e.metaKey || e.ctrlKey)) this.openTask(t);
       else this.openEdit(t);
     },
+    // 全天/跨日期条 resize：跨日期→左柄只改开始日、右柄只改结束日（另一端不动）；
+    // 单日全天→左柄延伸开始日、右柄延伸结束日
+    resizeSpan(t, which, newKey, isSpan, origDays, anchorMs) {
+      const ms = new Date(newKey + 'T00:00:00').getTime();
+      if (isSpan) {
+        // 跨日期：边缘拉伸——拖左柄改开始日（钳制不越过后端），拖右柄改结束日（钳制不越过前端）
+        if (which === 'start') {
+          t.startAt = Math.min(ms, Number(t.dueAt));
+        } else {
+          t.dueAt = Math.max(ms, Number(t.startAt));
+        }
+      } else if (which === 'start') {
+        t.startAt = ms;
+      } else {
+        // 单日全天：右柄把结束日延伸到落点（更晚），开始日锚定拖拽开始时的原单日
+        t.startAt = anchorMs;
+        t.dueAt = ms;
+      }
+    },
+    // 跨日期横跨条：把调整后的开始 / 结束日期落盘（保持全天 + 跨天开始日）
+    async resizeSpanCommit(t) {
+      try {
+        await Tasks.updateTask(t.guid, {
+          summary: t.summary, description: t.description,
+          dueAt: t.dueAt, startAt: t.startAt, dueAllDay: true
+        });
+        this.onSaved();
+      } catch (err) {
+        this.setError(this.$t('app.resizeFail') + (err && err.message || err));
+      }
+    },
     syncSubCount(t, items) {
       t.subtaskCount = items.length; // Vue3：直接赋值
       // 增删子任务会改变正文行号，静默重载以刷新其余任务的 guid
@@ -609,7 +661,10 @@ export default {
       const t = this.dragTask;
       this.onDragEnd();
       if (!t) return;
-      if (t.dueAt && ymd(new Date(t.dueAt)) === dayKey) return; // 原地放下
+      // 原地放下：落点已是任务当前日期则跳过。跨日任务以开始日（startAt）为锚点判断，
+      // 否则仅比较 dueAt（结束日）会把「拖到最后一天」误判为原地而无效果。
+      const anchorKey = spansDays(t) ? ymd(new Date(t.startAt)) : (t.dueAt ? ymd(new Date(t.dueAt)) : null);
+      if (anchorKey && anchorKey === dayKey) return;
       // 无日期任务（来自左侧待办列表）拖入某天 → 默认全天；有日期任务保留原时刻
       const allDay = t.dueAt ? !!t.dueAllDay : true;
       let dueAt;
@@ -620,6 +675,17 @@ export default {
         dueAt = new Date(dayKey + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00').getTime();
       }
       const payload = { summary: t.summary, description: t.description, dueAt, dueAllDay: allDay };
+      // 跨日期全天任务：落点作为开始日，结束日按原跨度顺延，保持原天数不变
+      if (allDay && t.startAt && t.startAt !== t.dueAt) {
+        const day = 86400000;
+        const spanDays = Math.max(0, Math.round((Number(t.dueAt) - Number(t.startAt)) / day));
+        payload.startAt = dueAt;                  // 落点 = 开始日
+        payload.dueAt = dueAt + spanDays * day;   // 结束日顺延，保持原跨度
+      } else {
+        // 普通任务（时间 / 全天）：开始日锚点必须跟着落到新的一天，否则 startAt 停在旧日、
+        // dueAt 跑到新日 → 向前拖（旧日<新日）被 spansDays 误判为跨日期；向后拖只是恰好退化单日。
+        payload.startAt = dueAt;
+      }
       // 时间段任务：保持原时长（结束随开始平移）
       if (!allDay && t.dueEndAt && !t.dueAllDay) {
         const dur = Math.max(0, Math.round((new Date(t.dueEndAt).getTime() - new Date(t.dueAt).getTime()) / 60000));
@@ -747,16 +813,6 @@ export default {
 }
 .tk-day-head .wd { font-weight: 700; font-size: 13px; color: var(--ink); }
 .tk-day-head .dt { color: var(--ink-soft); font-size: 11px; margin-left: auto; font-variant-numeric: tabular-nums; }
-.tk-add {
-  opacity: 0; flex: none; width: 20px; height: 20px; border: none; background: var(--gold); color: var(--text-on-accent);
-  border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; line-height: 1; transition: opacity .15s ease, filter .15s ease;
-  box-shadow: none;
-}
-.tk-add i { font-size: 10px; line-height: 1; }
-/* 默认隐藏，hover 当日列才显示（与月视图 .cel-add 一致） */
-.tk-day:hover .tk-add { opacity: 1; }
-.tk-add:hover { filter: brightness(1.1); }
 .tk-day-body { padding: 8px; display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; }
 .tk-empty-mini { color: var(--ink-soft); text-align: center; opacity: .45; margin-top: 20px; }
 .tk-item-wrap { border-radius: var(--radius-sm); }
@@ -897,7 +953,7 @@ export default {
 /* ===== 入场动画 / 无障碍 ===== */
 @keyframes tkRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .tk-body { animation: tkRise .45s ease .08s both; }
-.tk-add:focus-visible, .cel-add:focus-visible, .tk-quick-btn:focus-visible, .tk-edit:focus-visible {
+.tk-add:focus-visible, .tk-quick-btn:focus-visible, .tk-edit:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }

@@ -47,8 +47,8 @@
                   <span class="tk-cl-gtxt">{{ g.title }}</span><span class="tk-cl-gcnt">{{ g.tasks.length }}</span>
                 </template>
                 <span v-else class="tk-cl-gplain">{{ $t('app.ungrouped') }}</span>
-                <button class="tk-cl-gadd" type="button" :title="$t('app.addTaskToGroup')" @click="openAdd(g)">
-                  <i class="la la-plus"></i>
+                <button class="tk-add cl-gadd" type="button" :title="$t('app.addTaskToGroup')" @click="openAdd(g)">
+                  <i class="la la-plus-circle"></i>
                 </button>
               </div>
               <transition-group class="tk-cl-rows" tag="div" name="tk-clmove">
@@ -81,8 +81,8 @@
                 <span class="tk-cl-gtxt">{{ g.title }}</span><span class="tk-cl-gcnt">{{ g.tasks.length }}</span>
               </template>
               <span v-else class="tk-cl-gplain">{{ $t('app.ungrouped') }}</span>
-              <button class="tk-cl-gadd" type="button" :title="$t('app.addTaskToGroup')" @click="openAdd(g)">
-                <i class="la la-plus"></i>
+              <button class="tk-add cl-gadd" type="button" :title="$t('app.addTaskToGroup')" @click="openAdd(g)">
+                <i class="la la-plus-circle"></i>
               </button>
             </div>
             <transition-group class="tk-cl-rows" tag="div" name="tk-clmove">
@@ -364,16 +364,6 @@ export default {
 .tk-cl-head-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .tk-cl-title { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.25; word-break: break-all; }
 .tk-cl-prog { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-
-/* 分组标题右侧：添加任务到本分组（推到最右） */
-.tk-cl-gadd {
-  margin-left: auto; flex: none; width: 26px; height: 26px; padding: 0;
-  border: 1px solid var(--line); border-radius: 8px; background: transparent;
-  color: var(--ink-soft); cursor: pointer; font-size: 13px;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-}
-.tk-cl-gadd:hover { background: var(--gold-bg); color: var(--gold); border-color: var(--gold); }
 
 .tk-cl-loading, .tk-cl-none { padding: 40px; text-align: center; color: var(--ink-soft); }
 .tk-cl-body { flex: 1; overflow: auto; padding: 4px 20px 28px; }

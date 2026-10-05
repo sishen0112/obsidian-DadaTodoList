@@ -16,6 +16,7 @@ import { setColorScheme, setWeekStart } from './composables/tasks-logic.js';
 import { setupDevReload } from './dev/devReload.js';
 import { DadaTodoSettingTab } from './ui/settings.js';
 import { initI18n, t } from './i18n/index.js';
+import { tooltip } from './directives/tooltip.js';
 import 'line-awesome/dist/line-awesome/css/line-awesome.min.css';
 import './styles/tokens.css';
 import './styles/modals.css';
@@ -50,6 +51,8 @@ class DadaTodoView extends ItemView {
     root.style.height = '100%';
 
     this.vueApp = createApp(TasksApp);
+    // 自定义指令：v-tooltip 用 Obsidian 自带 setTooltip 实现悬浮提示
+    this.vueApp.directive('tooltip', tooltip);
     // 仅按需引入 Element Plus 的 Tooltip 组件（含最小样式：base 变量 + popper + tooltip）
     this.vueApp.component('ElTooltip', ElTooltip);
     // 顶栏控件：按钮 / 按钮组 / 下拉菜单（主题色由 tokens.css 的 --el-color-primary 映射为 --gold）

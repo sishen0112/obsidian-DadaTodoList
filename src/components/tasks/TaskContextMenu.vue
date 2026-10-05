@@ -3,6 +3,10 @@
   <teleport to="body">
     <transition name="tk-ctx-fade">
       <div v-if="ctxMenu.open" ref="el" class="tk-ctx" :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }" @contextmenu.stop.prevent>
+        <span class="tk-ctx-item" role="menuitem" tabindex="0" @click="openCtxEdit">
+          <i class="la la-pen"></i><span>{{ $t('app.ctxEdit') }}</span>
+        </span>
+        <div class="tk-ctx-sep"></div>
         <span v-for="opt in ctxMenuOpts" :key="opt.status" class="tk-ctx-item" role="menuitem" tabindex="0" @click="applyCtxStatus(opt)">
           <i :class="opt.icon"></i><span>{{ opt.label }}</span>
         </span>
@@ -25,8 +29,8 @@ import { useTaskCtxMenu, setCtxMenuEl } from '../../composables/useTaskCtxMenu.j
 export default {
   name: 'TaskContextMenu',
   setup() {
-    const { ctxMenu, ctxMenuOpts, applyCtxStatus, openCtxFile, deleteCtxTask } = useTaskCtxMenu();
-    return { ctxMenu, ctxMenuOpts, applyCtxStatus, openCtxFile, deleteCtxTask };
+    const { ctxMenu, ctxMenuOpts, applyCtxStatus, openCtxEdit, openCtxFile, deleteCtxTask } = useTaskCtxMenu();
+    return { ctxMenu, ctxMenuOpts, applyCtxStatus, openCtxEdit, openCtxFile, deleteCtxTask };
   },
   watch: {
     // 菜单打开后：注册 DOM（供全局「点击外部关闭」判定）并夹回视口内，避免溢出被裁切

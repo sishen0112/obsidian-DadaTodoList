@@ -4,6 +4,7 @@
 import { Modal } from 'obsidian';
 import { createApp } from 'vue';
 import { t } from '../i18n/index.js';
+import { tooltip } from '../directives/tooltip.js';
 
 export class VueModal extends Modal {
   /**
@@ -34,6 +35,8 @@ export class VueModal extends Modal {
     if (this.opts.width) this.modalEl.style.width = this.opts.width;
     const host = this.contentEl.createDiv('mylife-vue-host');
     this.vueApp = createApp(this.component, this.props);
+    // 自定义指令：v-tooltip 用 Obsidian 自带 setTooltip 实现悬浮提示
+    this.vueApp.directive('tooltip', tooltip);
     // i18n：VueModal 是独立于主视图的 Vue 应用（TaskEditorModal 等），
     // $t / provide('t') 必须在此单独注入，否则弹窗内 $t 不存在
     this.vueApp.config.globalProperties.$t = t;

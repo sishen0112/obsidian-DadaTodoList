@@ -60,6 +60,55 @@ export function msToTime(ms) {
   return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
 }
 
+// 跨日「全天」任务在给定日期列（通常为一周 7 天）上的泳道排布：
+//   - dayKeys 按顺序给出该周的日期键；list 为候选任务（调用方自行过滤，如仅全天任务）
+//   - 每个任务按自身 startAt(🛫) → dueAt(📅) 与本周边界的交集，映射到列区间 [startIdx, endIdx]
+//   - 同一泳道内列区间不重叠（贪心：起始列靠前、跨度长者优先）
+//   - contStart：本周之前已开始（左侧为「续接」，左端不收圆角）
+//   - contEnd  ：本周之后仍未结束（右侧为「续接」，右端不收圆角）
+// 返回 { bars, lanes }；bars 项含 { t, startIdx, endIdx, lane, contStart, contEnd }。
+export function layoutSpanBars(dayKeys, list) {
+  const n = dayKeys ? dayKeys.length : 0;
+  if (!n) return { bars: [], lanes: 0 };
+  const idx = new Map();
+  dayKeys.forEach((k, i) => idx.set(k, i));
+  const first = dayKeys[0];
+  const last = dayKeys[n - 1];
+  const items = [];
+  for (const t of (list || [])) {
+    if (!t || !t.dueAt) continue;
+    const startMs = (t.startAt && t.startAt !== t.dueAt) ? Number(t.startAt) : Number(t.dueAt);
+    const sKey = todayKey(startMs);
+    const eKey = todayKey(Number(t.dueAt));
+    if (eKey < first || sKey > last) continue; // 与本周无交集
+    let si = idx.has(sKey) ? idx.get(sKey) : 0;            // 早于本周 → 从第 0 列起
+    const ei = idx.has(eKey) ? idx.get(eKey) : (n - 1);    // 晚于本周 → 到最后一列止
+    if (si > ei) si = ei; // 逆序（开始日 > 结束日）：退化为结束日所在单列全天块，而非整条不显示
+    items.push({ t, startIdx: si, endIdx: ei, contStart: sKey < first, contEnd: eKey > last, len: ei - si });
+  }
+  // 贪心分泳道：放入第一条「上一条已在其左侧结束」的泳道
+  items.sort((a, b) => a.startIdx - b.startIdx || b.len - a.len);
+  const laneEnd = [];
+  for (const it of items) {
+    let li = 0;
+    while (li < laneEnd.length && laneEnd[li] >= it.startIdx) li++;
+    if (li === laneEnd.length) laneEnd.push(-1);
+    laneEnd[li] = it.endIdx;
+    it.lane = li;
+  }
+  return { bars: items, lanes: laneEnd.length };
+}
+
+// 是否跨天（按日期判定，忽略时刻）：开始日早于到期日且不在同一天。
+// 用于把「同时带时刻又跨多天」的任务归入横跨条；开始日≥结束日（相等或逆序）不算跨天。
+export function spansDays(t) {
+  if (!t || !t.dueAt) return false;
+  if (!t.startAt || t.startAt === t.dueAt) return false;
+  const sk = todayKey(Number(t.startAt));
+  const ek = todayKey(Number(t.dueAt));
+  return sk < ek; // 仅当开始日早于结束日才视为跨天（逆序退化为单日）
+}
+
 // 记录唯一标识：`日期#行号#文件相对路径`（日期为 YYYY-MM-DD 或 'inbox' 等）。
 // 同一日期可能存在多个日记文件，行号在不同文件内会重复，故把所属文件编入 guid 以唯一标识。
 // Obsidian 笔记名不允许含 '#'，故以 '#' 作为分隔安全无歧义。仍兼容旧格式 `日期#行号`（无文件段）。
@@ -312,10 +361,22 @@ export function plainInline(text) {
 // 节点 → 前端任务记录
 export function toRecord(dateKey, node, opts = {}) {
   const completed = !!node.completed;
-  // 日期优先取行内 📅 标记；清单文件（键形如 cl:xxx）没有「文件日期」，
-  // 任务日期只能来自 📅；每日笔记则回落到所在文件日期
-  const baseDate = node.due || (dateKey === INBOX_KEY || String(dateKey || '').indexOf('cl:') === 0 ? null : dateKey);
-  const dueAt = baseDate ? dateToMs(baseDate, node.time) : null;
+  // 日期约定：
+  //   - 清单 / 收件箱无「文件日期」，开始日(🛫)、结束日(📅)均来自行内标记；
+  //   - 每日笔记文件名表示「开始日」，📅 表示结束日（结束 > 开始时写入），🛫 可覆盖开始日。
+  const isDatedFile = !(dateKey === INBOX_KEY || String(dateKey || '').indexOf('cl:') === 0);
+  const fileMs = dateToMs(dateKey, node.time || '00:00');
+  let startAt = null;
+  let dueAt = null;
+  if (!isDatedFile) {
+    // 清单 / 收件箱：起止日均来自行内标记
+    startAt = node.start ? dateToMs(node.start, node.time || '00:00') : null;
+    dueAt = node.due ? dateToMs(node.due, node.time || '00:00') : (startAt != null ? startAt : null);
+  } else {
+    // 每日笔记：文件名=开始日（含时间）；📅=结束日（全天）；🛫 可覆盖开始日
+    startAt = node.start ? dateToMs(node.start, '00:00') : fileMs;
+    dueAt = node.due ? dateToMs(node.due, '00:00') : fileMs;
+  }
   const inline = parseInline(node.summary);
   // 所属文件（相对库根路径）：用于唯一标识同一日期下多个日记文件中的任务；
   // 空串表示单一文件键（收件箱 / 清单），后续操作回落到 taskFilePath 定位
@@ -332,8 +393,9 @@ export function toRecord(dateKey, node, opts = {}) {
     cancelledAt: node.cancelled ? dateToMs(node.cancelled) : null,
     completedAt: completed && node.done ? dateToMs(node.done) : null,
     dueAt,
+    startAt,
     dueAllDay: !node.time,
-    dueEndAt: (baseDate && node.timeEnd) ? dateToMs(baseDate, node.timeEnd) : null,
+    dueEndAt: (dueAt != null && node.timeEnd) ? dateToMs(todayKey(dueAt), node.timeEnd) : null,
     subtaskCount: (node.children || []).length,
     // 层级深度（0 = 顶层；每多一层缩进 +1），供清单视图按层级缩进显示
     indent: node.indentStr ? (node.indentStr.match(/\t/g) || []).length : 0,
@@ -430,17 +492,39 @@ export function locateNode(nodes, opts = {}) {
 // 列表中的日期：非本年时在日期前补上年份，避免跨年混淆
 export function dateText(t) {
   if (!t || !t.dueAt) return '—';
-  const d = new Date(t.dueAt);
-  const md = (d.getMonth() + 1) + '/' + d.getDate();
-  return d.getFullYear() === new Date().getFullYear() ? md : d.getFullYear() + '/' + md;
+  const end = new Date(t.dueAt);
+  const endMd = (end.getMonth() + 1) + '/' + end.getDate();
+  const endYear = end.getFullYear();
+  const curYear = new Date().getFullYear();
+  // 跨日期任务：显示完整区间 开始日-结束日（如 10/2-10/7），跨年补年份
+  if (t.startAt && t.startAt !== t.dueAt) {
+    const sk = todayKey(Number(t.startAt));
+    const ek = todayKey(Number(t.dueAt));
+    if (sk < ek) {
+      const s = new Date(t.startAt);
+      const startMd = (s.getMonth() + 1) + '/' + s.getDate();
+      const startYear = s.getFullYear();
+      const sStr = startYear === curYear ? startMd : startYear + '/' + startMd;
+      const eStr = endYear === curYear ? endMd : endYear + '/' + endMd;
+      return sStr + '-' + eStr;
+    }
+  }
+  return endYear === curYear ? endMd : endYear + '/' + endMd;
 }
 
-// 时间列：无日期为空；全天显示「全天」；否则 HH:MM（有时间段则 HH:MM-HH:MM）
+// 跨日期任务才返回区间文本（如 10/2-10/7），非跨日返回空串。
+// 供各视图「右侧小字显示起止区间」统一调用，避免每处重复判断 spansDays + 格式化。
+export function spanDateText(t) {
+  return spansDays(t) ? dateText(t) : '';
+}
+
+// 时间列：无日期为空；全天显示「全天」；否则 HH:MM（有合法时间段则 HH:MM-HH:MM）
 export function timeText(task) {
   if (!task || !task.dueAt) return '';
   if (task.dueAllDay) return t('app.allDay');
   const s = pad2(new Date(task.dueAt).getHours()) + ':' + pad2(new Date(task.dueAt).getMinutes());
-  if (task.dueEndAt) {
+  // 结束时间早于开始时间（含逆序时间段）→ 按普通单时间显示，不画范围
+  if (task.dueEndAt && Number(task.dueEndAt) > Number(task.dueAt)) {
     const e = new Date(task.dueEndAt);
     return s + '-' + pad2(e.getHours()) + ':' + pad2(e.getMinutes());
   }
@@ -604,12 +688,16 @@ export function itemColor(t, scheme) {
 }
 
 // 农历日文案：中文用库自带词表（初一、十五…）；
-// 库的农历日词表（LunarUtil.DAY）不随 I18n 切换，英文下自行按数字格式化
+// 库的农历日词表（LunarUtil.DAY）不随 I18n 切换，英文下自行按数字格式化。
+// 若当天为农历初一，则在日名前补出农历月名（如「九月 初一」/ 闰月「闰九月 初一」），便于辨认月份起点。
 export function lunarDayText(date) {
   if (!date) return '';
   const l = Lunar.fromDate(date);
-  if (currentLang() === 'zh-cn') return l.getDayInChinese();
-  return t('app.lunarDay', { day: l.getDay() });
+  if (currentLang().indexOf('zh') !== 0) return t('app.lunarDay', { day: l.getDay() });
+  // 初一：农历月名前置，如「九月 初一」（闰月为「闰九月 初一」）。
+  // 注意 getMonthInChinese() 仅返回数字字符（九/正/冬/腊，闰月为「闰九」），需手动补「月」。
+  if (l.getDay() === 1) return `${l.getMonthInChinese()}月 ${l.getDayInChinese()}`;
+  return l.getDayInChinese();
 }
 
 // 周几短标签（周一起始；词表来自语言资源 app.weekdaysShort）

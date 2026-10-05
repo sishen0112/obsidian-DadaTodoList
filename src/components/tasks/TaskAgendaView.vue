@@ -41,6 +41,8 @@
           </span>
           <div class="tk-ag-card" :style="ctx.agendaCard(t)">
             <span class="tk-ag-sum" :class="{ done: t.completed || t.cancelled }" v-html="ctx.richSummaryNoTags(t)" @click="ctx.onRichClick"></span>
+            <!-- 跨日期任务右侧小字：显示开始-结束日期区间（如 10/2-10/7） -->
+            <span v-if="ctx.spanRange(t)" class="tk-ag-range">{{ ctx.spanRange(t) }}</span>
           </div>
         </div>
       </div>
@@ -76,12 +78,37 @@ export default {
       for (let i = 0; i < 7; i++) dayMap.set(ymd(new Date(today0 + i * day)), []);
       for (const t of ctx.tasks) {
         if (!t.dueAt) continue;
-        const d0 = new Date(t.dueAt);
-        d0.setHours(0, 0, 0, 0);
-        const ms = d0.getTime();
-        if (ms < today0) { if (!t.completed && !t.cancelled) overdue.push(t); continue; }
-        if (ms < horizon) { dayMap.get(ymd(d0)).push(t); continue; }
-        far.push(t);
+        const sKey = (t.startAt && t.startAt !== t.dueAt) ? ymd(new Date(t.startAt)) : null;
+        const eKey = ymd(new Date(t.dueAt));
+        const isSpan = !!sKey && sKey < eKey; // 真正跨天（开始日早于结束日）
+        if (!isSpan) {
+          // 单日任务：按 anchor（跨天则起始日，否则到期日）归组
+          const anchor = (t.startAt && t.startAt !== t.dueAt) ? t.startAt : t.dueAt;
+          const d0 = new Date(anchor); d0.setHours(0, 0, 0, 0);
+          const ms = d0.getTime();
+          if (ms < today0) { if (!t.completed && !t.cancelled) overdue.push(t); continue; }
+          if (ms < horizon) { dayMap.get(ymd(d0)).push(t); continue; }
+          far.push(t);
+          continue;
+        }
+        // 跨日期任务：在 [开始日, 结束日] 的每一天都显示（窗口内逐日归组；
+        // 整段都已过去的未完成项 → 已延期；超出 7 天窗口的尾部 → 「更远」，各只计一次）
+        const sMs = new Date(t.startAt); sMs.setHours(0, 0, 0, 0);
+        const endMsT = new Date(t.dueAt); endMsT.setHours(0, 0, 0, 0);
+        const endT = endMsT.getTime();
+        if (endT < today0) {
+          if (!t.completed && !t.cancelled) overdue.push(t);
+          continue;
+        }
+        let addedFar = false;
+        for (let cur = Math.max(sMs.getTime(), today0); cur <= endT; cur += day) {
+          if (cur < horizon) {
+            dayMap.get(ymd(new Date(cur))).push(t);
+          } else if (!addedFar) {
+            far.push(t);
+            addedFar = true;
+          }
+        }
       }
       const out = [];
       if (overdue.length) out.push({ kind: 'overdue', key: 'overdue', label: this.$t('app.agendaOverdue'), tasks: overdue.sort(ctx.byDue) });
@@ -138,12 +165,8 @@ export default {
 .tk-ag-label.is-overdue { color: var(--c-cancel); }
 /* 右侧列表：紧贴日期向右铺开（不再整体居中，解决偏右问题） */
 .tk-ag-main { position: relative; flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-direction: column; }
-/* 加号按钮：每日都有，默认隐藏，悬停整段时出现 */
-.tk-ag-add { position: absolute; top: 4px; right: 0; opacity: 0; transition: opacity .15s ease;
-  width: auto; height: auto; border: none; border-radius: 0; background: transparent; color: var(--gold);
-  font-size: 16px; line-height: 1; box-shadow: none; }
-.tk-ag-add i { font-size: 16px; line-height: 1; }
-.tk-ag:hover .tk-ag-add { opacity: 1; }
+/* 加号按钮定位：每日段右上角（外观与显示逻辑统一走全局 .tk-add / .task-app .tk-ag:hover .tk-ag-add） */
+.tk-ag-add { position: absolute; top: 4px; right: 0; }
 .tk-ag-none { color: var(--ink-soft); font-size: 12px; padding: 4px 2px 2px; }
 /* 今日空状态：居中、加大留白与字号 */
 .tk-ag-none.is-today { text-align: center; font-size: 14px; color: var(--ink-soft); padding: 22px 10px; }
@@ -162,19 +185,12 @@ export default {
 .tk-ag-dot.cancel { color: var(--c-cancel); }
 .tk-ag-card { display: flex; align-items: center; gap: 8px; margin: 10px 20px; padding: 20px 10px; border-radius: 10px; border-left: 3px solid var(--ag-bar, var(--line)); min-width: 0; transition: filter .15s ease; }
 .tk-ag-card:hover { filter: brightness(.97); }
-.tk-ag-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.tk-ag-sum { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+/* 跨日期任务右侧小字：开始-结束日期区间（如 10/2-10/7），靠右、小号、低透明度 */
+.tk-ag-range { flex: none; margin-left: auto; padding-left: 8px; font-size: 9px; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tk-ag-sum.done { text-decoration: line-through; opacity: .55; }
 .tk-ag-row.done .tk-ag-time { opacity: .55; }
 .tk-ag-row.dragging { opacity: .5; }
-/* 通用加号按钮基样式（被 .cel-add 复用时的兜底，主要服务日程 .tk-ag-add） */
-.tk-add {
-  opacity: 0; flex: none; width: 20px; height: 20px; border: none; background: var(--gold); color: var(--text-on-accent);
-  border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; line-height: 1; transition: opacity .15s ease, filter .15s ease;
-  box-shadow: none;
-}
-.tk-add i { font-size: 10px; line-height: 1; }
-.tk-add:hover { filter: brightness(1.1); }
 /* 视图变窄时：日期信息移到任务列表上方，让列表占满整宽。
    改用 @container（面板宽度）而非 @media（主窗口），使其与左侧日期导航行为一致 */
 @container (max-width: 720px) {

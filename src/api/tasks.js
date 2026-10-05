@@ -131,7 +131,14 @@ export async function ensureInboxFile() {
   const v = vault();
   if (v.getAbstractFileByPath(path)) return;
   await ensureFolder(path.split('/').slice(0, -1).join('/'));
-  await v.create(path, INBOX_HEAD);
+  try {
+    await v.create(path, INBOX_HEAD);
+  } catch (e) {
+    // 启动早期文件树缓存未就绪 / 同名占用等情况下，上面「存在即返回」的检查可能漏检，
+    // 导致 create 抛 File already exists。此时视为幂等成功，避免每次启动误报。
+    if (e && /already exists/i.test(e.message || '')) return;
+    throw e;
+  }
 }
 
 // 统计收件箱文件中的任务块数（换路径时的迁移提示用）
@@ -493,7 +500,8 @@ export async function createTask(task) {
   const t = task || {};
   if (!String(t.summary || '').trim()) return res(400, { ok: false, reason: 'missing_summary' });
   const listKey = isListKey(t.list) ? String(t.list) : '';
-  const dateKey = listKey || (t.dueAt ? todayKey(Number(t.dueAt)) : INBOX_KEY);
+  // 新约定：日记文件名=开始日；有开始日用开始日，否则回落到结束日（单日），无日期=收件箱
+  const dateKey = listKey || ((t.startAt != null && t.startAt !== '') ? todayKey(Number(t.startAt)) : (t.dueAt ? todayKey(Number(t.dueAt)) : INBOX_KEY));
   // 新增任务：清单 / 收件箱走原路径；有日期则只落在核心日记插件配置的那一份（忽略用户的多个日记文件）
   const path = (dateKey === INBOX_KEY || isListKey(dateKey))
     ? taskFilePath(dateKey)
@@ -503,8 +511,15 @@ export async function createTask(task) {
   await ensureTaskFile(dateKey, path);
   const doc = await readTasks(path, dateKey);
   const node = nodeFromTask(t, dateKey);
-  // 清单文件没有「文件日期」，任务日期写进行内 📅 标记
-  if (listKey && t.dueAt) node.due = todayKey(Number(t.dueAt));
+  if (listKey) {
+    // 清单：行内标记日期，文件不变
+    if (t.dueAt) node.due = todayKey(Number(t.dueAt));
+    if (t.startAt) node.start = todayKey(Number(t.startAt));
+  } else {
+    // 日记：文件名=开始日；结束日 > 开始日时写行内 📅，🛫 无需（文件即开始日）
+    node.start = '';
+    node.due = (t.dueAt != null && todayKey(Number(t.dueAt)) > dateKey) ? todayKey(Number(t.dueAt)) : '';
+  }
   const { out, lineNo } = appendLines(doc.lines, node, '');
   await writeTasks(path, doc.head, out);
   return res(201, { ok: true, task: toRecord(dateKey, Object.assign({}, node, { lineNo }), { file: path }) });
@@ -524,6 +539,7 @@ export async function createChecklistTask(listKey, groupTitle, task) {
   const doc = await readTasks(path, listKey);
   const node = nodeFromTask(t, listKey);
   if (t.dueAt) node.due = todayKey(Number(t.dueAt));
+  if (t.startAt) node.start = todayKey(Number(t.startAt));
   const newLine = serializeTaskLine(node, '');
 
   const headings = [];
@@ -654,31 +670,43 @@ export async function updateTask(guid, patch) {
   }
 
   let targetKey = g.dateKey;
-  if (Object.prototype.hasOwnProperty.call(p, 'dueAt')) {
-    // 时间段结束时间：
-    // - 传入了 dueEndAt 键（含 null）→ 显式以该值覆盖，null 表示清空结束时间（单时间 / 全天）；
-    // - 未传入 dueEndAt 键 → 保留笔记中原有 timeEnd。
+  // 日期编辑：清单行内 📅/🛫；日记文件名=开始日，📅=结束日（结束>开始时写入）
+  const hasDue = Object.prototype.hasOwnProperty.call(p, 'dueAt');
+  const hasStart = Object.prototype.hasOwnProperty.call(p, 'startAt');
+  if (hasDue || hasStart) {
+    const isList = isListKey(g.dateKey);
+    const isDated = !isList && g.dateKey !== INBOX_KEY;
+    let cs = isDated ? (node.start || g.dateKey) : (node.start || '');
+    let cd = isDated ? (node.due || g.dateKey) : (node.due || '');
+    if (!isDated) { if (!cs && cd) cs = cd; if (!cd && cs) cd = cs; }
+    if (hasStart) cs = (p.startAt == null || p.startAt === '') ? '' : todayKey(Number(p.startAt));
+    if (hasDue) cd = (p.dueAt == null) ? null : todayKey(Number(p.dueAt));
+    if (cs && !cd) cd = cs;
+    if (cd && !cs) cs = cd;
     const hasEnd = Object.prototype.hasOwnProperty.call(p, 'dueEndAt');
     const endMs = hasEnd
       ? (p.dueEndAt != null ? Number(p.dueEndAt) : null)
-      : (node.timeEnd ? dateToMs(node.due || g.dateKey, node.timeEnd) : null);
+      : (node.timeEnd ? dateToMs(cd || cs, node.timeEnd) : null);
     const endTime = (p.dueAllDay || !endMs) ? '' : (Number.isFinite(endMs) ? msToTime(endMs) : '');
-    if (isListKey(g.dateKey)) {
-      // 清单内任务：日期写进行内 📅 标记，任务保留在清单文件中
-      node.due = p.dueAt == null ? '' : todayKey(Number(p.dueAt));
-      node.time = (p.dueAt == null || p.dueAllDay) ? '' : msToTime(Number(p.dueAt));
+    if (isList) {
+      node.due = cd || '';
+      node.start = cs || '';
+      node.time = p.dueAllDay ? '' : (p.dueAt != null ? msToTime(Number(p.dueAt)) : node.time);
       node.timeEnd = endTime;
-    } else if (p.dueAt == null) {
+    } else if (!cd) {
       targetKey = INBOX_KEY;
       node.time = '';
       node.timeEnd = '';
+      node.due = '';
+      node.start = '';
     } else {
-      targetKey = todayKey(Number(p.dueAt));
-      node.time = p.dueAllDay ? '' : msToTime(Number(p.dueAt));
+      targetKey = cs || cd;
+      node.start = '';
+      node.due = (cs && cd && cd > cs) ? cd : '';
+      node.time = p.dueAllDay ? '' : (p.startAt != null && p.startAt !== '' ? msToTime(Number(p.startAt)) : (p.dueAt != null ? msToTime(Number(p.dueAt)) : node.time));
       node.timeEnd = endTime;
     }
   }
-
   const removed = new Set(collectLineNos(node));
   const keep = doc.lines.filter((_, i) => !removed.has(i));
 

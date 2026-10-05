@@ -16,7 +16,7 @@
           <button class="tk-btn ico" type="button" @click="$emit('navigate', 'next')" :title="$t(nav.next)"><i class="la la-angle-right"></i></button>
         </div>
         <button class="tk-btn ico" type="button" :class="{ on: hideDone }"
-                :title="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
+                v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
           <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
         </button>
       </template>
@@ -28,7 +28,7 @@
           <i class="la la-clock-o"></i><span>{{ $t('app.backToToday') }}</span>
         </button>
         <button class="tk-btn ico" type="button" :class="{ on: hideDone }"
-                :title="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
+                v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
           <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
         </button>
       </template>
@@ -41,7 +41,7 @@
             <button class="tk-btn" type="button" :class="{ on: clMainView === 'cols' }" @click="$emit('set-cl-main-view', 'cols')"><i class="la la-columns"></i>{{ $t('app.cols') }}</button>
           </div>
           <button class="tk-btn ico" type="button" :class="{ on: hideDone }"
-                  :title="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
+                  v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
             <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
           </button>
         </div>

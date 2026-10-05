@@ -80,7 +80,7 @@
 #### ✏️ 顺手的任务编辑
 
 - **标题内联语法**：直接写 `#标签` 和 `[文字](链接)`，渲染为可点击的标签胶囊与超链接
-- **时间灵活**：单时间、时间段（开始 – 结束）、全天，三种形态一键切换
+- **时间灵活**：单时间、时间段（开始 – 结束）、全天、**跨日期**（开始日期 – 结束日期，自动跨多天显示）四种形态一键切换
 - **子任务**：无限层级缩进即子任务，弹窗内直接增删改
 
 #### 🖱 效率操作
@@ -175,6 +175,19 @@ tags:
 
 ---
 
+## 📌 更新日志（Changelog）
+
+### 0.5.0 · 跨日期任务
+
+- ✨ **跨日期任务**：编辑弹窗新增「跨日期」时间形态，设置开始日期与结束日期后，任务会在日 / 周 / 月 / 日程视图中自动跨天连续显示，适合旅行、活动、项目周期等场景。时间形态现共四种：单时间 / 时间段 / 全天 / 跨日期。
+- 🗓 **农历初一显示月份**：日 / 周 / 月 / 日程视图遇到农历初一，显示「九月 初一」（闰月为「闰九月 初一」），不再只显示「初一」，月份起点一目了然。
+- 🖱 **右键编辑**：任务右键菜单新增「编辑」项，点击直接弹出与双击一致的编辑弹窗。
+- 🎨 **添加按钮统一**：日 / 周 / 月 / 日程 / 清单五视图的「+」按钮视觉风格统一为同一套样式，降低维护成本、保持各界面一致。
+
+> English changelog below the [English](#english) section.
+
+---
+
 ## English
 
 **Dada Todo List** turns your Obsidian vault into a full-featured task and checklist manager — powered entirely by plain Markdown checkboxes (`- [ ]` / `- [x]`). No accounts, no cloud services, no proprietary database: your tasks are simply lines in your own notes, and the plugin brings them together with calendar, timeline and agenda views plus a polished editing experience.
@@ -188,7 +201,7 @@ tags:
 
 - **Six views** — day timeline, seven-day week timeline with lane layout, month calendar (with Chinese lunar dates, solar terms, festivals and statutory holidays), rolling agenda, grouped checklists, and a filterable list of everything
 - **Inline syntax** — write `#tags` and `[links](url)` right in the task title; they render as clickable pills and hyperlinks
-- **Flexible time** — single time, time ranges (start – end), or all-day, switchable per task
+- **Flexible time** — single time, time ranges (start – end), all-day, or **cross-date** (start date – end date, shown across multiple days), switchable per task
 - **Subtasks** — indented lines become nested subtasks of any depth
 - **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
 - **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note
@@ -257,6 +270,15 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 
 > 完整的中文文档见上方 [简体中文](#简体中文) 章节。
 
+### 📌 Changelog
+
+#### 0.5.0 · Cross-date tasks
+
+- ✨ **Cross-date tasks**: the editor gains a new "Cross-date" time mode. Set a start date and an end date, and the task spans consecutive days across the day / week / month / agenda views — great for trips, events, or project periods. Four time modes in total: single / range / all-day / cross-date.
+- 🗓 **Lunar month on the 1st**: in the day / week / month / agenda views, the first day of a lunar month now shows the month name, e.g. "九月 初一" (leap month: "闰九月 初一"), instead of just "初一".
+- 🖱 **Right-click to edit**: the task context menu now has an "Edit" item that opens the same editor as double-click.
+- 🎨 **Unified add buttons**: the "+" buttons across the day / week / month / agenda / checklist views now share one consistent style for easier maintenance.
+
 ---
 
 ## 💖 赞赏支持
@@ -264,7 +286,8 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 如果这个插件对你有帮助，欢迎请作者喝杯咖啡，是我持续更新的动力～
 
 微信赞赏 WeChat Pay
-![微信赞赏码|350](docs/donate-wechat.jpg)
+
+<img src="docs/donate-wechat.jpg" alt="微信赞赏码" width="300">
 
 ---
 

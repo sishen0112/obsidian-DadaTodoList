@@ -15,6 +15,7 @@ const ctxMenu = reactive({ open: false, x: 0, y: 0, task: null });
 // 外部注入的钩子（由 TasksApp 在 created 时设置一次）
 let _i18n = (k) => k;
 let _openTask = async () => {};
+let _openEdit = async () => {};   // 编辑任务钩子（由 TasksApp 封装打开 TaskEditorModal）
 let _reportError = () => {};
 let _afterApply = null;     // 应用状态后给视图的回调（如清单视图重算进度）
 let _afterDelete = null;    // 删除后给视图的回调（如清单视图重载分组）
@@ -23,6 +24,7 @@ let _menuEl = null;         // 菜单 DOM（由 TaskContextMenu 注册，用于�
 
 export function setCtxI18n(fn) { _i18n = fn; }
 export function setCtxOpenTask(fn) { _openTask = fn; }
+export function setCtxEdit(fn) { _openEdit = fn; }
 export function setCtxError(fn) { _reportError = fn; }
 export function setCtxDelete(fn) { _deleteTask = fn; }
 export function setCtxMenuEl(el) { _menuEl = el; }
@@ -111,6 +113,13 @@ export function openCtxFile() {
   if (t) _openTask(t);
 }
 
+// 「编辑任务」：关闭菜单后弹出 TaskEditorModal（打开逻辑由 TasksApp 注入，复用详情补全 + 重载）
+export function openCtxEdit() {
+  const t = ctxMenu.task;
+  closeCtxMenu();
+  if (t) _openEdit(t);
+}
+
 // 「删除任务」：关闭菜单后交给宿主（TasksApp）做「确认弹窗 + API 删除 + 视图重载」，
 // 再回调发起视图（如清单视图重载分组）做本地数据同步
 export async function deleteCtxTask() {
@@ -129,7 +138,7 @@ export async function deleteCtxTask() {
 export function useTaskCtxMenu() {
   return {
     ctxMenu, ctxMenuOpts,
-    openCtxMenu, closeCtxMenu, applyCtxStatus, openCtxFile, deleteCtxTask,
+    openCtxMenu, closeCtxMenu, applyCtxStatus, openCtxEdit, openCtxFile, deleteCtxTask,
     ctxMenuContains, setCtxMenuEl
   };
 }

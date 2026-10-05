@@ -4,7 +4,7 @@
       <button class="tk-close" @click="close"><i class="la la-times"></i></button>
       <div class="tk-modal-head">
         <h3 class="tk-modal-title">{{ editing ? $t('editor.editTitle') : $t('editor.newTitle') }}</h3>
-        <button v-if="editing" class="btn btn-icon" type="button" :title="$t('editor.openFileTip')" @click="openFile">
+        <button v-if="editing" class="btn btn-icon" type="button" v-tooltip="$t('editor.openFileTip')" @click="openFile">
           <i class="la la-external-link"></i>
         </button>
       </div>
@@ -46,29 +46,57 @@
         <span>{{ $t('editor.desc') }}</span>
         <textarea v-model="form.description" rows="3" :placeholder="$t('editor.descPh')"></textarea>
       </label>
-      <div class="tk-row2">
-        <label class="tk-field" style="flex:1">
-          <span>{{ $t('editor.date') }}</span>
-          <input v-model="form.dueDate" type="date" :disabled="saving" @change="onDateChange" />
-        </label>
-      </div>
-      <div v-if="form.dueDate" class="tk-time-block">
-        <span class="tk-check" @click="toggleAllDay">
-          <i class="tk-ic" :class="form.dueAllDay ? 'la la-check-circle-o' : 'la la-circle-o'"></i> {{ $t('editor.allDayHint') }}
-        </span>
-        <template v-if="!form.dueAllDay">
-          <div class="tk-tm-tabs">
-            <button type="button" class="tk-tm-tab" :class="{ active: form.timeMode === 'single' }" @click="setTimeMode('single')">{{ $t('editor.timeSingle') }}</button>
-            <button type="button" class="tk-tm-tab" :class="{ active: form.timeMode === 'range' }" @click="setTimeMode('range')">{{ $t('editor.timeRange') }}</button>
-          </div>
-          <div v-if="form.timeMode === 'single'" class="tk-time-row">
+      <!-- 时间形态：单时间 / 时间段 / 全天 / 跨日期；各形态仅展示所需字段 -->
+      <div class="tk-time-block">
+        <div class="tk-tm-tabs">
+          <button type="button" class="tk-tm-tab" :class="{ active: form.timeMode === 'single' }" @click="setTimeMode('single')">{{ $t('editor.timeSingle') }}</button>
+          <button type="button" class="tk-tm-tab" :class="{ active: form.timeMode === 'range' }" @click="setTimeMode('range')">{{ $t('editor.timeRange') }}</button>
+          <button type="button" class="tk-tm-tab" :class="{ active: form.timeMode === 'allday' }" @click="setTimeMode('allday')">{{ $t('app.allDay') }}</button>
+          <button type="button" class="tk-tm-tab" :class="{ active: form.timeMode === 'crossdate' }" @click="setTimeMode('crossdate')">{{ $t('editor.crossDate') }}</button>
+        </div>
+
+        <!-- 单时间：日期 + 时间 -->
+        <template v-if="form.timeMode === 'single'">
+          <label class="tk-field">
+            <span>{{ $t('editor.date') }}</span>
+            <input v-model="form.dueDate" type="date" :disabled="saving" @change="onDateChange" />
+          </label>
+          <div class="tk-time-row">
             <input v-model="form.dueTime" type="time" :disabled="saving" />
           </div>
-          <div v-else class="tk-time-row">
+        </template>
+
+        <!-- 时间段：日期 + 开始时间 + 结束时间 -->
+        <template v-else-if="form.timeMode === 'range'">
+          <label class="tk-field">
+            <span>{{ $t('editor.date') }}</span>
+            <input v-model="form.dueDate" type="date" :disabled="saving" @change="onDateChange" />
+          </label>
+          <div class="tk-time-row">
             <input v-model="form.dueStart" type="time" :disabled="saving" @change="normalizeEnd" />
             <span class="tk-tm-sep">—</span>
             <input v-model="form.dueEnd" type="time" :disabled="saving" @change="normalizeEnd" />
           </div>
+        </template>
+
+        <!-- 全天：日期 -->
+        <template v-else-if="form.timeMode === 'allday'">
+          <label class="tk-field">
+            <span>{{ $t('editor.date') }}</span>
+            <input v-model="form.dueDate" type="date" :disabled="saving" @change="onDateChange" />
+          </label>
+        </template>
+
+        <!-- 跨日期：开始日期 + 结束日期 -->
+        <template v-else-if="form.timeMode === 'crossdate'">
+          <label class="tk-field">
+            <span>{{ $t('editor.startDate') }}</span>
+            <input v-model="form.startDate" type="date" :disabled="saving" @change="ensureDefaultTimes" />
+          </label>
+          <label class="tk-field">
+            <span>{{ $t('editor.endDate') }}</span>
+            <input v-model="form.dueDate" type="date" :disabled="saving" @change="ensureDefaultTimes" />
+          </label>
         </template>
       </div>
       <div v-if="editing" class="tk-sub">
@@ -141,7 +169,10 @@ export default {
     };
   },
   computed: {
-    editing() { return !!(this.task && this.task.guid); }
+    editing() { return !!(this.task && this.task.guid); },
+    // 时间形态三态（allday / single / range）中，是否全天
+    isAllDay() { return this.form.timeMode === 'allday'; },
+    isCrossDate() { return this.form.timeMode === 'crossdate'; }
   },
   watch: {
     // immediate：VueModal 桥挂载时 open 已为 true，必须立即初始化预填表单
@@ -151,8 +182,8 @@ export default {
     blank() {
       return {
         guid: '', title: '', description: '', links: [], tags: [],
-        dueDate: this.defaultDate || '', dueTime: this.defaultTime || '', dueAllDay: false,
-        timeMode: 'single', dueStart: this.defaultTime || '', dueEnd: '',
+        dueDate: this.defaultDate || '', dueTime: this.defaultTime || '',
+        timeMode: 'single', dueStart: this.defaultTime || '', dueEnd: '', startDate: '',
         remind: true, completed: false, cancelled: false, cancelledAt: ''
       };
     },
@@ -169,15 +200,24 @@ export default {
     },
     // 标题只取纯文字，链接与标签拆成独立字段各自维护
     taskToForm(t) {
-      let dueDate = '', dueTime = '', dueAllDay = false, timeMode = 'single', dueStart = '', dueEnd = '';
+      let dueDate = '', dueTime = '', timeMode = 'single', dueStart = '', dueEnd = '', startDate = '';
       const sd = t.dueAt ? new Date(t.dueAt) : null;
       const ed = (t.dueEndAt && !t.dueAllDay) ? new Date(t.dueEndAt) : null;
-      if (sd) {
+      const startMs = (t.startAt != null) ? Number(t.startAt) : null;
+      const cross = sd && startMs != null && ymd(new Date(startMs)) !== ymd(sd);
+      if (cross) {
+        timeMode = 'crossdate';
+        startDate = ymd(new Date(startMs));
         dueDate = ymd(sd);
-        dueAllDay = !!t.dueAllDay;
-        dueTime = dueAllDay ? '' : pad(sd.getHours()) + ':' + pad(sd.getMinutes());
+      } else if (sd) {
+        dueDate = ymd(sd);
+        if (t.dueAllDay) {
+          timeMode = 'allday';
+        } else {
+          dueTime = pad(sd.getHours()) + ':' + pad(sd.getMinutes());
+        }
       }
-      if (ed) {
+      if (ed && !cross) {
         timeMode = 'range';
         dueStart = pad(sd.getHours()) + ':' + pad(sd.getMinutes());
         dueEnd = pad(ed.getHours()) + ':' + pad(ed.getMinutes());
@@ -189,7 +229,7 @@ export default {
         description: t.description || '',
         links: parts.links.slice(),
         tags: parts.tags.slice(),
-        dueDate, dueTime, dueAllDay, timeMode, dueStart, dueEnd,
+        dueDate, dueTime, timeMode, dueStart, dueEnd, startDate,
         remind: t.remind !== false,
         completed: !!t.completed,
         cancelled: !!t.cancelled,
@@ -229,7 +269,7 @@ export default {
     },
     // 时间段模式：结束时间不得早于开始时间，否则修正为开始之后的下一个整点/半点
     normalizeEnd() {
-      if (this.form.timeMode !== 'range' || this.form.dueAllDay) return;
+      if (this.form.timeMode !== 'range' || this.isAllDay) return;
       if (!this.form.dueStart || !this.form.dueEnd) return;
       if (this.toMin(this.form.dueEnd) <= this.toMin(this.form.dueStart)) {
         this.form.dueEnd = this.ceilHalfHour(this.form.dueStart);
@@ -237,7 +277,11 @@ export default {
     },
     // 未指定时间时，按模式带出默认值（单时间→下一个半点；时间段→开始为下一个半点、结束+30 分）
     ensureDefaultTimes() {
-      if (this.form.dueAllDay) return;
+      if (this.isAllDay) return;
+      if (this.form.timeMode === 'crossdate') {
+        if (!this.form.startDate) this.form.startDate = this.form.dueDate || '';
+        return;
+      }
       if (this.form.timeMode === 'range') {
         if (!this.form.dueStart) {
           const d = this.nextHalfHour();
@@ -248,12 +292,8 @@ export default {
         this.form.dueTime = this.form.dueStart || this.nextHalfHour().start;
       }
     },
-    toggleAllDay() {
-      this.form.dueAllDay = !this.form.dueAllDay;
-      if (!this.form.dueAllDay) this.ensureDefaultTimes();
-    },
     onDateChange() { this.ensureDefaultTimes(); },
-    // 单时间 / 时间段 切换：简单按钮 tab，切换时按模式补默认值
+    // 全天 / 单时间 / 时间段 切换：同一单选项，切换时按模式补默认值
     setTimeMode(mode) {
       if (this.form.timeMode === mode) return;
       this.form.timeMode = mode;
@@ -263,7 +303,17 @@ export default {
     buildDueAt() {
       if (!this.form.dueDate) return { dueAt: null, dueEndAt: null };
       const date = this.form.dueDate;
-      if (this.form.dueAllDay) return { dueAt: new Date(date + 'T00:00:00').getTime(), dueEndAt: null };
+      if (this.isAllDay) return { dueAt: new Date(date + 'T00:00:00').getTime(), dueEndAt: null };
+      if (this.isCrossDate) {
+        const end = this.form.dueDate;
+        const s = this.form.startDate;
+        const dueAt = end ? new Date(end + 'T00:00:00').getTime() : null;
+        // 开始日不得晚于结束日，否则回退为与结束日相同的单日
+        const startAt = (s && end && s <= end)
+          ? new Date(s + 'T00:00:00').getTime()
+          : dueAt;
+        return { dueAt, dueEndAt: null, startAt, dueAllDay: true };
+      }
       let start, end = null;
       if (this.form.timeMode === 'range') {
         start = this.form.dueStart || this.nextHalfHour().start;
@@ -282,14 +332,15 @@ export default {
       const title = (this.form.title || '').trim();
       if (!title) return;
       this.saving = true; this.error = '';
-      const { dueAt, dueEndAt } = this.buildDueAt();
+      const { dueAt, dueEndAt, startAt } = this.buildDueAt();
       const payload = {
         // 存盘时还原为完整 Markdown：标题 | [链接](地址) | #标签（提醒关闭时追加 🔕 标记）
         summary: composeSummary(title, this.form.links, this.form.tags, { mute: !this.form.remind }),
         description: this.form.description || '',
         dueAt,
         dueEndAt,
-        dueAllDay: this.form.dueAllDay
+        startAt,
+        dueAllDay: this.isAllDay || this.isCrossDate
       };
       if (this.editing) {
         payload.completed = this.form.completed;
@@ -392,8 +443,6 @@ export default {
 
 <style scoped>
 /* 表单原语（.tk-field/.btn 等）在全局弹窗样式 task-modal.css 中 */
-.tk-row2 { display: flex; gap: 12px; }
-.tk-row2 .tk-field { flex: 1; }
 /* 提权到 .tk-modal：避免被 tasks-shared.css 的 .task-app .tk-check（20px 字号 + 18px 宽高）覆盖 */
 .tk-modal .tk-check { display: flex; align-items: center; gap: 7px; width: 100%; height: auto; font-size: 13px; line-height: 1.6; color: var(--ink-soft); margin: 2px 0 16px; cursor: pointer; }
 /* 时间区：全天开关 + 单/时间段切换 + 选择器，纵向排布 */

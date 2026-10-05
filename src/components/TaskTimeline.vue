@@ -23,22 +23,35 @@
       </div>
     </div>
 
-    <!-- 全天任务 -->
-    <div class="tk-tl-allday">
+    <!-- 全天任务：按泳道排布，跨日任务一条横跨到底（跨列条），不再每列各放一份 -->
+    <div class="tk-tl-allday"
+         :style="{ '--tl-lanes': alldayLanes }"
+         @dragover.prevent="onAlldayDragOver($event)"
+         @drop.prevent="onAlldayDrop($event)">
       <div class="tk-tl-gutter">{{ $t('app.allDay') }}</div>
-      <div v-for="col in cols" :key="col.key" class="tk-tl-adcol"
-           :class="{ today: col.key === todayKey, 'drop-target': dragOverKey === col.key }"
-           @dragover.prevent="handlers.dragOver(col.key, $event)"
-           @drop.prevent="handlers.dropAllDay(col.key)">
-        <div v-for="t in col.allDay" :key="t.guid" class="tk-tl-aditem"
-             :class="{ done: t.completed || t.cancelled, dragging: dragGuid === t.guid }"
-             :style="helpers.itemColor(t)"
-             draggable="true" :title="helpers.dragHint(t)"
-             @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd" @click="handlers.open(t, $event)"
-             @contextmenu.prevent="handlers.ctx(t, $event)">
-          <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, helpers.statusIcon(t)]" @click.stop.prevent="handlers.toggle(t)"></i>
-          <span class="tk-tl-sum" :class="{ done: t.completed || t.cancelled }" v-html="helpers.richSummaryNoTags(t)" @click="helpers.richClick"></span>
-        </div>
+      <!-- 列背景 / 今日高亮 / 拖拽目标高亮（纯视觉，不拦截事件） -->
+      <div v-for="(col, i) in cols" :key="'adbg-' + col.key" class="tk-tl-adbg"
+           :style="{ gridColumn: (i + 2) }"
+           :class="{ today: col.key === todayKey, 'drop-target': dragOverKey === col.key }"></div>
+      <!-- 横跨条：单日任务（1 列宽）与跨日任务（多列宽）共用同一套泳道 -->
+      <div v-for="b in alldayBars" :key="b.t.guid" class="tk-tl-aditem"
+           :class="{ done: b.t.completed || b.t.cancelled, dragging: dragGuid === b.t.guid, selected: selectedGuid === b.t.guid, 'cont-start': b.contStart, 'cont-end': b.contEnd }"
+           :style="alldayBarStyle(b)"
+           :draggable="!resizing" :title="helpers.dragHint(b.t)"
+           @dragstart="onAdDragStart(b.t, $event)" @dragend="handlers.dragEnd"
+           @click.stop="onAdClick(b.t, $event)" @dblclick.stop="handlers.open(b.t, $event)"
+           @contextmenu.prevent="handlers.ctx(b.t, $event)">
+        <i class="tk-check" :class="[{ done: b.t.completed || b.t.cancelled }, helpers.statusIcon(b.t)]" @click.stop.prevent="handlers.toggle(b.t)"></i>
+        <span class="tk-tl-sum" :class="{ done: b.t.completed || b.t.cancelled }" v-html="helpers.richSummaryNoTags(b.t)" @click="helpers.richClick"></span>
+        <!-- 跨日期横跨条右侧小字：显示开始-结束日期区间（如 10/2-10/7） -->
+        <span v-if="spanRange(b.t)" class="tk-tl-adrange">{{ spanRange(b.t) }}</span>
+        <!-- 跨日期横跨条：选中后首/尾出现拖动柄（拖左柄改开始日、拖右柄改结束日，另一端不变） -->
+        <div v-if="isSpanSelected(b)" class="tk-tl-span-h tk-tl-span-h-l"
+             :title="$t('app.spanMoveTip')"
+             @pointerdown.stop.prevent="onSpanResizeDown('start', b, $event)" @mousedown.stop.prevent @click.stop.prevent @dragstart.stop.prevent></div>
+        <div v-if="isSpanSelected(b)" class="tk-tl-span-h tk-tl-span-h-r"
+             :title="$t('app.spanMoveTip')"
+             @pointerdown.stop.prevent="onSpanResizeDown('end', b, $event)" @mousedown.stop.prevent @click.stop.prevent @dragstart.stop.prevent></div>
       </div>
     </div>
 
@@ -48,10 +61,11 @@
       <div v-for="col in cols" :key="col.key" class="tk-tl-othercol"
            :class="{ today: col.key === todayKey }">
         <div v-for="t in col.other" :key="t.guid" class="tk-tl-aditem tk-tl-other-item"
-             :class="{ done: t.completed || t.cancelled, dragging: dragGuid === t.guid }"
+             :class="{ done: t.completed || t.cancelled, dragging: dragGuid === t.guid, selected: selectedGuid === t.guid }"
              :style="helpers.itemColor(t)"
-             draggable="true" :title="helpers.dragHint(t)"
-             @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd" @click="handlers.open(t, $event)"
+             :draggable="!resizing" :title="helpers.dragHint(t)"
+             @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd"
+             @click.stop="onAdClick(t, $event)" @dblclick.stop="handlers.open(t, $event)"
              @contextmenu.prevent="handlers.ctx(t, $event)">
           <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, helpers.statusIcon(t)]" @click.stop.prevent="handlers.toggle(t)"></i>
           <div class="tk-tl-other-body">
@@ -105,6 +119,7 @@
 </template>
 
 <script>
+import { layoutSpanBars, spansDays, spanDateText } from '../composables/tasks-logic.js';
 // 时间轴范围（分钟）由父级经 props 传入（默认 00:00–24:00）；吸附步长整点/半点
 const SNAP = 30;
 // 单时间任务在时间轴上的绘制时长（分钟），与 WeekDayView.layoutBlocks 的 DEFAULT_MIN 一致
@@ -143,7 +158,17 @@ export default {
     // 是否存在「其他时间」任务（窗口之外的定时任务），决定是否渲染该格子
     hasOther() {
       return this.cols.some((c) => c.other && c.other.length);
-    }
+    },
+    // 全天任务泳道排布：跨日任务按列区间横跨，单日任务为 1 列宽
+    alldayLayout() {
+      const seen = new Map();
+      for (const col of this.cols) {
+        for (const t of (col.allDay || [])) if (!seen.has(t.guid)) seen.set(t.guid, t);
+      }
+      return layoutSpanBars(this.cols.map((c) => c.key), Array.from(seen.values()));
+    },
+    alldayBars() { return this.alldayLayout.bars; },
+    alldayLanes() { return Math.max(1, this.alldayLayout.lanes); }
   },
   beforeDestroy() {
     if (this.resizing) {
@@ -155,6 +180,85 @@ export default {
     minOfDay(ms) {
       const d = new Date(ms);
       return d.getHours() * 60 + d.getMinutes();
+    },
+    // 全天横跨条样式：按列区间 / 泳道定位，叠加任务配色
+    alldayBarStyle(b) {
+      return Object.assign({
+        gridColumn: (b.startIdx + 2) + ' / ' + (b.endIdx + 3),
+        gridRow: String(b.lane + 1)
+      }, this.helpers.itemColor(b.t));
+    },
+    // 全天区落点列：跨列条会挡住逐列 drop 区，故在容器层按落点 x 统一判定
+    colKeyFromX(e) {
+      const el = e && e.currentTarget;
+      if (!el) return '';
+      return this.colKeyAt(e.clientX, el);
+    },
+    // 按客户端 x 坐标 → 所在日期列 key（减去左侧「全天」栏 54px）
+    colKeyAt(clientX, el) {
+      const n = this.cols.length;
+      if (n <= 0 || !el) return '';
+      const rect = el.getBoundingClientRect();
+      const w = rect.width - 54; // 减去左侧「全天」栏宽度
+      if (w <= 0) return '';
+      const x = clientX - rect.left - 54;
+      let i = Math.floor((x / w) * n);
+      if (i < 0) i = 0;
+      if (i > n - 1) i = n - 1;
+      return this.cols[i] ? this.cols[i].key : '';
+    },
+    onAlldayDragOver(e) {
+      const key = this.colKeyFromX(e);
+      if (key) this.handlers.dragOver(key, e);
+    },
+    onAlldayDrop(e) {
+      const key = this.colKeyFromX(e);
+      if (key) this.handlers.dropAllDay(key);
+    },
+    // 全天/跨日期条：首/尾日期柄按下。跨日期→整条平移（只改开始日）；单日全天→延伸为跨日期
+    onSpanResizeDown(which, b, e) {
+      const container = e.currentTarget.closest('.tk-tl-allday');
+      const t = b.t;
+      const isSpan = spansDays(t);
+      const p2 = (n) => (n < 10 ? '0' + n : '' + n);
+      const due = new Date(Number(t.dueAt));
+      const dueKey = due.getFullYear() + '-' + p2(due.getMonth() + 1) + '-' + p2(due.getDate());
+      let origDays = 1;
+      if (isSpan) {
+        const sd = new Date(Number(t.startAt)); sd.setHours(0, 0, 0, 0);
+        const dd = new Date(Number(t.dueAt)); dd.setHours(0, 0, 0, 0);
+        origDays = Math.max(1, Math.round((dd - sd) / 86400000) + 1); // 含首尾的原跨度天数
+      }
+      // 原始单日锚点（右柄延伸时固定作为开始日，避免反复覆盖 dueAt 后只跨 2 天）
+      const anchorMs = new Date(dueKey + 'T00:00:00').getTime();
+      this.resizing = { which, t, isSpan, origDays, dueKey, anchorMs, container, lastKey: '' };
+      const barEl = e.currentTarget.closest('.tk-tl-aditem');
+      if (barEl) barEl.draggable = false; // 立即关闭原生拖拽，避免「拖柄变成拖动任务」
+      window.addEventListener('pointermove', this.onSpanResizeMove);
+      window.addEventListener('pointerup', this.onSpanResizeUp);
+    },
+    onSpanResizeMove(e) {
+      const r = this.resizing;
+      if (!r) return;
+      let key = this.colKeyAt(e.clientX, r.container); // 落点所在日期列
+      if (!key) return;
+      // 单日全天延伸：左柄不能越过原单日、右柄不能早于原单日（否则退化为单日）
+      if (!r.isSpan) {
+        if (r.which === 'start' && key > r.dueKey) key = r.dueKey;
+        else if (r.which === 'end' && key < r.dueKey) key = r.dueKey;
+      }
+      if (key === r.lastKey) return;
+      r.lastKey = key;
+      // 跨日期→改所拖那一端（另一端不动）；单日全天→按柄延伸开始/结束日
+      this.handlers.resizeSpan(r.t, r.which, key, r.isSpan, r.origDays, r.anchorMs);
+    },
+    onSpanResizeUp() {
+      const r = this.resizing;
+      if (!r) return;
+      this.resizing = null;
+      window.removeEventListener('pointermove', this.onSpanResizeMove);
+      window.removeEventListener('pointerup', this.onSpanResizeUp);
+      this.handlers.resizeSpanCommit(r.t);
     },
     // 像素 Y（相对列顶，窗口起点对应 0）→ 当日分钟，吸附 SNAP 并限制在窗口内
     yToMin(y) {
@@ -169,6 +273,19 @@ export default {
     clearSelection() {
       this.selectedGuid = '';
     },
+    // 全天 / 其他时间条：单击选中（跨日期条由此显示首/尾日期柄），Ctrl/⌘ 单击直达编辑框
+    onAdClick(t, e) {
+      if (e && (e.metaKey || e.ctrlKey)) { if (this.handlers.open) this.handlers.open(t, e); return; }
+      this.selectedGuid = t.guid;
+    },
+    // 全天/跨日期条且当前选中：显示首/尾日期拖动柄（单日全天也可拖成跨日期）
+    isSpanSelected(b) {
+      return this.selectedGuid === b.t.guid && (b.t.dueAllDay || spansDays(b.t));
+    },
+    // 跨日期任务起止区间文本（如 10/2-10/7 / 2025/12/30-2026/1/3），供右侧小字显示
+    spanRange(t) {
+      return spanDateText(t);
+    },
     // 双击时间轴空白处：在落点时刻新增任务
     onColDblClick(col, e) {
       let y = 0;
@@ -180,6 +297,12 @@ export default {
     },
     // 块原生拖拽改期：拖动手柄调整时间时（resizing 已置位）取消原生拖拽，避免「移动整块」
     onBlockDragStart(t, e) {
+      if (this.resizing) { e.preventDefault(); return; }
+      this.handlers.dragStart(t, e);
+    },
+    // 全天/跨日期条原生拖拽改期：与块一致，拖首尾日期柄（resizing 已置位）时取消原生拖拽，
+    // 否则会「拖柄变成拖动整个任务」，导致 resize 的 pointermove 根本不执行。
+    onAdDragStart(t, e) {
       if (this.resizing) { e.preventDefault(); return; }
       this.handlers.dragStart(t, e);
     },
@@ -270,35 +393,55 @@ export default {
 .tk-tl-today-badge { flex: none; background: #e53935; color: #fff; font-size: 10.5px; font-weight: 600; line-height: 1; padding: 2px 7px; border-radius: 999px; }
 .tk-tl-rel { flex: none; color: var(--ink-soft); font-size: 11px; }
 .tk-tl-dayhead.today .tk-tl-wd { color: var(--gold); }
-/* 新增按钮：透明背景 + la-plus-circle 线性图标，默认隐藏，hover 日列才显示 */
-.tk-tl-dayhead .tk-add {
-  margin-left: auto; opacity: 0; flex: none; width: auto; height: auto; border: none; border-radius: 0;
-  background: transparent; color: var(--gold); font-size: 16px; line-height: 1; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: opacity .15s ease, color .15s ease; box-shadow: none;
-}
-.tk-tl-dayhead .tk-add i { font-size: 16px; line-height: 1; }
-.tk-tl-dayhead:hover .tk-add { opacity: 1; }
-.tk-tl-dayhead .tk-add:hover { filter: brightness(1.1); }
 
-/* 全天任务行 */
+/* 全天任务行：泳道网格 —— 跨日任务一条横跨多列，单日任务为 1 列宽 */
 .tk-tl-allday {
   display: grid; grid-template-columns: 54px repeat(var(--tl-cols, 7), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--tl-lanes, 1), 30px);
+  row-gap: 3px; padding: 4px 0;
   border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
 }
-.tk-tl-gutter { display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px 8px 4px; font-size: 10.5px; color: var(--ink-soft); }
-.tk-tl-adcol { display: flex; flex-direction: column; gap: 3px; min-height: var(--hour); padding: 4px; border-left: 1px solid var(--line); }
-.tk-tl-adcol.today { background: transparent; }
-.tk-tl-dayhead.drop-target { box-shadow: none; }
-.tk-tl-adcol.drop-target { box-shadow: none; }
-.tk-tl-aditem {
-  display: flex; align-items: center; gap: 5px; min-width: 0; cursor: grab;
-  padding: 2px 6px; border-radius: 6px;
-  background: var(--panel); font-size: 12px; color: var(--ink);
-  line-height: 30px;
+.tk-tl-gutter {
+  display: flex; align-items: flex-start; justify-content: flex-end;
+  padding: 2px 8px 4px; font-size: 10.5px; color: var(--ink-soft);
 }
+/* 全天行左侧「全天」栏：跨所有泳道行（仅在全天网格内定位） */
+.tk-tl-allday .tk-tl-gutter { grid-column: 1; grid-row: 1 / -1; }
+/* 列背景 / 今日高亮 / 拖拽目标高亮（纯视觉，不拦截事件） */
+.tk-tl-adbg { grid-row: 1 / -1; border-left: 1px solid var(--line); pointer-events: none; }
+.tk-tl-adbg.drop-target { background: var(--gold-bg); }
+.tk-tl-aditem {
+  position: relative;
+  display: flex; align-items: center; gap: 5px; min-width: 0; cursor: grab;
+  margin: 0 1px; padding: 2px 6px; border-radius: 6px;
+  background: var(--panel); font-size: 12px; color: var(--ink);
+  overflow: hidden;
+}
+/* 选中态：描边高亮，提示可拖动调整日期 */
+.tk-tl-aditem.selected { box-shadow: 0 0 0 2px var(--gold); padding-right: 16px; }
+/* 跨日期横跨条右侧小字：开始-结束日期区间（如 10/2-10/7），靠右、小号、低透明度 */
+.tk-tl-adrange { flex: none; margin-left: auto; padding-left: 6px; font-size: 9px; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 跨日期横跨条首/尾日期拖动柄：平时隐藏，选中时显示；靠左右内边缘，避免被 overflow 裁切 */
+.tk-tl-span-h {
+  position: absolute; top: 0; bottom: 0; width: 10px;
+  cursor: ew-resize; z-index: 4; opacity: 0; pointer-events: none;
+  transition: opacity .12s ease;
+}
+.tk-tl-span-h::before {
+  content: ''; position: absolute; top: 22%; bottom: 22%; left: 3px;
+  width: 4px; border-radius: 3px; background: var(--gold);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+.tk-tl-span-h-l { left: 0; }
+.tk-tl-span-h-r { right: 0; }
+.tk-tl-span-h-r::before { left: auto; right: 3px; }
+.tk-tl-aditem.selected .tk-tl-span-h { opacity: 1; pointer-events: auto; }
+.tk-tl-aditem.selected .tk-tl-span-h:hover::before { filter: brightness(1.12); }
 .tk-tl-aditem .tk-check { flex: none; }
 .tk-tl-aditem .tk-tl-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 跨日横跨条：续接端（非真实起止）不收圆角，以示「仍在延续」 */
+.tk-tl-aditem.cont-start { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.tk-tl-aditem.cont-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .tk-tl-aditem .tk-tl-time { margin-left: auto; padding-left: 6px; }
 /* 全天 / 凌晨项：已完成、已取消置灰（与月视图 .cel-task.done 一致） */
 .tk-tl-aditem.done { color: var(--ink-soft); opacity: .6; }

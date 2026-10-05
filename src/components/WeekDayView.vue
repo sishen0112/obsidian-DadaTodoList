@@ -41,7 +41,7 @@ import { Tasks } from '../composables/useTasks.js';
 import { openCtxMenu } from '../composables/useTaskCtxMenu.js';
 import {
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf,
-  statusIcon, timeText, richSummaryNoTags, plainInline, weekdayShort
+  statusIcon, timeText, richSummaryNoTags, plainInline, weekdayShort, spansDays
 } from '../composables/tasks-logic.js';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
@@ -170,6 +170,9 @@ export default {
         // 手柄拖动调时间：resize 实时改本地（触发重排），resizeCommit 落盘
         resize: (t, startMin, endMin) => s.resizeTaskLive(t, startMin, endMin),
         resizeCommit: (t) => s.resizeTaskCommit(t),
+        // 全天/跨日期条 resize：跨日期→平移（只改开始日），单日全天→按柄延伸为跨日期
+        resizeSpan: (t, which, newKey, isSpan, origDays, anchorMs) => s.resizeSpanLive(t, which, newKey, isSpan, origDays, anchorMs),
+        resizeSpanCommit: (t) => s.resizeSpanCommit(t),
         // 双击时间轴空白处：在落点时刻新增任务
         addAt: (key, min) => s.$emit('open-new-at', key, min),
         // 任务块右键：打开统一右键菜单
@@ -205,11 +208,11 @@ export default {
         weekday: weekdayShort(d),
         md: (d.getMonth() + 1) + '/' + d.getDate(),
         tasks,
-        allDay: tasks.filter((t) => t.dueAllDay),
-        // 定时任务（含凌晨）进入同一时间轴，但仅显示落在时间轴窗口内的
-        blocks: this.layoutBlocks(tasks.filter((t) => !t.dueAllDay && this.inTimeline(t))),
-        // 窗口之外的定时任务（早于开始 / 晚于结束）归入「其他时间」格子
-        other: tasks.filter((t) => !t.dueAllDay && this.inOther(t))
+        allDay: tasks.filter((t) => t.dueAllDay || spansDays(t)),
+        // 定时任务（含凌晨）进入同一时间轴，但仅显示落在时间轴窗口内且未跨天的
+        blocks: this.layoutBlocks(tasks.filter((t) => !t.dueAllDay && !spansDays(t) && this.inTimeline(t))),
+        // 窗口之外的定时任务（早于开始 / 晚于结束）归入「其他时间」格子（同样排除跨天任务）
+        other: tasks.filter((t) => !t.dueAllDay && !spansDays(t) && this.inOther(t))
       };
     },
     // 定时任务是否与时间轴显示窗口有重叠（按起止时刻判断）
@@ -241,11 +244,11 @@ export default {
         const d = new Date(t.dueAt);
         const start = d.getHours() * 60 + d.getMinutes();
         let end = start + DEFAULT_MIN;
-        if (t.dueEndAt) {
+        // 合法时间段（结束严格晚于开始，同日）才按真实跨度绘制；
+        // 无结束 或 结束≤开始（逆序时间段）→ 视为普通单时间块，按固定时长绘制
+        if (t.dueEndAt && Number(t.dueEndAt) > Number(t.dueAt)) {
           const de = new Date(t.dueEndAt);
-          const endMin = de.getHours() * 60 + de.getMinutes();
-          // 跨天（结束时刻 ≤ 开始时刻，如 23:00–00:30）按 +24h 处理
-          end = endMin <= start ? endMin + 24 * 60 : endMin;
+          end = de.getHours() * 60 + de.getMinutes();
         }
         return { t, start, end };
       }).sort((a, b) => a.start - b.start || a.end - b.end);
@@ -368,6 +371,14 @@ export default {
         const eh = Math.floor(endMin / 60), em = endMin % 60;
         payload.dueEndAt = new Date(dayKey + 'T' + pad(eh) + ':' + pad(em) + ':00').getTime();
       }
+      // 落盘时开始日锚点必须跟着落到新的一天：
+      // 跨天任务 → 清除 startAt，转单时间任务；普通时间任务 → startAt = dueAt（同日起止），
+      // 否则 startAt 留在旧日、dueAt 跑到新日 → spansDays 误判为跨日期任务。
+      if (spansDays(t)) {
+        payload.startAt = null;
+      } else {
+        payload.startAt = dueAt;
+      }
       try {
         await Tasks.updateTask(t.guid, payload);
         this.$emit('saved');
@@ -397,17 +408,57 @@ export default {
         this.$emit('error', this.$t('app.resizeFail') + (err && err.message || err));
       }
     },
+    // 全天/跨日期条 resize：跨日期→左柄只改开始日、右柄只改结束日（另一端不动）；
+    // 单日全天→左柄延伸开始日、右柄延伸结束日
+    resizeSpanLive(t, which, newKey, isSpan, origDays, anchorMs) {
+      const ms = new Date(newKey + 'T00:00:00').getTime();
+      if (isSpan) {
+        // 跨日期：边缘拉伸——拖左柄改开始日（钳制不越过后端），拖右柄改结束日（钳制不越过前端）
+        if (which === 'start') {
+          t.startAt = Math.min(ms, Number(t.dueAt));
+        } else {
+          t.dueAt = Math.max(ms, Number(t.startAt));
+        }
+      } else if (which === 'start') {
+        // 单日全天：左柄把开始日延伸到落点（更早），结束日保持原单日
+        t.startAt = ms;
+      } else {
+        // 单日全天：右柄把结束日延伸到落点（更晚），开始日锚定拖拽开始时的原单日——
+        // 不能用当前 t.dueAt（已被上一帧改写），否则每帧把 start 推到上一帧 due，跨度恒为 2 天、看似平移
+        t.startAt = anchorMs;
+        t.dueAt = ms;
+      }
+    },
+    // 跨日期横跨条：把调整后的开始 / 结束日期落盘（保持全天 + 跨天开始日）
+    async resizeSpanCommit(t) {
+      try {
+        await Tasks.updateTask(t.guid, {
+          summary: t.summary,
+          description: t.description,
+          dueAt: t.dueAt,
+          startAt: t.startAt,
+          dueAllDay: true
+        });
+        this.$emit('saved');
+      } catch (err) {
+        this.$emit('error', this.$t('app.resizeFail') + (err && err.message || err));
+      }
+    },
     // 拖到「全天」格子：无论原是否定时，都转为该日全天任务
     async onDropAllDay(dayKey) {
       const t = this.dragTask;
       this.$emit('drag-end');
       if (!t) return;
-      const dueAt = new Date(dayKey + 'T00:00:00').getTime();
+      const day = 86400000;
+      const base = new Date(dayKey + 'T00:00:00').getTime();
+      const isSpan = t.startAt && t.startAt !== t.dueAt;
       try {
         await Tasks.updateTask(t.guid, {
           summary: t.summary,
           description: t.description,
-          dueAt,
+          // 跨日期任务：落点作为开始日，结束日按原跨度顺延，保持原天数不变
+          startAt: isSpan ? base : undefined,
+          dueAt: isSpan ? base + Math.max(0, Math.round((Number(t.dueAt) - Number(t.startAt)) / day)) * day : base,
           dueAllDay: true
         });
         this.$emit('saved');

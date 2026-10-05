@@ -1,7 +1,7 @@
 <template>
   <transition name="tk-side">
     <aside v-if="open" class="tk-side" :class="{ 'side-anim': animating, 'drop-active': dropActive }"
-           @dragover.prevent="onPanelDragOver" @dragleave="onPanelDragLeave" @drop.prevent="onDropToPool">
+           @dragenter.prevent @dragover.prevent="onPanelDragOver" @dragleave="onPanelDragLeave" @drop.prevent="onDropToPool">
       <div class="tk-side-h">
         <i class="la la-inbox tk-pool-ic"></i>
         <span>{{ $t('app.todoPool') }}</span>
@@ -218,16 +218,21 @@ export default {
         this.dropActive = false;
       }
     },
-    // 把任务拖回待办池：清除其日期（dueAt/dueAllDay/dueEndAt），使其回到无日期池
-    async onDropToPool() {
-      const t = this.dragTask;
+    // 把任务拖回待办池：清除其日期（含跨日起始锚点 startAt），使其回到无日期池。
+    // 任务对象优先用父级下发的 dragTask；若因 prop 传递滞后等原因取不到，
+    // 则从拖拽数据里取 guid 兜底（updateTask 为 patch 模式，仅需 guid 即可清除）。
+    async onDropToPool(e) {
+      let t = this.dragTask;
+      if ((!t || !t.guid) && e && e.dataTransfer) {
+        const guid = e.dataTransfer.getData('text/plain');
+        if (guid) t = { guid };
+      }
       this.dropActive = false;
       this.$emit('drag-end');
-      if (!t) return;
+      if (!t || !t.guid) return;
       try {
         await Tasks.updateTask(t.guid, {
-          summary: t.summary, description: t.description,
-          dueAt: null, dueAllDay: false, dueEndAt: null
+          dueAt: null, dueAllDay: false, dueEndAt: null, startAt: null
         });
         this.$emit('saved');
       } catch (err) {
