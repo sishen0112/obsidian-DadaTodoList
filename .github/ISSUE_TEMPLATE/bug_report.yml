@@ -1,0 +1,95 @@
+name: 🐛 Bug 反馈 / Bug report
+description: 提交一个可以复现的问题 / Report a reproducible problem
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先确认这三件事：
+
+        1. 已在 README 里找过答案；
+        2. 使用的是**最新版本**插件（设置 → 第三方插件 → 检查更新）；
+        3. 已在「设置 → 第三方插件」中暂时禁用其他插件后重试过。
+
+        *Before submitting, please check the README, update to the latest version, and retry with other plugins disabled.*
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本 / Plugin version
+      description: 设置 → 第三方插件 → Dada Todo List 中可见
+      placeholder: "0.5.1"
+    validations:
+      required: true
+
+  - type: input
+    id: obsidian-version
+    attributes:
+      label: Obsidian 版本 / Obsidian version
+      description: 设置 → 关于
+      placeholder: "1.11.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 运行平台 / Platform
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Android
+        - iOS / iPadOS
+    validations:
+      required: true
+
+  - type: dropdown
+    id: daily-notes
+    attributes:
+      label: 核心「日记」插件是否已开启 / Core Daily notes enabled?
+      description: 有日期的任务依赖这个核心插件
+      options:
+        - 是 / Yes
+        - 否 / No
+        - 不确定 / Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述 / What happened
+      description: 实际发生了什么？你期望的是什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      description: 如果能稳定触发，请写清楚每一步
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或录屏 / Screenshots or recordings
+      description: 直接拖拽图片到此处。涉及个人任务内容的，请自行打码。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 确认 / Confirmation
+      options:
+        - label: 我已确认使用最新版本，并已在 README 中找过答案
+          required: true
+        - label: 我已尝试禁用其他插件后重试（可选，但能大幅加快排查）
+          required: false
