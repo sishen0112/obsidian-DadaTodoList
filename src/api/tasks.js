@@ -114,6 +114,15 @@ async function dailyTemplateContent() {
   }
 }
 
+// 完成任务时是否在任务行追加「✅ 完成日期」标记；设置项 addDoneDateMarker，默认开
+function addDoneDateEnabled() {
+  return (plugin.settings && plugin.settings.addDoneDateMarker) !== false;
+}
+// 计算完成态对应的 done 标记日期：开启返回已有/今天，关闭返回空（不写 ✅）
+function completionDoneDate(existing) {
+  return addDoneDateEnabled() ? (existing || todayKey()) : '';
+}
+
 function inboxPath() {
   const p = String((plugin.settings && plugin.settings.inboxFile) || 'DadaTodoList.md').replace(/^\/+|\/+$/g, '');
   return p || 'DadaTodoList.md';
@@ -510,7 +519,7 @@ export async function createTask(task) {
   // 先确保文件存在：日记走 Obsidian 原生创建以套用日记模板（如已配置），其余用默认 frontmatter
   await ensureTaskFile(dateKey, path);
   const doc = await readTasks(path, dateKey);
-  const node = nodeFromTask(t, dateKey);
+  const node = nodeFromTask(t, dateKey, { addDoneDate: addDoneDateEnabled() });
   if (listKey) {
     // 清单：行内标记日期，文件不变
     if (t.dueAt) node.due = todayKey(Number(t.dueAt));
@@ -537,7 +546,7 @@ export async function createChecklistTask(listKey, groupTitle, task) {
   if (!path) return res(400, { ok: false, reason: 'bad_list' });
   await ensureTaskFile(listKey, path);
   const doc = await readTasks(path, listKey);
-  const node = nodeFromTask(t, listKey);
+  const node = nodeFromTask(t, listKey, { addDoneDate: addDoneDateEnabled() });
   if (t.dueAt) node.due = todayKey(Number(t.dueAt));
   if (t.startAt) node.start = todayKey(Number(t.startAt));
   const newLine = serializeTaskLine(node, '');
@@ -617,7 +626,7 @@ export async function createSubtask(parentGuid, task) {
   const parent = locateNode(doc.roots, { lineNo: g.lineNo });
   if (!parent) return res(404, { ok: false, reason: 'not_found' });
 
-  const child = nodeFromTask(t, g.dateKey);
+  const child = nodeFromTask(t, g.dateKey, { addDoneDate: addDoneDateEnabled() });
   child.indentStr = (parent.indentStr || '') + CHILD_INDENT;
   child.indent = child.indentStr.length;
   const insertAt = Math.max(...collectLineNos(parent)) + 1;
@@ -654,7 +663,7 @@ export async function updateTask(guid, patch) {
   }
   if (p.completed != null) {
     node.completed = !!p.completed;
-    node.done = node.completed ? (node.done || todayKey()) : '';
+    node.done = node.completed ? completionDoneDate(node.done) : '';
   }
   // 取消 / 恢复：- [-] 标记 + ❌ 取消日期；取消时清除完成态与 ✅
   if (p.cancelled != null) {
@@ -756,7 +765,7 @@ export async function toggleTask(guid, done) {
   const node = locateNode(doc.roots, { lineNo: g.lineNo });
   if (!node) return res(404, { ok: false, reason: 'not_found' });
   node.completed = !!done;
-  node.done = node.completed ? (node.done || todayKey()) : '';
+  node.done = node.completed ? completionDoneDate(node.done) : '';
   if (done) { node.cancelMark = false; node.cancelled = ''; } // 勾选完成视为恢复，清除取消态
   const lines = doc.lines.slice();
   lines.splice(node.lineNo, 1, serializeTaskLine(node, node.indentStr));
@@ -776,7 +785,7 @@ export async function setChecklistStatus(guid, status) {
   if (!node) return res(404, { ok: false, reason: 'not_found' });
   if (status === 'done') {
     node.completed = true;
-    node.done = node.done || todayKey();
+    node.done = completionDoneDate(node.done);
     node.cancelMark = false;
     node.cancelled = '';
   } else if (status === 'cancelled') {

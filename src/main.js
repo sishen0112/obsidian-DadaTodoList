@@ -148,6 +148,8 @@ export default class DadaTodoPlugin extends Plugin {
       openLocation: data.openLocation || 'main',
       // 是否显示农历与节假日（日 / 周 / 月视图表头与日历格）
       showLunar: data.showLunar ?? true,
+      // 完成任务时是否在任务行追加「✅ 完成日期」标记；默认开。关闭后完成不写 ✅，开始/结束等日期标记不受影响
+      addDoneDateMarker: data.addDoneDateMarker ?? true,
       // 无日期任务的存放文件（相对库根目录）
       inboxFile: data.inboxFile || 'DadaTodoList.md',
       // 日记（有日期任务）所在文件夹：相对库根目录，默认 '/' = 库根；扫描其及子目录下文件名含日期的笔记

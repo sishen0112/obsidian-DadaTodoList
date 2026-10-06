@@ -445,7 +445,7 @@ export function serializeBlock(node, indentStr) {
 }
 
 // 由前端 payload 构造节点（用于新建）
-export function nodeFromTask(task, dateKey) {
+export function nodeFromTask(task, dateKey, opts = {}) {
   const t = task || {};
   const allDay = !!t.dueAllDay;
   const time = (t.dueAt && !allDay) ? msToTime(t.dueAt) : '';
@@ -465,7 +465,7 @@ export function nodeFromTask(task, dateKey) {
     created: '', start: '', scheduled: '', due: '', cancelled: '',
     priority: '',
     recurrence: '',
-    done: t.completed ? todayKey() : ''
+    done: (t.completed && opts.addDoneDate !== false) ? todayKey() : ''
   };
 }
 

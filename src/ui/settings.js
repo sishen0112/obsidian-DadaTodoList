@@ -282,6 +282,20 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           this.display();
         });
       });
+
+    // 分组：任务标记（完成日期标记开关）
+    new Setting(containerEl).setHeading().setName(t('settings.groupTaskMark'));
+
+    new Setting(containerEl)
+      .setName(t('settings.addDoneDateMarker'))
+      .setDesc(t('settings.addDoneDateMarkerDesc'))
+      .addToggle((tg) => {
+        tg.setValue(this.plugin.settings.addDoneDateMarker !== false); // 默认开
+        tg.onChange(async (value) => {
+          this.plugin.settings.addDoneDateMarker = value;
+          await this.plugin.saveSettings();
+        });
+      });
   }
 
   // 收件箱路径变更（输入逐字符触发 / 补全选中触发）：去抖 1s 后统一处理
