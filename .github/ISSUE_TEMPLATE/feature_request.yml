@@ -1,53 +1,53 @@
 name: ✨ 功能建议 / Feature request
-description: 提出一个新功能或改进 / Suggest a feature or improvement
+description: 有个想法想加进来？说说你遇到的问题 / Got an idea? Tell me about the problem you're hitting
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        好的功能建议描述的是**问题**，而不是解决方案——这样我才能判断有没有更轻量的做法。
+        比起直接给方案，先讲清楚你卡在哪会更管用——我也许能用更轻巧的办法解决。
 
-        *A good feature request describes the problem, not the solution.*
+        *A good feature request starts with the problem, not the solution.*
 
   - type: textarea
     id: problem
     attributes:
-      label: 你想解决的问题 / The problem you are trying to solve
-      description: 现在做这件事的时候，具体哪里不顺手？
+      label: 你想解决什么？/ The problem you're trying to solve
+      description: 现在做这件事时，哪里最别扭？
     validations:
       required: true
 
   - type: textarea
     id: workaround
     attributes:
-      label: 你现在是怎么绕过这个问题的 / Current workaround
-      description: 如果有的话。这一栏很有用——它能说明这个问题对你有多严重
+      label: 现在怎么凑合用的？/ Current workaround
+      description: 有的话写写。这一栏其实很有用，能帮我判断这事对你有多重要
     validations:
       required: false
 
   - type: textarea
     id: solution
     attributes:
-      label: 你设想的做法 / Your proposed solution
-      description: 如果你已经有具体想法，写在这里
+      label: 你心里想的方案 / Your proposed solution
+      description: 已经有具体想法就写这儿，没有也完全没关系
     validations:
       required: false
 
   - type: dropdown
     id: scope
     attributes:
-      label: 你觉得这个需求的影响范围 / How widely would this apply
+      label: 大概多少人会用到？/ How widely would this apply
       options:
-        - 大多数用户都会用到 / Most users
-        - 一部分用户会用到 / Some users
-        - 主要是我自己的用法 / Mostly my own workflow
+        - 大部分用户都会用到 / Most users
+        - 一部分用户会用 / Some users
+        - 主要我自己用 / Mostly my own workflow
     validations:
       required: true
 
   - type: checkboxes
     id: confirmations
     attributes:
-      label: 确认 / Confirmation
+      label: 最后确认下 / Confirmation
       options:
-        - label: 我理解功能建议会被评估，但不一定会实现
+        - label: 我理解：作者会评估每条建议，但不保证都能做出来
           required: true
