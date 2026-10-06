@@ -1,15 +1,5 @@
 import { ItemView, Plugin } from 'obsidian';
 import { createApp } from 'vue';
-import { ElTooltip, ElButton, ElButtonGroup, ElDropdown, ElDropdownMenu, ElDropdownItem, ElRadioGroup, ElRadioButton } from 'element-plus';
-import 'element-plus/es/components/tooltip/style/css';
-import 'element-plus/es/components/button/style/css';
-import 'element-plus/es/components/button-group/style/css';
-import 'element-plus/es/components/dropdown/style/css';
-import 'element-plus/es/components/dropdown-menu/style/css';
-import 'element-plus/es/components/dropdown-item/style/css';
-import 'element-plus/es/components/radio/style/css';
-import 'element-plus/es/components/radio-group/style/css';
-import 'element-plus/es/components/radio-button/style/css';
 import TasksApp from './views/TasksApp.vue';
 import { initTasksApi, ensureInboxFile } from './api/tasks.js';
 import { setColorScheme, setWeekStart } from './composables/tasks-logic.js';
@@ -53,17 +43,6 @@ class DadaTodoView extends ItemView {
     this.vueApp = createApp(TasksApp);
     // 自定义指令：v-tooltip 用 Obsidian 自带 setTooltip 实现悬浮提示
     this.vueApp.directive('tooltip', tooltip);
-    // 仅按需引入 Element Plus 的 Tooltip 组件（含最小样式：base 变量 + popper + tooltip）
-    this.vueApp.component('ElTooltip', ElTooltip);
-    // 顶栏控件：按钮 / 按钮组 / 下拉菜单（主题色由 tokens.css 的 --el-color-primary 映射为 --gold）
-    this.vueApp.component('ElButton', ElButton);
-    this.vueApp.component('ElButtonGroup', ElButtonGroup);
-    this.vueApp.component('ElDropdown', ElDropdown);
-    this.vueApp.component('ElDropdownMenu', ElDropdownMenu);
-    this.vueApp.component('ElDropdownItem', ElDropdownItem);
-    // 清单视图「列表 / 分栏」单选（主题色：--el-color-primary 已映射为 --gold）
-    this.vueApp.component('ElRadioGroup', ElRadioGroup);
-    this.vueApp.component('ElRadioButton', ElRadioButton);
     // 插件实例挂为全局属性（TasksApp 用 this.plugin）并一并 provide（兼容 inject）
     this.vueApp.config.globalProperties.plugin = this.plugin;
     this.vueApp.provide('plugin', this.plugin);
