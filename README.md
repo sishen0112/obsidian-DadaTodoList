@@ -1,55 +1,10 @@
 # Dada Todo List
 
-> A task & checklist manager for [Obsidian](https://obsidian.md), built entirely on plain Markdown checkboxes.
-> Your tasks live in your own notes — daily notes, an inbox note, and checklist files. No account, no cloud, no lock-in.
+> 一款基于 Obsidian 笔记的待办与清单管理插件，全部基于纯 Markdown 复选框。任务就在你自己的笔记里——日记、收件箱、清单文件。无账号、无云端、无锁定。
 
-[简体中文](#简体中文) | [English](#english)
-
----
-
-<!-- 主视图宣传图：请把生成好的主视图（Hero / 门面图）命名为 main-view.png，放入 docs/screenshots/ 目录即可自动显示 -->
-<p align="center">
-  <img src="docs/screenshots/main-view.jpg" alt="Dada Todo List 主视图"><br>
-  <em>Dada Todo List（达达清单）—— 把 Obsidian 变成你的任务中枢</em>
-</p>
+[English](./README_en.md) · [简体中文](./README.md)
 
 ---
-
-## 📸 界面预览
-
-<p align="center">
-  <img src="docs/screenshots/week-view.png" alt="周视图"><br>
-  <em>周视图：七天并排时间轴，定时任务按泳道排布、互不遮挡</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/month-view.png" alt="月视图"><br>
-  <em>月视图：农历、节气、节日、法定节假日（休 / 班）一目了然</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/agenda.png" alt="日程视图"><br>
-  <em>日程：按日期纵向滚动的议程，过期待办置顶</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/checklists.png" alt="清单视图"><br>
-  <em>清单：按标题分组管理，列表 / 分栏两种布局</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/list-view.png" alt="列表视图"><br>
-  <em>列表：全部任务池，按标签 / 日期 / 清单 / 状态多维筛选</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/editor.png" alt="任务编辑弹窗"><br>
-  <em>任务编辑：标题内联语法、时间形态切换、子任务管理</em>
-</p>
-
----
-
-## 简体中文
 
 **Dada Todo List（达达清单）** 是一款基于 Obsidian 笔记的待办与清单管理插件。所有任务就是你笔记里的 Markdown 复选框（`- [ ]` / `- [x]`），插件负责把它们聚合起来，提供日历、时间轴、日程等多种视图和顺手的编辑体验。
 
@@ -60,7 +15,7 @@
 
 ### 💡 快速上手
 
-1. 开启核心插件「**日记**」（设置 → 核心插件）——有日期的任务就存在你的每日笔记里；
+1. 建议开启核心插件「**日记**」（设置 → 核心插件）——有日期的任务就存在你的每日笔记里；
 2. 点击左侧栏的 ✅ 图标（或命令面板「打开 Dada Todo List」）打开面板；
 3. 在任意一篇每日笔记里写下一行 `- [ ] 买牛奶 #生活`，面板里立刻就能看到。
 
@@ -112,19 +67,15 @@
 **手动安装**：下载 `main.js`、`styles.css`、`manifest.json` 三个文件，放入
 `你的库/.obsidian/plugins/dada-todo-list/` 目录，然后在设置中启用第三方插件并开启本插件。
 
-**BRAT**：安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 后，添加本仓库地址即可自动更新。
-
 ### 📁 数据存储
 
 | 数据 | 位置 |
 |---|---|
-| 有日期的任务 | **核心「日记」插件**配置的日记文件夹（文件夹与文件名格式都跟随日记设置），任务即每日笔记正文中的复选框 |
+| 有日期的任务 | **日记文件夹**设置指定的文件夹（插件扫描其中文件名含日期的笔记），任务即这些笔记正文中的复选框 |
 | 无日期的任务（收件箱） | 默认库根目录 `DadaTodoList.md`，可在设置中改为任意文件；不存在时启动自动创建 |
 | 清单 | frontmatter `tags` 中包含 `todoList`（可改）的笔记，**全库识别**，不限目录 |
 
-> 三个位置只有收件箱路径与清单标记是本插件的设置项；每日笔记完全跟随你现有的日记配置，装上即用、无需导入。
->
-> 若核心「日记」插件未开启，面板顶部会出现提醒条，有日期任务暂不可读写，收件箱与清单不受影响。
+> 收件箱文件、清单 tag 标记与日记文件夹都是本插件的设置项。日记文件夹默认指向库根目录（扫描文件名含日期的笔记），可独立于核心「日记」插件使用。
 
 ### 📝 清单文件的写法
 
@@ -160,104 +111,19 @@ tags:
 | 设置项 | 说明 |
 |---|---|
 | **打开位置** | 左侧栏 / 主工作区标签页 / 右侧栏 |
-| **启动后自动打开** | 每次启动 Obsidian 自动打开任务面板 |
+| **主题配色** | 时间轴、日历等任务块的配色方案：默认 / 莫兰迪 / 卡通果冻 / 春樱 / 夏木 / 秋枫 / 冬雪；按任务标题取色，相同标题颜色一致 |
 | **显示农历与节假日** | 日 / 周 / 月视图中的农历、节气、节日及休 / 班标记，可关闭只显示公历 |
-| **任务块配色** | 时间轴 / 全天 / 凌晨等任务块的配色方案：默认 / 莫兰迪（低饱和灰调）/ 卡通果冻（高饱和糖果色）；按任务标题取色，相同标题颜色一致 |
+| **日记文件夹** | 存放日记（有日期任务）的文件夹，插件扫描该目录及子目录里文件名含日期的笔记；默认 `/` 表示库根目录 |
+| **日记载入范围** | 仅加载最近 N 天的日记（近 30 / 90 / 180 天 / 一年 / 全部，默认全部）。笔记与任务较多时可调小以提升加载性能 |
 | **收件箱文件** | 无日期任务的存放文件（相对库根目录的路径）；更换路径时若旧文件还有任务，会主动询问是否整体迁移 |
-| **清单识别标记** | frontmatter `tags` 含任一标记的笔记即清单文件，可配置多个 |
-| **每日笔记加载范围** | 仅加载最近 N 天的每日笔记（近 30 / 90 / 180 天 / 一年 / 全部，默认全部）。笔记与任务较多时可调小以提升加载性能 |
+| **清单文件 tag 标记** | frontmatter `tags` 含任一标记的笔记即清单文件，可配置多个 |
+| **每周开始日** | 周视图起始列与月历首列以此为准，可选周日到周六，默认周一 |
+| **时间轴显示范围** | 时间轴视图的起止小时（0:00 – 24:00），聚焦常用时段 |
+| **完成任务时添加完成日期标记** | 勾选完成任务时，在任务行末尾追加完成日期（如 ✅ 2026-10-06）。默认开启，关闭后不再追加该标记，开始 / 结束等日期标记不受影响 |
 
 ### 🌐 语言
 
 界面跟随 Obsidian 的语言设置（简体中文 / English）。切换 Obsidian 语言后重启即可生效。
-
-> 英文文档见下方 [English](#english) 章节。
-
----
-
----
-
-## English
-
-**Dada Todo List** turns your Obsidian vault into a full-featured task and checklist manager — powered entirely by plain Markdown checkboxes (`- [ ]` / `- [x]`). No accounts, no cloud services, no proprietary database: your tasks are simply lines in your own notes, and the plugin brings them together with calendar, timeline and agenda views plus a polished editing experience.
-
-### Who is it for?
-
-- **Already managing tasks in Obsidian?** If your to-dos are scattered across daily notes and scattered checklists — and finding them means searching — this plugin is for you. It gathers everything you've already written into six views (day / week / month / agenda / checklists / list) with zero migration: your notes stay exactly where they are.
-- **Haven't tried task management in Obsidian yet?** You don't need yet another to-do service. Your vault *is* your task manager: plain Markdown that stays readable forever, stored locally, synced with whatever you already use. Start with a single `- [ ]` and grow your own system from there.
-
-### Highlights
-
-- **Six views** — day timeline, seven-day week timeline with lane layout, month calendar (with Chinese lunar dates, solar terms, festivals and statutory holidays), rolling agenda, grouped checklists, and a filterable list of everything
-- **Inline syntax** — write `#tags` and `[links](url)` right in the task title; they render as clickable pills and hyperlinks
-- **Flexible time** — single time, time ranges (start – end), all-day, or **cross-date** (start date – end date, shown across multiple days), switchable per task
-- **Subtasks** — indented lines become nested subtasks of any depth
-- **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
-- **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note
-
-### Installation
-
-**Manual**: download `main.js`, `styles.css` and `manifest.json` into
-`your-vault/.obsidian/plugins/dada-todo-list/`, then enable the plugin in Settings → Community plugins.
-
-**BRAT**: install [BRAT](https://github.com/TfTHacker/obsidian42-brat) and add this repository.
-
-### Where your data lives
-
-| Data | Location |
-|---|---|
-| Dated tasks | Your **core Daily notes** folder (follows its folder & date format) — tasks are checkboxes inside each daily note |
-| Dateless tasks (inbox) | `DadaTodoList.md` in the vault root by default; configurable, created automatically |
-| Checklists | Any note whose frontmatter `tags` include `todoList` (configurable), anywhere in the vault |
-
-Everything is plain Markdown. Uninstalling the plugin changes nothing — your notes stay as they are.
-
-### Writing checklists
-
-Any note whose frontmatter `tags` include the checklist tag (default `todoList`) becomes a checklist. Use **`###` third-level headings as group separators** — the checklist view renders one group per heading:
-
-```markdown
----
-tags:
-  - todoList
----
-
-### Work
-- [ ] Finish the quarterly report #work
-    - [ ] Collect data
-- [x] Reply to client emails
-
-### Life
-- [ ] Book a dentist appointment
-```
-
-- **`###` heading = group name**, freely added/renamed/removed; tasks before any heading fall into "Ungrouped"
-- **Indented checkboxes are subtasks**, nesting to any depth
-- Switch between **list / columns** layouts; **drag a task onto another group** to move it
-- Each group has a **+ button** to add tasks; the sidebar shows live total / done progress per checklist
-
-### Data access disclosure
-
-- **File enumeration**: the plugin lists Markdown file paths and their frontmatter to discover daily notes and checklist files (checklists are identified anywhere in the vault by their tags). Only matched daily notes (within the configured load window), the inbox file, and tag-matched checklist files are actually read — no other file's content is ever touched.
-- **localStorage**: stores only non-essential UI preferences (current view, filters, onboarding state) on the local device. It never contains note content and is never synced; it is deliberately *not* written to `data.json` to avoid triggering cloud-sync services on every interaction.
-
-### Settings
-
-| Option | Description |
-|---|---|
-| Open location | Left sidebar / main workspace tab / right sidebar |
-| Open on startup | Automatically open the panel when Obsidian launches |
-| Lunar calendar & holidays | Show lunar dates, solar terms and holiday badges in day / week / month views; can be turned off |
-| Task block color scheme | Color scheme for task blocks (timeline / all-day / early-morning): Default / Morandi (muted) / Jelly (candy); color derived from the task title |
-| Inbox file | Where dateless tasks are stored; changing it offers to migrate existing tasks |
-| Checklist tags | Frontmatter tags that mark a note as a checklist file |
-| Daily-notes load window | Load only the last N days of daily notes (30 / 90 / 180 / 365 / all; default all) — lower it on large vaults for better performance |
-
-### Language
-
-The interface follows Obsidian's language setting (English / 简体中文). Restart Obsidian after switching.
-
-> 完整的中文文档见上方 [简体中文](#简体中文) 章节。
 
 ---
 
