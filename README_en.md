@@ -97,7 +97,7 @@ The interface follows Obsidian's language setting (English / 简体中文). Rest
 
 ## 💖 Support the author
 
-If this plugin helps you, feel free to buy me a coffee — it keeps me motivated to keep improving it~
+If this plugin helps you, feel free to buy me a coffee — it keeps me motivated to keep improving it~ You can also find me on [Xiaohongshu](https://xhslink.cn/o/2G9OTVU76WP) for tips and updates.
 
 WeChat Pay
 
