@@ -2,7 +2,7 @@
 
 > 一款基于 Obsidian 笔记的待办与清单管理插件，全部基于纯 Markdown 复选框。任务就在你自己的笔记里——日记、收件箱、清单文件。无账号、无云端、无锁定。
 
-[English](./README_en.md) · [简体中文](./README.md)
+[English](./README_en.md) · 简体中文
 
 ---
 

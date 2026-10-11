@@ -2,7 +2,7 @@
 
 > A task & checklist manager for Obsidian, built entirely on plain Markdown checkboxes. Your tasks live in your own notes — daily notes, an inbox note, and checklist files. No account, no cloud, no lock-in.
 
-[简体中文](./README.md) · [English](./README_en.md)
+[简体中文](./README.md) · English
 
 ---
 
