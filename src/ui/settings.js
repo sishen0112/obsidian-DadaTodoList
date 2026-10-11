@@ -283,6 +283,20 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         });
       });
 
+    // 时间选择器步长（分钟）：下拉以该步长生成选项
+    new Setting(containerEl)
+      .setName(t('settings.timeStep'))
+      .setDesc(t('settings.timeStepDesc'))
+      .addDropdown((dd) => {
+        for (let m = 5; m <= 60; m += 5) dd.addOption(String(m), String(m) + t('settings.minuteUnit'));
+        dd.setValue(String(this.plugin.settings.timeStep || 5));
+        dd.onChange(async (value) => {
+          this.plugin.settings.timeStep = parseInt(value, 10) || 5;
+          await this.plugin.saveSettings();
+          this.plugin.reloadOpenViews();
+        });
+      });
+
     // 分组：任务标记（完成日期标记开关）
     new Setting(containerEl).setHeading().setName(t('settings.groupTaskMark'));
 

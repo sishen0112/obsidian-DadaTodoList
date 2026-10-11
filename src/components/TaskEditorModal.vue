@@ -59,10 +59,10 @@
         <template v-if="form.timeMode === 'single'">
           <label class="tk-field">
             <span>{{ $t('editor.date') }}</span>
-            <input v-model="form.dueDate" type="date" :disabled="saving" @change="onDateChange" />
+            <DatePicker v-model="form.dueDate" :disabled="saving" @change="onDateChange" />
           </label>
           <div class="tk-time-row">
-            <input v-model="form.dueTime" type="time" :disabled="saving" />
+            <TimePicker v-model="form.dueTime" :disabled="saving" :step="timeStep" placeholder="HH:MM" />
           </div>
         </template>
 
@@ -70,12 +70,12 @@
         <template v-else-if="form.timeMode === 'range'">
           <label class="tk-field">
             <span>{{ $t('editor.date') }}</span>
-            <input v-model="form.dueDate" type="date" :disabled="saving" @change="onDateChange" />
+            <DatePicker v-model="form.dueDate" :disabled="saving" @change="onDateChange" />
           </label>
           <div class="tk-time-row">
-            <input v-model="form.dueStart" type="time" :disabled="saving" @change="normalizeEnd" />
+            <TimePicker v-model="form.dueStart" :disabled="saving" :max="form.dueEnd" :step="timeStep" placeholder="开始" />
             <span class="tk-tm-sep">—</span>
-            <input v-model="form.dueEnd" type="time" :disabled="saving" @change="normalizeEnd" />
+            <TimePicker v-model="form.dueEnd" :disabled="saving" :min="form.dueStart" :step="timeStep" placeholder="结束" />
           </div>
         </template>
 
@@ -83,7 +83,7 @@
         <template v-else-if="form.timeMode === 'allday'">
           <label class="tk-field">
             <span>{{ $t('editor.date') }}</span>
-            <input v-model="form.dueDate" type="date" :disabled="saving" @change="onDateChange" />
+            <DatePicker v-model="form.dueDate" :disabled="saving" @change="onDateChange" />
           </label>
         </template>
 
@@ -91,11 +91,11 @@
         <template v-else-if="form.timeMode === 'crossdate'">
           <label class="tk-field">
             <span>{{ $t('editor.startDate') }}</span>
-            <input v-model="form.startDate" type="date" :disabled="saving" @change="ensureDefaultTimes" />
+            <DatePicker v-model="form.startDate" :disabled="saving" @change="ensureDefaultTimes" />
           </label>
           <label class="tk-field">
             <span>{{ $t('editor.endDate') }}</span>
-            <input v-model="form.dueDate" type="date" :disabled="saving" @change="ensureDefaultTimes" />
+            <DatePicker v-model="form.dueDate" :disabled="saving" @change="ensureDefaultTimes" />
           </label>
         </template>
       </div>
@@ -138,13 +138,15 @@ import { splitSummary, composeSummary, sanitizeTag } from '../composables/tasks-
 import { LinkFormModal, ConfirmModal } from '../ui/modals.js';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
 import SubtaskList from './SubtaskList.vue';
+import TimePicker from './TimePicker.vue';
+import DatePicker from './DatePicker.vue';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 
 export default {
   name: 'TaskEditorModal',
-  components: { SubtaskList },
+  components: { SubtaskList, TimePicker, DatePicker },
   props: {
     open: { type: Boolean, default: false },
     task: { type: Object, default: null },
@@ -172,6 +174,8 @@ export default {
     editing() { return !!(this.task && this.task.guid); },
     // 时间形态三态（allday / single / range）中，是否全天
     isAllDay() { return this.form.timeMode === 'allday'; },
+    // 时间选择器步长：取自插件设置（timeStep），取不到时默认 5（分钟）
+    timeStep() { return (this.plugin && this.plugin.settings && this.plugin.settings.timeStep) || 5; },
     isCrossDate() { return this.form.timeMode === 'crossdate'; }
   },
   watch: {
@@ -267,14 +271,6 @@ export default {
       if (next >= 1440) next = 1410; // 封顶 23:30
       return pad(Math.floor(next / 60)) + ':' + pad(next % 60);
     },
-    // 时间段模式：结束时间不得早于开始时间，否则修正为开始之后的下一个整点/半点
-    normalizeEnd() {
-      if (this.form.timeMode !== 'range' || this.isAllDay) return;
-      if (!this.form.dueStart || !this.form.dueEnd) return;
-      if (this.toMin(this.form.dueEnd) <= this.toMin(this.form.dueStart)) {
-        this.form.dueEnd = this.ceilHalfHour(this.form.dueStart);
-      }
-    },
     // 未指定时间时，按模式带出默认值（单时间→下一个半点；时间段→开始为下一个半点、结束+30 分）
     ensureDefaultTimes() {
       if (this.isAllDay) return;
@@ -318,8 +314,6 @@ export default {
       if (this.form.timeMode === 'range') {
         start = this.form.dueStart || this.nextHalfHour().start;
         end = this.form.dueEnd || this.addMinutes(start, 30);
-        // 兜底：结束不得早于开始，否则取开始之后的下一个整点/半点
-        if (this.toMin(end) <= this.toMin(start)) end = this.ceilHalfHour(start);
       } else {
         start = this.form.dueTime || this.nextHalfHour().start;
       }
@@ -331,6 +325,12 @@ export default {
     async save(opts) {
       const title = (this.form.title || '').trim();
       if (!title) return;
+      // 时间段：结束须晚于开始，否则提示并阻止保存（不再静默吸附，避免改期被悄悄改写）
+      if (this.form.timeMode === 'range' && this.form.dueStart && this.form.dueEnd
+          && this.toMin(this.form.dueEnd) <= this.toMin(this.form.dueStart)) {
+        this.error = this.$t('editor.endAfterStart');
+        return;
+      }
       this.saving = true; this.error = '';
       const { dueAt, dueEndAt, startAt } = this.buildDueAt();
       const payload = {

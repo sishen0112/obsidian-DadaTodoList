@@ -174,6 +174,8 @@ export default class DadaTodoPlugin extends Plugin {
         if (v > 24) v = 24;
         return v;
       })(),
+      // 时间选择器步长（分钟）：下拉以该步长生成可选项（5–60，默认 5）
+      timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || 5))),
     };
     // 启动即用已保存的配色方案 / 每周起始日初始化（视图重载时会按此重算）
     setColorScheme(this.settings.colorScheme);

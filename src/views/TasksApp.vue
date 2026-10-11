@@ -686,13 +686,13 @@ export default {
         // dueAt 跑到新日 → 向前拖（旧日<新日）被 spansDays 误判为跨日期；向后拖只是恰好退化单日。
         payload.startAt = dueAt;
       }
-      // 时间段任务：保持原时长（结束随开始平移）
+      // 时间段任务：保持原时长（结束随开始平移）。
+      // 用「新开始 − 原开始」的真实时间差整体平移 dueEndAt：既保留结束的本地时/分，
+      // 也兼容跨午夜。原实现用 Math.floor(dueAt/60000)%(24*60) 取的是 UTC 日内分钟，
+      // 在非 UTC 时区会把结束时间整体偏移一个时区差，导致结束时刻错乱。
       if (!allDay && t.dueEndAt && !t.dueAllDay) {
-        const dur = Math.max(0, Math.round((new Date(t.dueEndAt).getTime() - new Date(t.dueAt).getTime()) / 60000));
-        let endMin = Math.floor(dueAt / 60000) % (24 * 60) + dur;
-        if (endMin > 23 * 60 + 59) endMin = 23 * 60 + 59;
-        const eh = Math.floor(endMin / 60), em = endMin % 60;
-        payload.dueEndAt = new Date(dayKey + 'T' + pad(eh) + ':' + pad(em) + ':00').getTime();
+        const delta = dueAt - new Date(t.dueAt).getTime();
+        payload.dueEndAt = new Date(new Date(t.dueEndAt).getTime() + delta).getTime();
       }
       try {
         await Tasks.updateTask(t.guid, payload);
