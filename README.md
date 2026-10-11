@@ -135,6 +135,10 @@ tags:
 
 <img src="docs/donate-wechat.jpg" alt="微信赞赏码" width="300">
 
+支付宝赞赏 Alipay
+
+<img src="docs/donate-alipay.jpg" alt="支付宝赞赏码" width="300">
+
 ---
 
 ## 🛠 开发

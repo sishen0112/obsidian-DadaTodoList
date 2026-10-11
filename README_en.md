@@ -103,6 +103,10 @@ WeChat Pay
 
 <img src="docs/donate-wechat.jpg" alt="WeChat donation QR" width="300">
 
+Alipay
+
+<img src="docs/donate-alipay.jpg" alt="Alipay donation QR" width="300">
+
 ---
 
 ## 🛠 Development
