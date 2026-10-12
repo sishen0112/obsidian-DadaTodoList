@@ -248,7 +248,14 @@
     "daysAll": "全部",
     "checklistTag": "清单文件 tag 标记",
     "checklistTagDesc": "可添加多个。frontmatter 的 tags 含任一标签（或其子标签，如 todoList/工作）的笔记会被识别为清单文件。",
-    "tagPlaceholder": "输入标签后回车添加（如 todoList）"
+    "tagPlaceholder": "输入标签后回车添加（如 todoList）",
+    "groupAbout": "关于",
+    "author": "作者",
+    "github": "GitHub",
+    "xiaohongshu": "小红书",
+    "feedbackTitle": "问题反馈",
+    "feedbackDesc": "使用中遇到问题，可在 GitHub 提交 Issue，或通过小红书私信联系作者。",
+    "feedbackLink": "在 GitHub 提交 Issue"
   },
   "modals": {
     "linkAdd": "新增链接",

@@ -1,0 +1,103 @@
+/* ---------- 设置页：关于区 ---------- */
+.dt-about-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 14px 16px;
+  margin-top: 8px;
+  background: var(--background-secondary);
+}
+
+.dt-about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dt-about-name {
+  font-weight: 600;
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+}
+
+.dt-about-version-tag {
+  margin-left: 8px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: 1px 8px;
+}
+
+.dt-about-hr {
+  height: 1px;
+  background: var(--background-modifier-border);
+  margin: 12px 0;
+  border: 0;
+}
+
+.dt-about-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dt-about-author {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dt-about-author-name {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.dt-about-links {
+  display: flex;
+  gap: 8px;
+}
+
+.dt-about-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-normal);
+  text-decoration: none;
+  font-size: var(--font-ui-small);
+  background: var(--background-primary);
+}
+
+.dt-about-link:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+.dt-about-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dt-about-fb-desc {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.dt-about-link-fb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-ui-small);
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.dt-about-link-fb:hover {
+  text-decoration: underline;
+}

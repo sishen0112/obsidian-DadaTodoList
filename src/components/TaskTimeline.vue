@@ -213,7 +213,7 @@ export default {
     },
     onAlldayDrop(e) {
       const key = this.colKeyFromX(e);
-      if (key) this.handlers.dropAllDay(key);
+      if (key) this.handlers.dropAllDay(key, e);
     },
     // 全天/跨日期条：首/尾日期柄按下。跨日期→整条平移（只改开始日）；单日全天→延伸为跨日期
     onSpanResizeDown(which, b, e) {

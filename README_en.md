@@ -20,6 +20,7 @@
 - **Flexible time** — single time, time ranges (start – end), all-day, or **cross-date** (start date – end date, shown across multiple days), switchable per task
 - **Subtasks** — indented lines become nested subtasks of any depth
 - **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
+- **Option/Alt + drag to copy** — hold Option (Mac) / Alt or Ctrl (Windows·Linux) while dragging to drop a copy at the target; the original stays put. In the month view the copy keeps its original times and only changes the date; on the week / day timeline the drop point becomes the new start time (original duration preserved)
 - **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note
 
 ### Installation

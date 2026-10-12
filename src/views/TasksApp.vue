@@ -147,6 +147,8 @@ export default {
       dragGuid: '',
       dragOverKey: '',
       dragTask: null,
+      // Option(⌥)/Ctrl 拖拽 = 复制任务（落点新建，原任务不动）；普通拖拽 = 移动
+      dragCopy: false,
       // 待办侧栏（周/日/月视图共用）：localStorage 记忆用户选择（缺省展开）；
       // 窄面板（手机端）默认收起，避免遮挡视图主体——顶栏的「展开待办」按钮在窄屏被隐藏，故窄屏不应默认展开
       todoPanelOpen: (() => {
@@ -640,16 +642,22 @@ export default {
     onDragStart(t, e) {
       this.dragGuid = t.guid;
       this.dragTask = t;
+      // Option(⌥，Mac) / Ctrl(Windows·Linux) 拖拽 = 复制任务：落点新建副本，原任务不变
+      this.dragCopy = !!(e && (e.altKey || e.ctrlKey));
       if (e && e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
+        // copyMove：允许移动；按住 Option/Ctrl 时由 dragover 实时切到 copy，光标显示「+」
+        e.dataTransfer.effectAllowed = 'copyMove';
         // Firefox 必须写入数据才会启动拖拽
         try { e.dataTransfer.setData('text/plain', t.guid); } catch (err) { /* 忽略 */ }
       }
     },
-    // 拖拽悬停：仅记录目标日期 key（月视图列高亮；时间轴内的预览横线在 WeekDayView 内部处理）
-    onDragOver(key) {
+    // 拖拽悬停：记录目标日期 key（月视图列高亮），并实时同步 Option/Ctrl 复制态
+    // （用户可能在抓起后才按 Option，故以 dragover 的修饰键为准，drop 时再兜底读一次）
+    onDragOver(key, e) {
       if (!this.dragTask) return;
       this.dragOverKey = key;
+      if (e && (e.altKey || e.ctrlKey)) this.dragCopy = true;
+      else if (e) this.dragCopy = false;
     },
     onDragEnd() {
       this.dragGuid = '';
@@ -657,14 +665,16 @@ export default {
       this.dragTask = null;
     },
     // 月视图 / 日程视图的日期格放置：拖入某天即改期到那天
-    async onDrop(dayKey) {
+    async onDrop(dayKey, e) {
       const t = this.dragTask;
+      const copy = this.dragCopy || !!(e && (e.altKey || e.ctrlKey));
       this.onDragEnd();
       if (!t) return;
       // 原地放下：落点已是任务当前日期则跳过。跨日任务以开始日（startAt）为锚点判断，
       // 否则仅比较 dueAt（结束日）会把「拖到最后一天」误判为原地而无效果。
       const anchorKey = spansDays(t) ? ymd(new Date(t.startAt)) : (t.dueAt ? ymd(new Date(t.dueAt)) : null);
-      if (anchorKey && anchorKey === dayKey) return;
+      // 复制模式允许落到原日期（生成当天副本）；移动模式原地放下则跳过
+      if (anchorKey && anchorKey === dayKey && !copy) return;
       // 无日期任务（来自左侧待办列表）拖入某天 → 默认全天；有日期任务保留原时刻
       const allDay = t.dueAt ? !!t.dueAllDay : true;
       let dueAt;
@@ -695,7 +705,9 @@ export default {
         payload.dueEndAt = new Date(new Date(t.dueEndAt).getTime() + delta).getTime();
       }
       try {
-        await Tasks.updateTask(t.guid, payload);
+        // 复制：在落点新建一份相同内容的任务（原任务保留）；移动：原地改写该任务
+        if (copy) await Tasks.createTask(payload);
+        else await Tasks.updateTask(t.guid, payload);
         await this.reload();
         this.maybeRefreshNoDate();
       } catch (e) {

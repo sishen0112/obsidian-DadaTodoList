@@ -310,6 +310,54 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         });
       });
+
+    // 分组：关于（软件信息 / 作者 / 反馈渠道）
+    const GH_REPO = 'https://github.com/sishen0112/obsidian-DadaTodoList';
+    const GH_ISSUES = GH_REPO + '/issues';
+    // 作者小红书主页：用户提供链接后填入此处；留空则不显示小红书按钮
+    const XIAOHONGSHU_URL = 'https://xhslink.cn/o/2G9OTVU76WP';
+
+    new Setting(containerEl).setHeading().setName(t('settings.groupAbout'));
+
+    const about = containerEl.createDiv('dt-about-card');
+
+    // 软件名 + 版本
+    const infoRow = about.createDiv('dt-about-row');
+    infoRow.createSpan({ text: this.plugin.manifest.name, cls: 'dt-about-name' });
+    infoRow.createSpan({ text: 'v' + (this.plugin.manifest.version || ''), cls: 'dt-about-version-tag' });
+
+    about.createDiv('dt-about-hr');
+
+    // 作者 + 社交链接
+    const authorRow = about.createDiv('dt-about-row');
+    const authorLeft = authorRow.createDiv('dt-about-author');
+    authorLeft.createSpan({ text: t('settings.author'), cls: 'dt-about-label' });
+    authorLeft.createSpan({ text: this.plugin.manifest.author || '', cls: 'dt-about-author-name' });
+    const authorLinks = authorRow.createDiv('dt-about-links');
+    const gh = authorLinks.createEl('a', { cls: 'dt-about-link', href: this.plugin.manifest.authorUrl || GH_REPO });
+    gh.setAttribute('target', '_blank');
+    gh.setAttribute('rel', 'noopener');
+    gh.createEl('i', { cls: 'la la-github' });
+    gh.createSpan({ text: t('settings.github') });
+    if (XIAOHONGSHU_URL) {
+      const xhs = authorLinks.createEl('a', { cls: 'dt-about-link', href: XIAOHONGSHU_URL });
+      xhs.setAttribute('target', '_blank');
+      xhs.setAttribute('rel', 'noopener');
+      xhs.createEl('i', { cls: 'la la-book' });
+      xhs.createSpan({ text: t('settings.xiaohongshu') });
+    }
+
+    about.createDiv('dt-about-hr');
+
+    // 反馈说明
+    const fbRow = about.createDiv('dt-about-feedback');
+    fbRow.createEl('div', { text: t('settings.feedbackTitle'), cls: 'dt-about-label' });
+    fbRow.createEl('div', { text: t('settings.feedbackDesc'), cls: 'dt-about-fb-desc' });
+    const fbLink = fbRow.createEl('a', { cls: 'dt-about-link-fb', href: GH_ISSUES });
+    fbLink.setAttribute('target', '_blank');
+    fbLink.setAttribute('rel', 'noopener');
+    fbLink.createEl('i', { cls: 'la la-external-link-alt' });
+    fbLink.createSpan({ text: t('settings.feedbackLink') });
   }
 
   // 收件箱路径变更（输入逐字符触发 / 补全选中触发）：去抖 1s 后统一处理

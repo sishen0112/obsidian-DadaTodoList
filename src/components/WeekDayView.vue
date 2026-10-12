@@ -165,7 +165,7 @@ export default {
         dragStart: (t, e) => s.$emit('drag-start', t, e),
         dragEnd: () => s.$emit('drag-end'),
         dragOver: (key, e) => s.handleDragOver(key, e),
-        dropAllDay: (key) => s.onDropAllDay(key),
+        dropAllDay: (key, e) => s.onDropAllDay(key, e),
         dropTimeline: (key, e) => s.onDropTimeline(key, e),
         // 手柄拖动调时间：resize 实时改本地（触发重排），resizeCommit 落盘
         resize: (t, startMin, endMin) => s.resizeTaskLive(t, startMin, endMin),
@@ -341,8 +341,11 @@ export default {
     // 时间轴列内拖拽悬停：通知父级记录目标列，本地记录纵向落点（画预览横线）
     handleDragOver(key, e) {
       if (!this.dragTask) return;
-      this.$emit('drag-over', key);
-      if (e && e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      this.$emit('drag-over', key, e); // 透传 e：父级据 Option/Ctrl 实时更新复制态
+      if (e && e.dataTransfer) {
+        // Option(⌥)/Ctrl 拖拽 = 复制：光标显示「+」；否则为移动
+        e.dataTransfer.dropEffect = (e.altKey || e.ctrlKey) ? 'copy' : 'move';
+      }
       if (e && e.currentTarget) {
         const rect = e.currentTarget.getBoundingClientRect();
         this.dropY = e.clientY - rect.top;
@@ -352,6 +355,8 @@ export default {
     // 时间段任务：保持原时长，开始与结束一起平移（结束超出当天 24:00 则收缩到 23:59）
     async onDropTimeline(dayKey, e) {
       const t = this.dragTask;
+      // Option(⌥)/Ctrl 拖拽 = 复制：落点即新开始时间，原任务保留
+      const copy = !!(e && (e.altKey || e.ctrlKey));
       this.$emit('drag-end');
       if (!t) return;
       let y = 0;
@@ -380,7 +385,8 @@ export default {
         payload.startAt = dueAt;
       }
       try {
-        await Tasks.updateTask(t.guid, payload);
+        if (copy) await Tasks.createTask(payload);
+        else await Tasks.updateTask(t.guid, payload);
         this.$emit('saved');
       } catch (err) {
         this.$emit('error', this.$t('app.rescheduleFail') + (err && err.message || err));
@@ -445,22 +451,26 @@ export default {
       }
     },
     // 拖到「全天」格子：无论原是否定时，都转为该日全天任务
-    async onDropAllDay(dayKey) {
+    // Option(⌥)/Ctrl 拖拽 = 复制：原任务保留，落点新建全天副本
+    async onDropAllDay(dayKey, e) {
       const t = this.dragTask;
+      const copy = !!(e && (e.altKey || e.ctrlKey));
       this.$emit('drag-end');
       if (!t) return;
       const day = 86400000;
       const base = new Date(dayKey + 'T00:00:00').getTime();
       const isSpan = t.startAt && t.startAt !== t.dueAt;
+      // 跨日期任务：落点作为开始日，结束日按原跨度顺延，保持原天数不变
+      const payload = {
+        summary: t.summary,
+        description: t.description,
+        startAt: isSpan ? base : undefined,
+        dueAt: isSpan ? base + Math.max(0, Math.round((Number(t.dueAt) - Number(t.startAt)) / day)) * day : base,
+        dueAllDay: true
+      };
       try {
-        await Tasks.updateTask(t.guid, {
-          summary: t.summary,
-          description: t.description,
-          // 跨日期任务：落点作为开始日，结束日按原跨度顺延，保持原天数不变
-          startAt: isSpan ? base : undefined,
-          dueAt: isSpan ? base + Math.max(0, Math.round((Number(t.dueAt) - Number(t.startAt)) / day)) * day : base,
-          dueAllDay: true
-        });
+        if (copy) await Tasks.createTask(payload);
+        else await Tasks.updateTask(t.guid, payload);
         this.$emit('saved');
       } catch (err) {
         this.$emit('error', this.$t('app.rescheduleFail') + (err && err.message || err));

@@ -234,7 +234,7 @@ export default {
     },
     onWeekDrop(w, e) {
       const day = this.dayFromX(w, e);
-      if (day) this.ctx.onDrop(day);
+      if (day) this.ctx.onDrop(day, e);
     }
   }
 };

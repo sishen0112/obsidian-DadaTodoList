@@ -248,7 +248,14 @@
     "daysAll": "All",
     "checklistTag": "Checklist file tag(s)",
     "checklistTagDesc": "Add one or more tags. Notes whose frontmatter tags include any of them (or a sub-tag like todoList/work) are treated as checklists.",
-    "tagPlaceholder": "Type a tag and press Enter"
+    "tagPlaceholder": "Type a tag and press Enter",
+    "groupAbout": "About",
+    "author": "Author",
+    "github": "GitHub",
+    "xiaohongshu": "Xiaohongshu",
+    "feedbackTitle": "Feedback",
+    "feedbackDesc": "If you run into issues, file a GitHub Issue or message the author on Xiaohongshu.",
+    "feedbackLink": "Open a GitHub Issue"
   },
   "modals": {
     "linkAdd": "Add link",

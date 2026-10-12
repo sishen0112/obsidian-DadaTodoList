@@ -11,6 +11,7 @@ import 'line-awesome/dist/line-awesome/css/line-awesome.min.css';
 import './styles/tokens.css';
 import './styles/modals.css';
 import './styles/task-modal.css';
+import './styles/settings.css';
 
 // ============================================================================
 // Dada Todo · Obsidian 插件入口（任务模块来自 myLife-Plugin）
