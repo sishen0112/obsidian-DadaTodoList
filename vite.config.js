@@ -57,6 +57,7 @@ export default defineConfig({
   // 编译期注入 dev 标志 + 兜底手机端无 process 全局
   define: {
     __DADA_DEV__: JSON.stringify(isDev),
+    __DADA_PRO__: 'false',
     'process.env': JSON.stringify({ NODE_ENV: isDev ? 'development' : 'production' })
   },
   build: {
@@ -65,7 +66,7 @@ export default defineConfig({
     // （产物文件名固定为 main.js/styles.css/manifest.json，无残留哈希文件风险）
     emptyOutDir: !isDev,
     lib: {
-      entry: 'src/main.js',
+      entry: 'src/core/main.js',
       formats: ['cjs'],
       fileName: () => 'main.js'
     },

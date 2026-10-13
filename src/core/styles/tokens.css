@@ -22,6 +22,10 @@
   --gold: var(--interactive-accent);
   --gold-soft: var(--interactive-accent-hover);
   --gold-bg: var(--background-modifier-hover);
+  /* 今日高亮浅底令牌：周/月视图「今日」格共用，调深浅或换色只改这一处 */
+  --today-tint-color: var(--gold);
+  --today-tint-op: .08;            /* 常规泳道 / 月视图格的浅度 */
+  --today-tint-op-condensed: .16;  /* 全天细窄泳道，.08 几乎看不出，单独加深 */
   --paper: var(--background-primary);
   --panel: var(--background-primary);
   --panel-2: var(--background-secondary);

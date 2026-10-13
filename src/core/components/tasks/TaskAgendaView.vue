@@ -16,7 +16,7 @@
             <span class="tk-ag-lunar">{{ g.lunar }}</span>
             <span v-if="g.tag" class="tk-ag-tag">{{ g.tag }}</span>
             <span class="tk-ag-flags">
-              <span v-if="g.isToday" class="tk-ag-today">{{ $t('app.todayBadge') }}</span>
+              <span v-if="g.isToday" class="tk-today-badge">{{ $t('app.todayBadge') }}</span>
               <span v-if="g.holiday" class="tk-ag-hb" :class="g.holiday.rest ? 'is-rest' : 'is-work'" :title="g.holiday.name">{{ g.holiday.rest ? $t('app.rest') : $t('app.work') }}</span>
             </span>
           </div>
@@ -157,7 +157,7 @@ export default {
 .tk-ag-hb { flex: none; font-size: 9px; font-weight: 700; line-height: 14px; padding: 0 4px; border-radius: 9px; }
 .tk-ag-hb.is-rest { color: var(--text-on-accent); background: var(--c-done); }
 .tk-ag-hb.is-work { color: var(--text-on-accent); background: var(--c-cancel); }
-.tk-ag-today { flex: none; font-size: 10px; font-weight: 700; color: var(--text-on-accent); background: var(--gold); padding: 1px 7px; border-radius: 999px; }
+
 /* 分组标签（已延期 / 更远） */
 .tk-ag-lico { font-size: 13px; color: var(--ink-soft); transition: transform .15s ease; }
 .tk-ag-lico.la-rotate-90 { transform: rotate(90deg); }
@@ -170,8 +170,10 @@ export default {
 .tk-ag-none { color: var(--ink-soft); font-size: 12px; padding: 4px 2px 2px; }
 /* 今日空状态：居中、加大留白与字号 */
 .tk-ag-none.is-today { text-align: center; font-size: 14px; color: var(--ink-soft); padding: 22px 10px; }
-.tk-ag-row { display: grid; grid-template-columns: 52px 22px minmax(0, 1fr); align-items: stretch; cursor: pointer; }
-.tk-ag-time { display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tk-ag-row { display: grid; grid-template-columns: 80px 22px minmax(0, 1fr); align-items: stretch; cursor: pointer; }
+/* 时间列：pre-line 让延期/更远任务的「日期\n时间」分成两行（日期第一行、时间第二行）；
+   列宽固定 80px 保证时间轴竖线在行间对齐，不随内容宽度抖动；overflow-wrap 兜底长时段不裁切 */
+.tk-ag-time { display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: pre-line; overflow-wrap: anywhere; text-align: right; line-height: 1.3; }
 .tk-ag-axis { position: relative; display: flex; align-items: center; justify-content: center; }
 .tk-ag-axis::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--line); transform: translateX(-50%); }
 /* 时间轴首尾：线只连到圆点，不超出 */

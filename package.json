@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "DADA_DEV=1 vite build --watch",
-    "build": "vite build"
+    "build": "vite build",
+    "build:free": "vite build",
+    "build:pro": "vite build --config vite.config.pro.js"
   },
   "dependencies": {
     "i18next": "^23.16.8",

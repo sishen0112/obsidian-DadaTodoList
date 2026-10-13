@@ -1,0 +1,10 @@
+{
+  "id": "dada-todo-pro",
+  "name": "Dada Todo List Pro",
+  "version": "0.6.0",
+  "minAppVersion": "1.11.0",
+  "description": "Dada Todo List 的 Pro 版本：包含全部基础功能（日/周/月/日程视图、清单、子任务、标签、拖拽改期、农历节假日，纯本地），并叠加 Pro 专属 UI 与新功能。本插件为付费闭源版本。",
+  "author": "Plover",
+  "authorUrl": "https://github.com/sishen0112",
+  "isDesktopOnly": false
+}

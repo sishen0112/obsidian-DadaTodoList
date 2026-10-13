@@ -5,6 +5,16 @@
    所有类名均以 tk- 前缀限定，并挂在 .task-app 容器下，避免全局污染。
    设计令牌（--gold 等）定义在 .task-app 上，经 CSS 变量继承到子组件。 */
 
+/* ===== 统一「今日」徽标（日/周/月/日程视图共用同一外观） =====
+   主题强调色胶囊，跟随 Obsidian 主题（var(--gold)）。各视图在模板加 .tk-today-badge 即可，
+   组件内仅保留各自特有属性（如月视图 .cel-today 的 align-self）。 */
+.task-app .tk-today-badge {
+  flex: none;
+  font-size: 10px; font-weight: 700;
+  color: var(--text-on-accent); background: var(--gold);
+  padding: 1px 7px; border-radius: 999px;
+}
+
 /* ===== 统一「添加」按钮（日/周/月/日程/清单视图共用同一外观） =====
    透明金色 + 圆形图标，默认隐藏，hover 所属容器时显示；
    清单分组标题无 hover 容器，常驻可见。各视图仅保留定位类（如 .tk-ag-add 绝对定位）。 */

@@ -1,5 +1,5 @@
 import { ItemView, Plugin } from 'obsidian';
-import { createApp } from 'vue';
+import { createApp, reactive } from 'vue';
 import TasksApp from './views/TasksApp.vue';
 import { initTasksApi, ensureInboxFile } from './api/tasks.js';
 import { setColorScheme, setWeekStart } from './composables/tasks-logic.js';
@@ -22,7 +22,10 @@ import './styles/settings.css';
 //   与 app.provide('plugin', this)（兼容 inject 写法），数据层走 saveData / api/tasks.js。
 // ============================================================================
 
-const VIEW_TYPE_DADA_TODO = 'dada-todo-view';
+// 视图类型 / 命令 id 等标识符由 manifest.id 派生，确保「免费版 / Pro 版」作为两个独立插件
+// 互不冲突（否则两者注册同一 view type 会导致后加载者报「已注册」而加载失败，并互相顶掉页面）。
+// 免费版 manifest.id = dada-todo-list → 沿用历史值 dada-todo-view / open-dada-todo（不破坏老用户）；
+// 其它 id（如 Pro 版 dada-todo-pro）→ 自动派生为 dada-todo-pro-view / dada-todo-pro-open。
 
 /** 待办视图：Obsidian 侧栏面板，挂载 Vue 应用 */
 class DadaTodoView extends ItemView {
@@ -32,10 +35,24 @@ class DadaTodoView extends ItemView {
     this.vueApp = null;
   }
 
-  getViewType() { return VIEW_TYPE_DADA_TODO; }
-  // 视图标题跟随界面语言：中文「达达清单」，英文「Dada Todo List」
-  getDisplayText() { return t('app.viewTitle'); }
-  getIcon() { return 'check-square'; }
+  // 视图类型 / 标题由 manifest.id 派生：免费版 dada-todo-list → dada-todo-view；
+  // 其它（如 Pro dada-todo-pro）→ dada-todo-pro-view，并显示名追加「 Pro」。
+  // 直接读 plugin.manifest.id 而非 plugin.viewType：避免宿主在某些时序下构造视图时
+  // 插件实例尚未注入（this.plugin 为空）而读到 undefined.viewType 崩溃。
+  // && 短路保证 this.plugin / manifest 任意一层缺失时都有兜底，不会抛错。
+  getViewType() {
+    const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
+    return (id === 'dada-todo-list' ? 'dada-todo' : id) + '-view';
+  }
+  getDisplayText() {
+    const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
+    return t('app.viewTitle') + (id === 'dada-todo-list' ? '' : ' Pro');
+  }
+  getIcon() {
+    // 与侧栏打开按钮一致：免费版 check-square，Pro 版 crown；用 manifest.id 派生并短路兜底
+    const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
+    return id === 'dada-todo-list' ? 'check-square' : 'crown';
+  }
 
   async onOpen() {
     const root = this.contentEl.createDiv('dada-todo-root');
@@ -72,6 +89,18 @@ export default class DadaTodoPlugin extends Plugin {
     // 初始化 i18n：跟随 Obsidian 界面语言（zh-cn / en）
     await initI18n(this);
 
+    // 派生本插件专属标识符（view type / 命令 id / 显示名），避免与同源的另一插件（如 Pro）冲突：
+    // 免费版 manifest.id = dada-todo-list → 沿用历史值 dada-todo-view / open-dada-todo（不破坏老用户）；
+    // 其它 id（如 Pro 版 dada-todo-pro）→ 自动派生 dada-todo-pro-view / dada-todo-pro-open，并显示名追加「 Pro」。
+    const base = (this.manifest && this.manifest.id && this.manifest.id !== 'dada-todo-list') ? this.manifest.id : 'dada-todo';
+    this.viewType = base + '-view';
+    const variantSuffix = base === 'dada-todo' ? '' : ' Pro';
+    this.viewTitle = t('app.viewTitle') + variantSuffix;
+    const commandId = base === 'dada-todo' ? 'open-dada-todo' : base + '-open';
+    // 是否 Pro 变体（manifest.id 非 dada-todo-list）：驱动侧栏图标 / 设置页徽标等身份呈现差异
+    this.isPro = base !== 'dada-todo';
+    const ribbonIcon = this.isPro ? 'crown' : 'check-square';
+
     // 任务数据层注入插件实例（vault / metadataCache 读写）
     initTasksApi(this);
     // 核心「日记」插件未启用的提醒改为面板顶部提醒条（TasksApp 内，随面板实时检测）
@@ -84,13 +113,13 @@ export default class DadaTodoPlugin extends Plugin {
       console.warn('[DadaTodo] 创建收件箱文件失败：', e);
     }
 
-    this.registerView(VIEW_TYPE_DADA_TODO, (leaf) => new DadaTodoView(leaf, this));
+    this.registerView(this.viewType, (leaf) => new DadaTodoView(leaf, this));
 
-    this.addRibbonIcon('check-square', t('app.openDada'), () => this.activateView());
+    this.addRibbonIcon(ribbonIcon, t('app.openDada') + variantSuffix, () => this.activateView());
 
     this.addCommand({
-      id: 'open-dada-todo',
-      name: t('app.openDada'),
+      id: commandId,
+      name: t('app.openDada') + variantSuffix,
       callback: () => this.activateView()
     });
 
@@ -111,14 +140,14 @@ export default class DadaTodoPlugin extends Plugin {
     if (loc === 'left') leaf = workspace.getLeftLeaf(true);
     else if (loc === 'right') leaf = workspace.getRightLeaf(true);
     else leaf = workspace.getLeaf('tab'); // 主窗口
-    await leaf.setViewState({ type: VIEW_TYPE_DADA_TODO, active: true });
+    await leaf.setViewState({ type: this.viewType, active: true });
     workspace.revealLeaf(leaf);
   }
 
   /** 已打开则聚焦；否则按配置位置打开 */
   async activateView() {
     const { workspace } = this.app;
-    const existing = workspace.getLeavesOfType(VIEW_TYPE_DADA_TODO);
+    const existing = workspace.getLeavesOfType(this.viewType);
     if (existing.length) {
       workspace.revealLeaf(existing[0]);
       return;
@@ -128,12 +157,12 @@ export default class DadaTodoPlugin extends Plugin {
 
   /** 切换打开位置：关闭现有面板并按新位置重新打开 */
   async applyOpenLocation() {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_DADA_TODO);
+    this.app.workspace.detachLeavesOfType(this.viewType);
     await this.openInLocation(this.settings.openLocation || 'main');
   }
 
   onunload() {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_DADA_TODO);
+    this.app.workspace.detachLeavesOfType(this.viewType);
   }
 
   async loadSettings() {
@@ -147,6 +176,8 @@ export default class DadaTodoPlugin extends Plugin {
     this.settings = {
       // 打开位置：左侧栏 / 主工作区标签页 / 右侧栏
       openLocation: data.openLocation || 'main',
+      // 菜单样式：horizontal（默认，底部横向胶囊）/ vertical（左侧竖向菜单，Pro 同款可展开收起）
+      menuStyle: data.menuStyle || 'horizontal',
       // 是否显示农历与节假日（日 / 周 / 月视图表头与日历格）
       showLunar: data.showLunar ?? true,
       // 完成任务时是否在任务行追加「✅ 完成日期」标记；默认开。关闭后完成不写 ✅，开始/结束等日期标记不受影响
@@ -178,6 +209,8 @@ export default class DadaTodoPlugin extends Plugin {
       // 时间选择器步长（分钟）：下拉以该步长生成可选项（5–60，默认 5）
       timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || 5))),
     };
+    // 让设置在 Vue 中具备响应式：菜单样式等设置改动后可即时生效，无需重启 Obsidian
+    this.settings = reactive(this.settings);
     // 启动即用已保存的配色方案 / 每周起始日初始化（视图重载时会按此重算）
     setColorScheme(this.settings.colorScheme);
     setWeekStart(this.settings.weekStart);
@@ -190,7 +223,7 @@ export default class DadaTodoPlugin extends Plugin {
   // 数据相关设置（每日笔记加载范围 / 收件箱路径）变更后调用：
   // 刷新所有已打开的面板，让新配置立即生效，无需手动重开面板
   reloadOpenViews() {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_DADA_TODO);
+    const leaves = this.app.workspace.getLeavesOfType(this.viewType);
     for (const leaf of leaves) {
       const v = leaf.view;
       const ok = !!(v && v.vueRoot && typeof v.vueRoot.load === 'function');

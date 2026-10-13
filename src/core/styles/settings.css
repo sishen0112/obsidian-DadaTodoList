@@ -101,3 +101,26 @@
 .dt-about-link-fb:hover {
   text-decoration: underline;
 }
+
+/* ---------- 设置页：Pro 版标题徽标（小标签框） ---------- */
+/* 仅当 manifest.id 非 dada-todo-list（Pro 变体）时才渲染对应元素；免费版不出现，CSS 处于休眠 */
+.dt-settings-title {
+  display: flex;
+  align-items: center;
+}
+
+.dt-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 1px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #6b4e00;
+  background: linear-gradient(180deg, #ffe9a8, #ffd34d);
+  border: 1px solid #e0a92e;
+  border-radius: 999px;
+  letter-spacing: .4px;
+  vertical-align: middle;
+}

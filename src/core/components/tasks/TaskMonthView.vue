@@ -19,6 +19,7 @@
                 <span v-if="ctx.holidayOf(c.day)" class="cel-hb" :class="ctx.holidayOf(c.day).rest ? 'is-rest' : 'is-work'" :title="ctx.holidayOf(c.day).name">
                   {{ ctx.holidayOf(c.day).rest ? $t('app.rest') : $t('app.work') }}
                 </span>
+                <span v-if="c.today" class="cel-today tk-today-badge">{{ $t('app.todayBadge') }}</span>
                 <span class="cel-day">{{ c.day.split('-')[2] }}</span>
                 <span class="cel-lunar">{{ ctx.lunarDayText(c.date) }}</span>
                 <span v-if="ctx.lunarTagText(c.date)" class="cel-lunar-tag">{{ ctx.lunarTagText(c.date) }}</span>
@@ -255,11 +256,21 @@ export default {
 .cel {
   min-width: 0; min-height: 106px; padding: 0 4px 8px; display: flex; flex-direction: column;
   background: var(--panel); border: none; border-radius: 0;
+  position: relative;
   transition: box-shadow .15s ease;
 }
 .cel.other { opacity: .45; }
 .cel:hover { box-shadow: var(--shadow); }
 .cel.today { box-shadow: inset 0 0 0 1px var(--gold); }
+/* 月视图今日格：与周视图同一套主题强调色浅底（var(--gold) 低透明 ::after 叠加），
+   不盖住任务块；沿用周视图主泳道的浅度 .08。今日格的金色内描边保留作为「今日」强提示。 */
+.cel.today::after {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: var(--today-tint-color, var(--gold));
+  opacity: var(--today-tint-op, .08);
+  pointer-events: none;
+}
+.cel.today > * { position: relative; z-index: 1; }
 /* 拖拽悬停的日期格 */
 .cel.drop-target { background: var(--gold-bg); box-shadow: inset 0 0 0 2px var(--gold); }
 .cel-top { height: var(--cel-head, 30px); box-sizing: border-box; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
@@ -273,6 +284,8 @@ export default {
 .cel-hb.is-rest { color: var(--text-on-accent); background: var(--c-done); }
 .cel-hb.is-work { color: var(--text-on-accent); background: var(--c-cancel); }
 .cel-day { font-size: 14px; font-weight: 600; color: var(--ink); }
+/* 月视图今日格「今日」徽标：外观见全局 .tk-today-badge，此处仅补垂直居中对齐日期数字 */
+.cel-today { align-self: center; }
 .cel-lunar { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cel-lunar-tag { font-size: 11px; color: var(--c-cancel); white-space: nowrap; }
 .cel-tasks { min-width: 0; margin-top: calc(var(--week-lanes, 0) * var(--lane-h, 24px) + 2px); display: flex; flex-direction: column; gap: 3px; overflow-y: auto; }
@@ -282,7 +295,7 @@ export default {
   background: var(--panel); border-radius: 6px; padding: 2px 6px;
   cursor: grab; overflow: hidden; transition: box-shadow .15s ease, opacity .15s ease;
 }
-.cel-task:hover { box-shadow: var(--shadow); }
+.cel-task:not(.selected):hover { box-shadow: var(--shadow); }
 .cel-task.dragging { opacity: .4; cursor: grabbing; }
 /* 提高特异性以压过 tasks-shared.css 的 .task-app .tk-check（20px）；其余视图不受影响 */
 .task-app .cel-task .tk-check { flex: none; width: 12px; height: 12px; font-size: 14px; line-height: 12px; }
@@ -302,11 +315,13 @@ export default {
   font-size: 11.5px; line-height: 1.35; color: var(--ink); border-radius: 6px; cursor: grab;
   transition: box-shadow .15s ease, opacity .15s ease;
 }
-.cel-bar.selected { box-shadow: 0 0 0 2px var(--gold); padding-right: 16px; }
+/* 选中态用 outline 画金色描边：独立于 box-shadow，绝不会被 :hover 的 shadow 覆盖
+   （原 box-shadow 方案在 hover 时被 .cel-bar:hover 覆盖，导致选中态边框消失） */
+.cel-bar.selected { outline: 2px solid var(--gold); outline-offset: 0; padding-right: 16px; }
 /* 跨日期条右侧小字：开始-结束日期区间（如 10/2-10/7），靠右、小号、低透明度 */
 .cel-bar-range { flex: none; margin-left: auto; padding-left: 6px; font-size: 9px; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* 月视图 chip 的祖先 .cel-tasks 为 overflow-y:auto，会裁切外扩 box-shadow；选中改用 inset 内描边，永不被裁切 */
-.cel-task.selected { box-shadow: inset 0 0 0 2px var(--gold); }
+/* 单日 chip 选中同样用 outline（内缩 2px，外观等同原 inset 描边）；outline 不受 overflow 与 hover 影响 */
+.cel-task.selected { outline: 2px solid var(--gold); outline-offset: -2px; }
 /* 跨日期横跨条首/尾日期拖动柄：平时隐藏，选中时显示；靠左右内边缘，避免被 overflow 裁切 */
 .cel-span-h {
   position: absolute; top: 0; bottom: 0; width: 10px;
@@ -325,7 +340,7 @@ export default {
 .cel-task { position: relative; }
 .cel-task.selected .cel-span-h { opacity: 1; pointer-events: auto; }
 .cel-task.selected .cel-span-h:hover::before { filter: brightness(1.12); }
-.cel-bar:hover { box-shadow: var(--shadow); }
+.cel-bar:not(.selected):hover { box-shadow: var(--shadow); }
 .cel-bar.dragging { opacity: .4; cursor: grabbing; }
 .cel-bar.done { color: var(--ink-soft); opacity: .6; }
 /* 续接端（非真实起止）不收圆角，以示「仍在延续」 */

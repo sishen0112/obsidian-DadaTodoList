@@ -1,9 +1,8 @@
 <template>
-  <!-- 底部悬浮视图切换：横向 / 竖向 拆成两个独立模块，互斥显示（各自一套按钮 + 各自的收起/展开钮，
-       存在冗余但换取更干净的结构与可控动画）。
-       展开：显示横向模块（居中胶囊，含收起按钮）；折叠：显示竖向模块（右下角圆钮，hover 竖排列表）。
-       横向模块离开/进入：淡出 + 右移 + 缩成圆；竖向模块进入：从左往右滑入 + 渐显，离开：反向滑出 + 渐隐。 -->
-  <div class="tk-viewpill">
+  <!-- 底部悬浮视图切换胶囊（horizontal 菜单样式，保持原逻辑不变）。
+       仍用 .tk-viewpill 包裹：该层为 position:absolute / height:0 / pointer-events:none，
+       仅承载固定的底部胶囊模块，逻辑不受影响。 -->
+  <div class="tk-viewpill" v-if="!vertical">
     <!-- 模块一：横向（展开态，居中胶囊） -->
     <transition name="tk-pill">
       <div class="tk-module-h tk-capsule" v-if="!collapsed" key="h">
@@ -25,24 +24,45 @@
     <!-- 模块二：竖向（折叠态，右下角圆钮 + hover 竖排列表） -->
     <transition name="tk-pill-v">
       <div class="tk-module-v" v-if="collapsed" key="v">
-      <div class="tk-module-v-pill tk-capsule">
-        <button class="tk-viewpill-toggle" type="button"
-                :title="$t('app.expandViews')" @click="toggleCollapsed">
-          <i class="la la-chevron-left"></i>
-        </button>
-      </div>
-      <div class="tk-pill-v">
-        <div class="tk-pill-v-inner">
-          <button v-for="v in views" :key="v.key" type="button"
-                  class="tk-viewpill-item" :class="{ on: view === v.key }"
-                  :title="$t(v.labelKey)"
-                  @click="$emit('switch-view', v.key)">
-            <i :class="v.icon" class="vp-ico"></i><span class="vp-label">{{ $t(v.labelKey) }}</span>
+        <div class="tk-module-v-pill tk-capsule">
+          <button class="tk-viewpill-toggle" type="button"
+                  :title="$t('app.expandViews')" @click="toggleCollapsed">
+            <i class="la la-chevron-left"></i>
           </button>
         </div>
-      </div>
+        <div class="tk-pill-v">
+          <div class="tk-pill-v-inner">
+            <button v-for="v in views" :key="v.key" type="button"
+                    class="tk-viewpill-item" :class="{ on: view === v.key }"
+                    :title="$t(v.labelKey)"
+                    @click="$emit('switch-view', v.key)">
+              <i :class="v.icon" class="vp-ico"></i><span class="vp-label">{{ $t(v.labelKey) }}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </transition>
+  </div>
+
+  <!-- 左侧固定「可展开/收起」竖向菜单（vertical 菜单样式；基础版与 Pro 共用，体验一致）。
+       关键：必须直接作为 .task-app 的子节点，脱离 .tk-viewpill（其 height:0 会让内部
+       absolute 轨道塌缩为 0 高度而不可见）。.task-app 为 position:relative 全高，
+       故 top:0;bottom:0 才能铺满左侧；收起=仅图标竖栏，展开=图标+文字面板。 -->
+  <div v-else class="tk-pro-rail" :class="{ collapsed: railCollapsed }">
+    <button class="tk-pro-rail-toggle" type="button"
+            v-tooltip="railCollapsed ? { text: $t('app.expandViews'), placement: 'right' } : null"
+            @click="$emit('update:rail-collapsed', !railCollapsed)">
+      <i :class="railCollapsed ? 'la la-chevron-right' : 'la la-chevron-left'"></i>
+    </button>
+    <div class="tk-pro-rail-items">
+      <button v-for="v in views" :key="v.key" type="button"
+              class="tk-pro-rail-item" :class="{ on: view === v.key }"
+              v-tooltip="railCollapsed ? { text: $t(v.labelKey), placement: 'right' } : null"
+              @click="$emit('switch-view', v.key)">
+        <i :class="v.icon" class="vp-ico"></i>
+        <span class="vp-label">{{ $t(v.labelKey) }}</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -53,12 +73,17 @@ export default {
   name: 'ViewPill',
   props: {
     // 当前视图 key：four / day / month / agenda / cl / all
-    view: { type: String, required: true }
+    view: { type: String, required: true },
+    // 是否竖向菜单模式：true 时渲染左侧固定菜单（取代底部胶囊）；由设置项 menuStyle 控制
+    vertical: { type: Boolean, default: false },
+    // 左侧菜单折叠态（由父组件持有并持久化）：true=收起(仅图标)，false=展开(图标+文字)
+    railCollapsed: { type: Boolean, default: true }
   },
-  emits: ['switch-view'],
+  emits: ['switch-view', 'update:rail-collapsed'],
   data() {
     return {
-      collapsed: false,
+      // 仅免费版使用内部折叠态；Pro 版由父组件通过 railCollapsed 控制
+      collapsed: this.loadCollapsed(),
       views: [
         { key: 'day', labelKey: 'app.viewDay', icon: 'la la-sun-o' },
         { key: 'four', labelKey: 'app.viewWeek', icon: 'la la-stream' },
@@ -259,4 +284,53 @@ export default {
   .tk-pill-enter-active, .tk-pill-leave-active,
   .tk-pill-v-enter-active, .tk-pill-v-leave-active { transition: none !important; }
 }
+
+/* ===== Pro 版：左侧固定竖向菜单（可展开/收起） ===== */
+/* 固定在视图左缘，整高竖栏；收起态仅图标、展开态图标+文字。
+   宽度与 TasksApp 的 .task-app 左内边距同速动画，保证内容不被遮挡 */
+.tk-pro-rail {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 44px;                 /* 收起态：仅图标竖栏 */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 12px 0;
+  background: var(--panel-2);
+  border-right: 1px solid var(--line);
+  z-index: 15;
+  overflow: hidden;
+  transition: width .28s cubic-bezier(.4, 0, .2, 1);
+}
+.tk-pro-rail:not(.collapsed) { width: 158px; }   /* 展开态：图标 + 文字面板 */
+.tk-pro-rail-toggle {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin: 0 auto 10px;
+  border: none; background: transparent; color: var(--text-normal);
+  border-radius: 999px; cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.tk-pro-rail-toggle:hover { background: var(--gold-bg); color: var(--ink); }
+.tk-pro-rail-toggle i { font-size: 18px; }
+.tk-pro-rail-items {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 0 6px; justify-content: flex-start;
+}
+.tk-pro-rail-item {
+  display: inline-flex; align-items: center; gap: 10px;
+  width: 100%; box-sizing: border-box;
+  border: none; background: transparent; color: var(--text-normal);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  padding: 9px 10px; border-radius: 9px; cursor: pointer;
+  box-shadow: none; white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+.tk-pro-rail-item .vp-ico { font-size: 18px; width: 22px; text-align: center; flex: none; }
+/* 收起态：居中仅图标，隐藏文字 */
+.tk-pro-rail.collapsed .tk-pro-rail-item { justify-content: center; padding: 9px 0; }
+.tk-pro-rail.collapsed .vp-label { display: none; }
+.tk-pro-rail-item:not(.on):hover { background: var(--gold-bg); color: var(--ink); }
+.tk-pro-rail-item.on { background: var(--gold-bg); color: var(--gold); font-weight: 700; }
 </style>

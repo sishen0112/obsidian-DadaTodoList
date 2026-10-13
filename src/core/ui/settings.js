@@ -71,7 +71,10 @@ export class DadaTodoSettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: t('settings.title') });
+    // 设置页标题：免费版仅标题；Pro 版（manifest.id 非 dada-todo-list）在标题后追加「Pro」小标签框
+    const titleEl = containerEl.createEl('h2', { cls: 'dt-settings-title' });
+    titleEl.createSpan({ text: t('settings.title') });
+    if (this.plugin.isPro) titleEl.createSpan({ text: 'Pro', cls: 'dt-pro-badge' });
 
     // 分组：面板与外观
     new Setting(containerEl).setHeading().setName(t('settings.groupAppearance'));
@@ -89,6 +92,21 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
           // 立即按新位置重新打开面板
           await this.plugin.applyOpenLocation();
+        });
+      });
+
+    // 菜单样式：底部横向胶囊（默认）/ 左侧竖向菜单（Pro 同款，可展开收起）
+    new Setting(containerEl)
+      .setName(t('settings.menuStyle'))
+      .setDesc(t('settings.menuStyleDesc'))
+      .addDropdown((dd) => {
+        dd.addOption('horizontal', t('settings.menuHorizontal'));
+        dd.addOption('vertical', t('settings.menuVertical'));
+        dd.setValue(this.plugin.settings.menuStyle || 'horizontal');
+        dd.onChange(async (value) => {
+          this.plugin.settings.menuStyle = value;
+          await this.plugin.saveSettings();
+          // settings 已响应式，菜单样式即时重渲，无需重载面板（基础版与 Pro 共用此开关）
         });
       });
 
@@ -334,11 +352,14 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     authorLeft.createSpan({ text: t('settings.author'), cls: 'dt-about-label' });
     authorLeft.createSpan({ text: this.plugin.manifest.author || '', cls: 'dt-about-author-name' });
     const authorLinks = authorRow.createDiv('dt-about-links');
-    const gh = authorLinks.createEl('a', { cls: 'dt-about-link', href: this.plugin.manifest.authorUrl || GH_REPO });
-    gh.setAttribute('target', '_blank');
-    gh.setAttribute('rel', 'noopener');
-    gh.createEl('i', { cls: 'la la-github' });
-    gh.createSpan({ text: t('settings.github') });
+    // Pro 版不提供 GitHub 仓库访问（避免与免费开源版混淆），仅免费版显示
+    if (!this.plugin.isPro) {
+      const gh = authorLinks.createEl('a', { cls: 'dt-about-link', href: this.plugin.manifest.authorUrl || GH_REPO });
+      gh.setAttribute('target', '_blank');
+      gh.setAttribute('rel', 'noopener');
+      gh.createEl('i', { cls: 'la la-github' });
+      gh.createSpan({ text: t('settings.github') });
+    }
     if (XIAOHONGSHU_URL) {
       const xhs = authorLinks.createEl('a', { cls: 'dt-about-link', href: XIAOHONGSHU_URL });
       xhs.setAttribute('target', '_blank');
@@ -347,17 +368,18 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       xhs.createSpan({ text: t('settings.xiaohongshu') });
     }
 
-    about.createDiv('dt-about-hr');
-
-    // 反馈说明
-    const fbRow = about.createDiv('dt-about-feedback');
-    fbRow.createEl('div', { text: t('settings.feedbackTitle'), cls: 'dt-about-label' });
-    fbRow.createEl('div', { text: t('settings.feedbackDesc'), cls: 'dt-about-fb-desc' });
-    const fbLink = fbRow.createEl('a', { cls: 'dt-about-link-fb', href: GH_ISSUES });
-    fbLink.setAttribute('target', '_blank');
-    fbLink.setAttribute('rel', 'noopener');
-    fbLink.createEl('i', { cls: 'la la-external-link-alt' });
-    fbLink.createSpan({ text: t('settings.feedbackLink') });
+    // 反馈说明（仅免费版：Pro 版不提供问题反馈入口，连同上方分隔线一并隐藏）
+    if (!this.plugin.isPro) {
+      about.createDiv('dt-about-hr');
+      const fbRow = about.createDiv('dt-about-feedback');
+      fbRow.createEl('div', { text: t('settings.feedbackTitle'), cls: 'dt-about-label' });
+      fbRow.createEl('div', { text: t('settings.feedbackDesc'), cls: 'dt-about-fb-desc' });
+      const fbLink = fbRow.createEl('a', { cls: 'dt-about-link-fb', href: GH_ISSUES });
+      fbLink.setAttribute('target', '_blank');
+      fbLink.setAttribute('rel', 'noopener');
+      fbLink.createEl('i', { cls: 'la la-external-link-alt' });
+      fbLink.createSpan({ text: t('settings.feedbackLink') });
+    }
   }
 
   // 收件箱路径变更（输入逐字符触发 / 补全选中触发）：去抖 1s 后统一处理

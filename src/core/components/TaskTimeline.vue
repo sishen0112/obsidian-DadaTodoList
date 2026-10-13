@@ -8,7 +8,7 @@
         <div class="tk-tl-dh-row1">
           <span class="tk-tl-wd">{{ $t('app.weekShort', { wd: col.weekday }) }}</span>
           <span class="tk-tl-dt">{{ col.md }}</span>
-          <span v-if="col.label" class="tk-tl-today-badge">{{ col.label }}</span>
+          <span v-if="col.label" class="tk-tl-today-badge tk-today-badge">{{ col.label }}</span>
           <span v-else-if="col.label" class="tk-tl-rel">{{ col.label }}</span>
           <button class="tk-add" @click="handlers.add(col.key)" :title="$t('app.addDayTask')"><i class="la la-plus-circle"></i></button>
         </div>
@@ -390,16 +390,49 @@ export default {
 .tk-tl-hb.is-work { color: var(--text-on-accent); background: var(--c-cancel); }
 .tk-tl-lunar { flex: none; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
 .tk-tl-lunar-tag { flex: none; font-size: 11px; color: var(--c-cancel); white-space: nowrap; }
-.tk-tl-today-badge { flex: none; background: #e53935; color: #fff; font-size: 10.5px; font-weight: 600; line-height: 1; padding: 2px 7px; border-radius: 999px; }
+/* 「今日」徽标外观见全局 .task-app .tk-today-badge；.tk-tl-today-badge 仅作钩子供窄屏隐藏规则使用。 */
 .tk-tl-rel { flex: none; color: var(--ink-soft); font-size: 11px; }
 .tk-tl-dayhead.today .tk-tl-wd { color: var(--gold); }
+/* 当日泳道浅主题色底：用 Obsidian 主题强调色（var(--gold) = --interactive-accent）做浅底，
+   伪元素叠加、opacity 很低，不依赖 color-mix，全版本可用；0.08 足够浅，不会盖住时间轴小时线。
+   想更明显把 0.08 调大即可。 */
+.tk-tl-dayhead.today,
+.tk-tl-adbg.today,
+.tk-tl-othercol.today,
+.tk-tl-col.today { position: relative; }
+/* 表头 / 其他时段泳道的静态子元素抬到 z-index:1，浮在今日浅底 ::after(z-index:0) 之上；
+   时间轴主列的任务块按 top 绝对定位，层级由 .tk-tl-block 的 z-index:1 处理，此处不对其改 position。 */
+.tk-tl-dayhead.today > *,
+.tk-tl-othercol.today > * { position: relative; z-index: 1; }
+/* 今日浅底仅作用于「周视图」：根节点带 .tk-tl-week（日视图根为纯 .tk-tl，不加此类，
+   故日视图整列不会被染上今日背景）。月视图为独立组件，另在 TaskMonthView 处理。 */
+.tk-tl-week .tk-tl-dayhead.today::after,
+.tk-tl-week .tk-tl-adbg.today::after,
+.tk-tl-week .tk-tl-othercol.today::after,
+.tk-tl-week .tk-tl-col.today::after {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: var(--today-tint-color, var(--gold));
+  opacity: var(--today-tint-op, .08);
+  pointer-events: none;
+}
+/* 全天区有上下 padding 与 1px 边框，.tk-tl-adbg 作为网格项被 inset，导致今日浅色四周缩进、
+   跟上下行不连贯。让 ::after 负向溢出（= 边框 + padding）铺满容器边缘，任务块仍保留呼吸感，
+   且全天区无小时线、不怕盖格子。溢出量由 .tk-tl-allday 上的 --allday-border/--allday-pad 派生，
+   改 padding 或边框时此处自动同步，无需手改。 */
+.tk-tl-week .tk-tl-adbg.today::after {
+  opacity: var(--today-tint-op-condensed, .16);
+  top: calc(-1 * (var(--allday-border, 1px) + var(--allday-pad, 4px)));
+  bottom: calc(-1 * (var(--allday-border, 1px) + var(--allday-pad, 4px)));
+}
 
 /* 全天任务行：泳道网格 —— 跨日任务一条横跨多列，单日任务为 1 列宽 */
 .tk-tl-allday {
+  --allday-pad: 4px; --allday-border: 1px;
   display: grid; grid-template-columns: 54px repeat(var(--tl-cols, 7), minmax(0, 1fr));
   grid-template-rows: repeat(var(--tl-lanes, 1), 30px);
-  row-gap: 3px; padding: 4px 0;
-  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  row-gap: 3px; padding: var(--allday-pad) 0;
+  border-top: var(--allday-border) solid var(--line);
+  border-bottom: var(--allday-border) solid var(--line);
 }
 .tk-tl-gutter {
   display: flex; align-items: flex-start; justify-content: flex-end;
@@ -410,6 +443,7 @@ export default {
 /* 列背景 / 今日高亮 / 拖拽目标高亮（纯视觉，不拦截事件） */
 .tk-tl-adbg { grid-row: 1 / -1; border-left: 1px solid var(--line); pointer-events: none; }
 .tk-tl-adbg.drop-target { background: var(--gold-bg); }
+
 .tk-tl-aditem {
   position: relative;
   display: flex; align-items: center; gap: 5px; min-width: 0; cursor: grab;
@@ -452,7 +486,7 @@ export default {
 }
 .tk-tl-other .tk-tl-gutter { white-space: pre-line; line-height: 1.25; text-align: right; }
 .tk-tl-othercol { display: flex; flex-direction: column; gap: 3px; min-height: 34px; padding: 4px; border-left: 1px solid var(--line); }
-.tk-tl-othercol.today { background: transparent; }
+
 /* 其他时间任务项：标题在上、时间在标题下方 */
 .tk-tl-other-item { align-items: flex-start; line-height: 1.3; padding: 3px 6px; }
 .tk-tl-other-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -493,13 +527,13 @@ export default {
   border-radius: 3px;
   font-variant-numeric: tabular-nums;
 }
-.tk-tl-col.today { background-color: transparent; }
+
 .tk-tl-col.drop-target { box-shadow: none; }
 
 /* 时间轴任务块 */
 .tk-tl-block {
   position: absolute; box-sizing: border-box; overflow: visible; cursor: grab;
-  border-radius: 7px;
+  border-radius: 7px; z-index: 1;
   transition: filter .15s ease;
 }
 .tk-tl-block:hover { filter: brightness(.97); }

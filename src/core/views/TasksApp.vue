@@ -1,5 +1,5 @@
 <template>
-  <div class="task-app">
+  <div class="task-app" :class="{ 'tk-pro': verticalMenu, 'tk-pro-rail-open': verticalMenu && !proRailCollapsed }">
     <div v-if="error" class="tk-err">{{ error }}</div>
     <!-- 核心「日记」插件未启用：有日期任务无法读写（顶部常驻提醒，不可手动关闭；开启日记插件后自动消失） -->
     <div v-if="!canUseDaily()" class="tk-onboard tk-warn">
@@ -72,8 +72,10 @@
     <!-- 任务块右键菜单（单例，teleport 到 body；日/周/月/日程/清单 共用） -->
     <task-context-menu />
 
-    <!-- 底部悬浮胶囊视图切换（日/周/月/日程/清单/全部） -->
-    <view-pill :view="view" @switch-view="switchView" />
+    <!-- 底部悬浮胶囊视图切换（日/周/月/日程/清单/全部）。
+         Pro 版改为左侧固定可展开/收起菜单（由 ViewPill 内部按 isPro 分支渲染） -->
+    <view-pill :view="view" :vertical="verticalMenu" :rail-collapsed="proRailCollapsed"
+               @switch-view="switchView" @update:rail-collapsed="v => proRailCollapsed = v" />
 
     <!-- 编辑器与完成日历改用 Obsidian 原生 Modal 外壳（Vue-in-Modal 桥），不再内嵌页面 -->
   </div>
@@ -81,6 +83,7 @@
 
 <script>
 import { getCurrentInstance } from 'vue';
+
 import { Tasks } from '../composables/useTasks.js';
 import {
   setCtxI18n, setCtxOpenTask, setCtxEdit, setCtxError, setCtxDelete, openCtxMenu, closeCtxMenu, ctxMenuContains
@@ -133,9 +136,14 @@ export default {
   },
   data() {
     const tv = getTaskViewPref();
+    // 左侧竖向菜单折叠态（持久化在 localStorage，缺省收起为图标栏）
+    let railCollapsed = true;
+    try { railCollapsed = window.localStorage.getItem('tk-pro-rail-collapsed') !== '0'; } catch (e) { /* 忽略 */ }
     return {
       loading: false,
       error: '',
+      // 菜单折叠态（菜单样式走设置项，经响应式 settings 即时生效）
+      proRailCollapsed: railCollapsed,
       tasks: [],
       view: tv.view,
       weekStart: Tasks.startOfWeek(new Date()),
@@ -177,9 +185,16 @@ export default {
   },
   watch: {
     // 待办池展开状态持久化到本机（默认展开，用户收起后也记住）
-    todoPanelOpen(v) { try { localStorage.setItem('dada:todoPanelOpen', v ? '1' : '0'); } catch (e) { /* 忽略 */ } }
+    todoPanelOpen(v) { try { localStorage.setItem('dada:todoPanelOpen', v ? '1' : '0'); } catch (e) { /* 忽略 */ } },
+    // 左侧竖向菜单折叠态持久化（'0' = 展开，其余 = 收起）；仅竖向菜单生效
+    proRailCollapsed(v) {
+      if (this.verticalMenu) { try { window.localStorage.setItem('tk-pro-rail-collapsed', v ? '1' : '0'); } catch (e) { /* 忽略 */ } }
+    }
   },
   computed: {
+    // 是否采用左侧竖向菜单：由设置项 menuStyle 控制（horizontal=底部胶囊 / vertical=左侧竖向菜单）。
+    // 直接读取响应式 settings，设置页改动后即时生效（无需重启）。基础版与 Pro 共用此开关，体验一致。
+    verticalMenu() { return (this.plugin.settings && this.plugin.settings.menuStyle) === 'vertical'; },
     // 顶栏区间文案：随当前视图取对应标签（周区间 / 日日期 / 月份 / 日程区间）
     rangeLabel() {
       if (this.view === 'four') return this.tlRange;
@@ -513,7 +528,9 @@ export default {
       this.agendaActiveKey = key;
       this.scrollAgendaToDate(key);
     },
-    // 日程视图每行左侧文案：当天只显示时刻，已延期/更远显示「月/日 时刻」
+    // 日程视图每行左侧文案：
+    //   当日分组：只显示时刻（allDay 显示「全天」），日期已由左侧分组表头承担；
+    //   已延期/更远（跨多日期）：保留「月/日」，并用 \n 把日期放第一行、时间放第二行
     agendaWhen(task, kind) {
       if (!task.dueAt) return '';
       const d = new Date(task.dueAt);
@@ -524,7 +541,7 @@ export default {
       }
       if (kind === 'day') return task.dueAllDay ? this.$t('app.allDay') : hm;
       const md = (d.getMonth() + 1) + '/' + d.getDate();
-      return task.dueAllDay ? md : md + ' ' + hm;
+      return task.dueAllDay ? md : md + '\n' + hm;
     },
     // 列表中的日期：非本年时在日期前补上年份，避免跨年混淆
     dateText(t) { return dateText(t); },
@@ -779,6 +796,11 @@ export default {
   color: var(--ink);
   background: var(--paper);
 }
+
+/* Pro 版：左侧固定菜单时让出左内边距，避免遮挡内容（含日程视图左导航）；
+   与 ViewPill 内 .tk-pro-rail 宽度同速动画，保持二者同步 */
+.task-app.tk-pro { padding-left: 52px; transition: padding-left .28s cubic-bezier(.4, 0, .2, 1); }
+.task-app.tk-pro.tk-pro-rail-open { padding-left: 168px; }
 
 /* 顶栏样式已抽离至 TaskTopBar.vue */
 
