@@ -65,6 +65,7 @@
     </button>
     <div class="tk-pro-rail-items">
       <template v-for="(g, gi) in groups" :key="gi">
+        <div v-if="gi > 0" class="tk-pro-rail-sep"></div>
         <div v-if="g.label" class="tk-pro-rail-group-h">{{ $t(g.label) }}</div>
         <button v-for="v in g.items" :key="v.key" type="button"
                 class="tk-pro-rail-item" :class="{ on: view === v.key }"
@@ -124,12 +125,17 @@ export default {
     // 个人版经 installPersonal 注入 extraNavGroups 追加分组（如「预览」）。
     groups() {
       const base = this.views;
-      const arr = [{ label: (this.plugin && this.plugin.baseNavGroupLabel) || null, items: base }];
-      const extra = this.plugin && this.plugin.extraNavGroups;
-      if (Array.isArray(extra)) {
-        for (const g of extra) arr.push({ label: (g && g.label) || null, items: (g && g.items) || [] });
-      }
-      return arr;
+      const baseGroup = { label: (this.plugin && this.plugin.baseNavGroupLabel) || null, items: base };
+      const extra = (this.plugin && this.plugin.extraNavGroups) || [];
+      // extraNavGroups 支持 position: 'before-base' → 插到基础分组之前；其余默认排在之后。
+      // 中性扩展点：免费/Pro 不传 extraNavGroups 时只有 baseGroup，行为不变。
+      const before = (Array.isArray(extra) ? extra : [])
+        .filter((g) => g && g.position === 'before-base')
+        .map((g) => ({ label: (g && g.label) || null, items: (g && g.items) || [] }));
+      const after = (Array.isArray(extra) ? extra : [])
+        .filter((g) => !(g && g.position === 'before-base'))
+        .map((g) => ({ label: (g && g.label) || null, items: (g && g.items) || [] }));
+      return [...before, baseGroup, ...after];
     },
     // 横向胶囊 / 竖向折叠列表沿用扁平排布（分组头在窄行内容易拥挤）；仅左侧竖栏渲染分组头
     flatItems() {
@@ -378,6 +384,12 @@ export default {
   overflow: hidden; text-overflow: ellipsis; flex: none;
 }
 .tk-pro-rail.collapsed .tk-pro-rail-group-h { display: none; }
+/* 折叠态：文字标题隐藏后，用横线分隔每个分组（首个分组前不画）；展开态标题已作分隔，故隐藏 */
+.tk-pro-rail-sep { display: none; }
+.tk-pro-rail.collapsed .tk-pro-rail-sep {
+  display: block; height: 0; border-top: 1px solid var(--line);
+  margin: 6px 10px; flex: none;
+}
 .tk-pro-rail-item {
   display: inline-flex; align-items: center; gap: 10px;
   width: 100%; box-sizing: border-box;
@@ -395,7 +407,7 @@ export default {
 .tk-pro-rail-item.on { background: var(--gold-bg); color: var(--gold); font-weight: 700; }
 /* 设置按钮：左侧导航最下方，与视图项分组隔开（视图项容器 flex:1 已将其推到底部） */
 .tk-pro-rail-settings { margin-top: 8px; border-top: 1px solid var(--line); border-radius: 0; }
-.tk-pro-rail.collapsed .tk-pro-rail-settings { margin-top: 4px; border-top: none; }
+.tk-pro-rail.collapsed .tk-pro-rail-settings { margin-top: 8px; border-top: 1px solid var(--line); }
 
 /* 横向胶囊中设置按钮与视图项之间的竖向分隔线 */
 .tk-pill-sep { width: 1px; align-self: stretch; background: var(--line); margin: 6px 4px; flex: none; }

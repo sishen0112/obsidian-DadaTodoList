@@ -29,7 +29,7 @@ class MarkdownFileSuggest extends AbstractInputSuggest {
 }
 
 // 日记文件夹输入补全：输入时浮层建议库内文件夹（含库根 /）
-class FolderSuggest extends AbstractInputSuggest {
+export class FolderSuggest extends AbstractInputSuggest {
   constructor(app, inputEl, onPick) {
     super(app, inputEl);
     this.onPick = onPick;
@@ -334,6 +334,14 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         });
       });
+
+    // 分组：个人版专属（动态注入，免费/Pro 无则整段跳过）
+    // 个人版由 src/personal 经 plugin.extraSettingsSections 提供分组标题 + 渲染回调；
+    // core 只暴露此中性扩展点，不夹带任何个人版内容
+    for (const sec of (this.plugin.extraSettingsSections || [])) {
+      new Setting(containerEl).setHeading().setName(t(sec.titleKey));
+      if (typeof sec.render === 'function') sec.render(containerEl, this.plugin);
+    }
 
     // 分组：关于（软件信息 / 作者 / 反馈渠道）
     const GH_REPO = 'https://github.com/sishen0112/obsidian-DadaTodoList';
