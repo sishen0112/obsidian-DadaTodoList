@@ -69,7 +69,7 @@
         <div class="tk-custom-empty-t">{{ customTitle }}</div>
         <div class="tk-custom-empty-d">{{ $t('app.comingSoon') }}</div>
       </div>
-      <component v-else-if="isCustomView && customComponent" :is="customComponent" :ctx="this" :plugin="plugin" :view="view" />
+      <component v-else-if="isCustomView && customComponent" :is="customComponent" :plugin="plugin" :view="view" />
 
       <!-- ===== 列表视图（独立组件） ===== -->
       <task-list-view v-else key="list" :ctx="this" :plugin="plugin" />

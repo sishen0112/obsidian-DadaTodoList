@@ -237,8 +237,8 @@ export default class DadaTodoPlugin extends Plugin {
       })(),
       // 时间选择器步长（分钟）：下拉以该步长生成可选项（5–60，默认 5）
       timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || (isPersonal ? 15 : 5)))),
-      // 个人版专属配置（仅 Personal 构建生效；免费/Pro 不读此键）：影视墙扫描目录
-      personal: Object.assign({ filmMediaDir: '3. Resources/08-影视' }, data.personal || {}),
+      // 个人版专属配置（仅 Personal 构建生效；免费/Pro 不读此键）：影视墙 / 游玩墙 扫描目录
+      personal: Object.assign({ filmMediaDir: '3. Resources/08-影视', playDir: '3. Resources/09-游玩', feishu: { appId: '', appSecret: '', baseUrl: '', movieTable: '' } }, data.personal || {}),
     };
     // 让设置在 Vue 中具备响应式：菜单样式等设置改动后可即时生效，无需重启 Obsidian
     this.settings = reactive(this.settings);
