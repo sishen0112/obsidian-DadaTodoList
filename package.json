@@ -7,7 +7,8 @@
     "dev": "DADA_DEV=1 vite build --watch",
     "build": "vite build",
     "build:free": "vite build",
-    "build:pro": "vite build --config vite.config.pro.js"
+    "build:pro": "vite build --config vite.config.pro.js",
+    "build:personal": "vite build --config vite.config.personal.js"
   },
   "dependencies": {
     "i18next": "^23.16.8",
