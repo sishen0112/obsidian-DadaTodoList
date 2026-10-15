@@ -230,8 +230,6 @@
     "schemeSummer": "夏木",
     "schemeAutumn": "秋枫",
     "schemeWinter": "冬雪",
-    "schemePikachu": "皮卡丘",
-    "schemeViolet": "紫罗兰",
     "timelineRange": "时间轴显示范围",
     "timelineRangeDesc": "日 / 周视图的时间轴只显示该时间段（整点，0–24）。结束时间须晚于开始时间。默认 00:00–24:00（全天）。窗口之外的定时任务不会在时间轴中显示。",
     "timeStep": "时间选择器步长",

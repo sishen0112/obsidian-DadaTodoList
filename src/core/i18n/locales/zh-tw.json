@@ -230,8 +230,6 @@
     "schemeSummer": "夏木",
     "schemeAutumn": "秋楓",
     "schemeWinter": "冬雪",
-    "schemePikachu": "皮卡丘",
-    "schemeViolet": "紫羅蘭",
     "timelineRange": "時間軸顯示範圍",
     "timelineRangeDesc": "日 / 週視圖的時間軸只顯示該時間段（整點，0–24）。結束時間須晚於開始時間。預設 00:00–24:00（全天）。視窗之外的定時任務不會在時間軸中顯示。",
     "timeStep": "時間選擇器步長",

@@ -67,27 +67,5 @@
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
 }
 
-/* 紫罗兰（Pro 专属）：时间文字改为继承块色（即各自 fg / 深紫底下的 fgDark），
-   与任务名同色，避免「固定中紫」与某些浅紫色卡的名字色相矛盾而不和谐；
-   浅底深字 / 深底亮字均随 colorOf 切换，深浅模式都清晰。
-   仅当根节点 data-color-scheme="violet" 时生效；base 构建即便含此规则也不会触发。 */
-.task-app[data-color-scheme="violet"] .tk-tl-time,
-.task-app[data-color-scheme="violet"] .tk-ag-time,
-.task-app[data-color-scheme="violet"] .cel-task-time {
-  color: inherit;
-}
-.task-app[data-color-scheme="violet"] .cel-task-time {
-  opacity: 1;
-}
-
-/* 皮卡丘（Pro 专属）：时间文字改为继承块色（即各自 fg，固定色），
-   浅黄底 = 深棕字、近黑 / 焦棕深底 = 亮金字，深浅模式都清晰；
-   仅当根节点 data-color-scheme="pikachu" 时生效。base 构建即便含此规则也不会触发。 */
-.task-app[data-color-scheme="pikachu"] .tk-tl-time,
-.task-app[data-color-scheme="pikachu"] .tk-ag-time,
-.task-app[data-color-scheme="pikachu"] .cel-task-time {
-  color: inherit;
-}
-.task-app[data-color-scheme="pikachu"] .cel-task-time {
-  opacity: 1;
-}
+/* 皮卡丘 / 紫罗兰 的时间文字规则已迁移至私有 src/pro/themes.css（由 Pro / Personal 构建打包），
+   公开仓库 src/core 不再含任何 Pro 主题源码；base 构建不会包含这些规则。 */

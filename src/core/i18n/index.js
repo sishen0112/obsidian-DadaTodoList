@@ -34,6 +34,15 @@ export function currentLang() {
   return i18nState.lang;
 }
 
+/**
+ * 上层（Pro / Personal）注入额外 i18n 资源（嵌套对象结构，与 locales/*.json 一致）。
+ * 例：addI18nResources('zh-cn', { settings: { schemePikachu: '皮卡丘' } })
+ * 需在 i18next 初始化（插件 onload 内）之后调用；此处使用默认命名空间 translation。
+ */
+export function addI18nResources(lng, res) {
+  i18next.addResourceBundle(lng, 'translation', res, true, true);
+}
+
 // 语言探测：多来源聚合，全部命中候选后择优。
 // 说明：不同版本 Obsidian 的 UI 语言存放位置不一（vault config / localStorage / moment），
 // 这里把所有来源都取出来打日志，任一来源以 zh 开头即判定中文。

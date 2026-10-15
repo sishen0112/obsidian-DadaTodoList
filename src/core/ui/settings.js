@@ -1,7 +1,7 @@
 import { PluginSettingTab, Notice, Setting, AbstractInputSuggest, TFolder } from 'obsidian';
 import { t } from '../i18n/index.js';
 import { countInboxTasks, migrateInboxTasks } from '../api/tasks.js';
-import { setColorScheme, setWeekStart } from '../composables/tasks-logic.js';
+import { setColorScheme, setWeekStart, EXTRA_SCHEME_OPTIONS } from '../composables/tasks-logic.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
 class MarkdownFileSuggest extends AbstractInputSuggest {
@@ -121,10 +121,10 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         dd.addOption('summer', t('settings.schemeSummer'));
         dd.addOption('autumn', t('settings.schemeAutumn'));
         dd.addOption('winter', t('settings.schemeWinter'));
-        // 皮卡丘 / 紫罗兰 均为 Pro 专属配色，仅 Pro 版显示（基础版无）；标签后追加 Pro 字样，提示会员专属
-        if (this.plugin.isPro) {
-          dd.addOption('pikachu', t('settings.schemePikachu') + ' Pro');
-          dd.addOption('violet', t('settings.schemeViolet') + ' Pro');
+        // 皮卡丘 / 紫罗兰 等 Pro 专属方案由 src/pro 注入（EXTRA_SCHEME_OPTIONS），
+        // 免费版该表为空，故基础版不显示任何 Pro 配色项；标签后追加 Pro 字样提示会员专属
+        for (const opt of EXTRA_SCHEME_OPTIONS) {
+          dd.addOption(opt.key, t(opt.labelKey) + ' Pro');
         }
         dd.setValue(this.plugin.settings.colorScheme || 'default');
         dd.onChange(async (value) => {

@@ -10,7 +10,6 @@
 
 import { Lunar, HolidayUtil } from 'lunar-javascript';
 import { t, currentLang } from '../i18n/index.js';
-import { IS_PRO } from '../../shared/flags.js';
 
 // 「无日期」任务所在收件箱文件的键名（与具体路径解耦）
 export const INBOX_KEY = 'inbox';
@@ -644,35 +643,14 @@ export const WINTER_COLORS = [
   { bg: 'rgba(150, 185, 205, .28)', fg: '#346066' }  // 松雪青（少量）
 ];
 
-// 皮卡丘（Pro 专属）：身体明黄 → 金黄 → 蜜橙拉开梯度，红脸颊，再加近黑尾巴 / 焦棕耳尖两支深底色卡。
-// 亮底深字（light mode）；dark mode 下整块切换为 bgDark（更深更实）+ fgDark（亮字），
-// 避免半透明浅色压在深色主题上看不清（与紫罗兰同机制）。仅 Pro 构建包含。
-export const PIKACHU_COLORS = IS_PRO ? [
-  { bg: 'rgba(255, 245, 150, .44)', fg: '#6B5A00', bgDark: 'rgba(190, 160, 40, .55)', fgDark: '#FFF3B0' }, // 浅柠檬
-  { bg: 'rgba(255, 208, 38, .42)', fg: '#5C4500', bgDark: 'rgba(205, 165, 15, .55)', fgDark: '#FFF0A0' }, // 皮卡丘黄
-  { bg: 'rgba(255, 176, 16, .40)', fg: '#6B3D00', bgDark: 'rgba(195, 135, 10, .55)', fgDark: '#FFE79A' }, // 金黄
-  { bg: 'rgba(255, 140, 0, .34)', fg: '#5E3300', bgDark: 'rgba(205, 115, 0, .55)', fgDark: '#FFDFAE' }, // 蜜橙
-  { bg: 'rgba(255, 74, 62, .30)', fg: '#7A170C', bgDark: 'rgba(195, 50, 42, .55)', fgDark: '#FFD0C6' }, // 脸颊红
-  { bg: 'rgba(214, 26, 50, .28)', fg: '#7A0A16', bgDark: 'rgba(165, 22, 46, .55)', fgDark: '#FFC2CC' }, // 莓红
-  { bg: 'rgba(26, 24, 22, .64)', fg: '#F4D97C', bgDark: 'rgba(18, 16, 14, .80)', fgDark: '#F4D97C', dark: true }, // 炭黑
-  { bg: 'rgba(78, 54, 32, .58)', fg: '#F0D9A8', bgDark: 'rgba(58, 40, 22, .74)', fgDark: '#F0D9A8', dark: true }, // 焦棕
-] : [];
+// 皮卡丘 / 紫罗兰 配色已迁移至私有 src/pro（由 installPro 通过 registerColorScheme 注入），
+// 公开仓库 src/core 不再含任何 Pro 主题源码；下方仅保留基础方案。
 
-// 紫罗兰（Pro 专属）：沿色相弧拉开层次——粉紫→丁香→蓝长春花→蓝紫→紫水晶→紫罗兰→深紫→雾深紫，
-// 浅底深字（与全站卡片风格一致），只作用于任务块；每个变体同时给出 dark mode 配色（对应深底+亮字），
-// 由 colorOf 按当前主题切换，确保深浅两种主题都清晰。仅 Pro 构建包含。
-export const VIOLET_COLORS = IS_PRO ? [
-  { bg: 'rgba(247, 200, 234, .30)', fg: '#5E1F54', bgDark: 'rgba(80, 48, 78, .55)', fgDark: '#F8D2EC' }, // 浅粉紫
-  { bg: 'rgba(224, 200, 248, .30)', fg: '#3B2A66', bgDark: 'rgba(56, 42, 100, .54)', fgDark: '#DCC8FF' }, // 丁香
-  { bg: 'rgba(192, 188, 250, .30)', fg: '#2E3278', bgDark: 'rgba(48, 50, 104, .56)', fgDark: '#C2C4FF' }, // 长春花（偏蓝）
-  { bg: 'rgba(176, 168, 246, .32)', fg: '#322C82', bgDark: 'rgba(42, 44, 102, .58)', fgDark: '#B6B2F8' }, // 蓝雾（蓝紫）
-  { bg: 'rgba(212, 178, 248, .28)', fg: '#4A2C9E', bgDark: 'rgba(56, 38, 102, .58)', fgDark: '#D0AEF8' }, // 紫水晶
-  { bg: 'rgba(194, 150, 242, .32)', fg: '#3E208E', bgDark: 'rgba(62, 40, 110, .60)', fgDark: '#D6C0FF' }, // 紫罗兰
-  { bg: 'rgba(180, 142, 234, .34)', fg: '#381E84', bgDark: 'rgba(50, 32, 100, .60)', fgDark: '#C8AEF4' }, // 罗兰（深紫）
-  { bg: 'rgba(164, 126, 228, .36)', fg: '#301A78', bgDark: 'rgba(42, 28, 92, .62)', fgDark: '#BCA6F0' }, // 雾深紫
-] : [];
+// 紫罗兰配色同上，已迁移至私有 src/pro（installPro registerColorScheme 注入）。
 
-// 配色方案注册表（设置项 colorScheme 的取值）
+// 配色方案注册表（设置项 colorScheme 的取值）。基础方案恒含；
+// 皮卡丘 / 紫罗兰 等 Pro 专属方案由 src/pro 的 installPro 通过 registerColorScheme 注入，
+// 故公开仓库 src/core 不含任何 Pro 主题源码，免费版此表仅为基
 export const COLOR_SCHEMES = {
   default: TIMELINE_COLORS,
   morandi: MORANDI_COLORS,
@@ -681,10 +659,25 @@ export const COLOR_SCHEMES = {
   summer: SUMMER_COLORS,
   autumn: AUTUMN_COLORS,
   winter: WINTER_COLORS,
-  // 皮卡丘 / 紫罗兰：均为 Pro 专属方案，仅 Pro 构建注册，免费版无此配色
-  ...(IS_PRO ? { pikachu: PIKACHU_COLORS } : {}),
-  ...(IS_PRO ? { violet: VIOLET_COLORS } : {}),
 };
+
+// 每个方案的渲染标志（由上层注入；基础方案无此表，取默认行为）。
+//   darkSwitch：深色主题下切换到该方案的 bgDark/fgDark（否则维持浅底深字）。
+//   useFg：任务块文字强制用各自 fg（而非 var(--ink)）；深底色卡（标记 dark）天然也用 fg。
+export const SCHEME_FLAGS = {};
+
+// 设置页「配色方案」下拉的额外项（由 Pro 等上层注入）；免费版恒为空，故基础版不显示任何 Pro 配色项。
+export const EXTRA_SCHEME_OPTIONS = [];
+
+// 上层（Pro / Personal）调用，注入专属配色方案，使 src/core 不含 Pro 主题源码。
+//   colors：与基础方案同构的颜色数组（可含 bgDark/fgDark/dark）。
+//   opts.darkSwitch / opts.useFg：渲染标志（见 SCHEME_FLAGS 注释）。
+//   opts.labelKey：设置项下拉项的 i18n 键（Pro 需同时用 addI18nResources 注入对应文案）。
+export function registerColorScheme(key, colors, opts = {}) {
+  COLOR_SCHEMES[key] = colors;
+  SCHEME_FLAGS[key] = { darkSwitch: !!opts.darkSwitch, useFg: !!opts.useFg };
+  if (opts.labelKey) EXTRA_SCHEME_OPTIONS.push({ key, labelKey: opts.labelKey });
+}
 
 // 当前生效的配色方案：由 main.js 在加载设置、以及设置变更时调用 setColorScheme 更新。
 // 视图组件在设置变更后通过 reloadOpenViews() 重载，从而用新方案重算颜色。
@@ -716,10 +709,10 @@ export function colorOf(t, scheme) {
   let h = 0;
   for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % arr.length;
   const c = arr[h];
-  // 紫罗兰 / 皮卡丘 在 dark mode 下切换为「深底 + 亮字」（各自 bgDark/fgDark），
-  // 否则用「浅底 + 深字」；其余方案不受影响
+  // 深色切换由 SCHEME_FLAGS 驱动（Pro 注入的方案可声明 darkSwitch）；基础方案不切换
   const eff = scheme || activeColorScheme;
-  if ((eff === 'violet' || eff === 'pikachu') && isDarkMode()) return { bg: c.bgDark, fg: c.fgDark };
+  const flags = SCHEME_FLAGS[eff] || {};
+  if (flags.darkSwitch && isDarkMode()) return { bg: c.bgDark, fg: c.fgDark };
   return c;
 }
 
@@ -727,10 +720,9 @@ export function colorOf(t, scheme) {
 export function itemColor(t, scheme) {
   const active = scheme || activeColorScheme;
   const c = colorOf(t, active);
-  // 紫罗兰：深底配亮色字；皮卡丘：块内文字统一用各自 fg（固定色，浅黄底深棕字 / 深底亮金字），
-  //   不随主题变，dark mode 下浅底块也不会变成「浅灰字压浅底」而看不清；深底色卡（标记 dark）同理。
-  // 三者均为 Pro 专属，免费版恒为默认墨色，不受影响。
-  const useFg = active === 'violet' || active === 'pikachu' || !!(c && c.dark);
+  // 是否用块色文字：由 SCHEME_FLAGS.useFg 声明（Pro 注入方案），或该色卡自身标记 dark（深底色卡）
+  const flags = SCHEME_FLAGS[active] || {};
+  const useFg = flags.useFg || !!(c && c.dark);
   return { background: c.bg, color: useFg ? (c.fg || 'var(--ink)') : 'var(--ink)' };
 }
 
