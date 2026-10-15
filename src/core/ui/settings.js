@@ -71,10 +71,11 @@ export class DadaTodoSettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    // 设置页标题：免费版仅标题；Pro 版（manifest.id 非 dada-todo-list）在标题后追加「Pro」小标签框
+    // 设置页标题徽标：免费版仅标题；Personal 版显示「Personal」（青绿），Pro 版显示「Pro」（金）
     const titleEl = containerEl.createEl('h2', { cls: 'dt-settings-title' });
     titleEl.createSpan({ text: t('settings.title') });
-    if (this.plugin.isPro) titleEl.createSpan({ text: 'Pro', cls: 'dt-pro-badge' });
+    if (this.plugin.isPersonal) titleEl.createSpan({ text: 'Personal', cls: 'dt-personal-badge' });
+    else if (this.plugin.isPro) titleEl.createSpan({ text: 'Pro', cls: 'dt-pro-badge' });
 
     // 分组：面板与外观
     new Setting(containerEl).setHeading().setName(t('settings.groupAppearance'));

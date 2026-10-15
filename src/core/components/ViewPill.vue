@@ -7,7 +7,7 @@
     <transition name="tk-pill">
       <div class="tk-module-h tk-capsule" v-if="!collapsed" key="h">
         <div class="tk-module-h-items">
-          <button v-for="v in views" :key="v.key" type="button"
+          <button v-for="v in flatItems" :key="v.key" type="button"
                   class="tk-viewpill-item" :class="{ on: view === v.key }"
                   :title="$t(v.labelKey)"
                   @click="$emit('switch-view', v.key)">
@@ -21,7 +21,7 @@
         </div>
         <button class="tk-viewpill-toggle" type="button"
                 :title="$t('app.collapseViews')" @click="toggleCollapsed">
-          <i class="la la-chevron-right"></i>
+          <i class="la la-exchange-alt"></i>
         </button>
       </div>
     </transition>
@@ -32,12 +32,12 @@
         <div class="tk-module-v-pill tk-capsule">
           <button class="tk-viewpill-toggle" type="button"
                   :title="$t('app.expandViews')" @click="toggleCollapsed">
-            <i class="la la-chevron-left"></i>
+            <i class="la la-exchange-alt"></i>
           </button>
         </div>
         <div class="tk-pill-v">
           <div class="tk-pill-v-inner">
-            <button v-for="v in views" :key="v.key" type="button"
+            <button v-for="v in flatItems" :key="v.key" type="button"
                     class="tk-viewpill-item" :class="{ on: view === v.key }"
                     :title="$t(v.labelKey)"
                     @click="$emit('switch-view', v.key)">
@@ -61,16 +61,19 @@
     <button class="tk-pro-rail-toggle" type="button"
             v-tooltip="railCollapsed ? { text: $t('app.expandViews'), placement: 'right' } : null"
             @click="$emit('update:rail-collapsed', !railCollapsed)">
-      <i :class="railCollapsed ? 'la la-chevron-right' : 'la la-chevron-left'"></i>
+      <i class="la la-exchange-alt"></i>
     </button>
     <div class="tk-pro-rail-items">
-      <button v-for="v in views" :key="v.key" type="button"
-              class="tk-pro-rail-item" :class="{ on: view === v.key }"
-              v-tooltip="railCollapsed ? { text: $t(v.labelKey), placement: 'right' } : null"
-              @click="$emit('switch-view', v.key)">
-        <i :class="v.icon" class="vp-ico"></i>
-        <span class="vp-label">{{ $t(v.labelKey) }}</span>
-      </button>
+      <template v-for="(g, gi) in groups" :key="gi">
+        <div v-if="g.label" class="tk-pro-rail-group-h">{{ $t(g.label) }}</div>
+        <button v-for="v in g.items" :key="v.key" type="button"
+                class="tk-pro-rail-item" :class="{ on: view === v.key }"
+                v-tooltip="railCollapsed ? { text: $t(v.labelKey), placement: 'right' } : null"
+                @click="$emit('switch-view', v.key)">
+          <i :class="v.icon" class="vp-ico"></i>
+          <span class="vp-label">{{ $t(v.labelKey) }}</span>
+        </button>
+      </template>
     </div>
     <!-- 设置：左侧导航最下方，点击打开插件设置页（基础版 / Pro 共用） -->
     <button class="tk-pro-rail-item tk-pro-rail-settings" type="button"
@@ -114,6 +117,26 @@ export default {
   },
   created() {
     this.collapsed = this.loadCollapsed();
+  },
+  computed: {
+    // 分组导航（个人版专属；免费/Pro 不传则退化为扁平菜单）：
+    // 基础 6 视图恒为第一组，标签由 plugin.baseNavGroupLabel 可选提供；
+    // 个人版经 installPersonal 注入 extraNavGroups 追加分组（如「预览」）。
+    groups() {
+      const base = this.views;
+      const arr = [{ label: (this.plugin && this.plugin.baseNavGroupLabel) || null, items: base }];
+      const extra = this.plugin && this.plugin.extraNavGroups;
+      if (Array.isArray(extra)) {
+        for (const g of extra) arr.push({ label: (g && g.label) || null, items: (g && g.items) || [] });
+      }
+      return arr;
+    },
+    // 横向胶囊 / 竖向折叠列表沿用扁平排布（分组头在窄行内容易拥挤）；仅左侧竖栏渲染分组头
+    flatItems() {
+      const out = [];
+      for (const g of this.groups) for (const it of (g.items || [])) out.push(it);
+      return out;
+    }
   },
   methods: {
     loadCollapsed() {
@@ -332,7 +355,7 @@ export default {
   overflow: hidden;
   transition: width .28s cubic-bezier(.4, 0, .2, 1);
 }
-.tk-pro-rail:not(.collapsed) { width: 158px; }   /* 展开态：图标 + 文字面板 */
+.tk-pro-rail:not(.collapsed) { width: 100px; }   /* 展开态：图标 + 文字面板（收窄） */
 .tk-pro-rail-toggle {
   flex: none;
   display: inline-flex; align-items: center; justify-content: center;
@@ -348,6 +371,13 @@ export default {
   display: flex; flex-direction: column; gap: 4px;
   padding: 0 6px; justify-content: flex-start;
 }
+/* 左侧竖栏分组标题（个人版分组导航；免费/Pro 无标签则不出）；收起态隐藏文字标题 */
+.tk-pro-rail-group-h {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--text-faint); padding: 12px 12px 4px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; flex: none;
+}
+.tk-pro-rail.collapsed .tk-pro-rail-group-h { display: none; }
 .tk-pro-rail-item {
   display: inline-flex; align-items: center; gap: 10px;
   width: 100%; box-sizing: border-box;
