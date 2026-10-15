@@ -121,6 +121,11 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         dd.addOption('summer', t('settings.schemeSummer'));
         dd.addOption('autumn', t('settings.schemeAutumn'));
         dd.addOption('winter', t('settings.schemeWinter'));
+        // 皮卡丘 / 紫罗兰 均为 Pro 专属配色，仅 Pro 版显示（基础版无）；标签后追加 Pro 字样，提示会员专属
+        if (this.plugin.isPro) {
+          dd.addOption('pikachu', t('settings.schemePikachu') + ' Pro');
+          dd.addOption('violet', t('settings.schemeViolet') + ' Pro');
+        }
         dd.setValue(this.plugin.settings.colorScheme || 'default');
         dd.onChange(async (value) => {
           this.plugin.settings.colorScheme = value;
@@ -339,7 +344,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
 
     const about = containerEl.createDiv('dt-about-card');
 
-    // 软件名 + 版本
+    // 软件名 + 版本：名称在左，版本号右对齐
     const infoRow = about.createDiv('dt-about-row');
     infoRow.createSpan({ text: this.plugin.manifest.name, cls: 'dt-about-name' });
     infoRow.createSpan({ text: 'v' + (this.plugin.manifest.version || ''), cls: 'dt-about-version-tag' });
@@ -354,6 +359,16 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     const authorLinks = authorRow.createDiv('dt-about-links');
     // Pro 版不提供 GitHub 仓库访问（避免与免费开源版混淆），仅免费版显示
     if (!this.plugin.isPro) {
+      // 社区插件页（Obsidian 官方社区），放在 GitHub 之前；样式与下方链接按钮一致
+      const community = authorLinks.createEl('a', {
+        cls: 'dt-about-link',
+        href: 'https://community.obsidian.md/plugins/' + this.plugin.manifest.id,
+      });
+      community.setAttribute('target', '_blank');
+      community.setAttribute('rel', 'noopener');
+      community.createEl('i', { cls: 'la la-globe' });
+      community.createSpan({ text: t('settings.communityPage') });
+
       const gh = authorLinks.createEl('a', { cls: 'dt-about-link', href: this.plugin.manifest.authorUrl || GH_REPO });
       gh.setAttribute('target', '_blank');
       gh.setAttribute('rel', 'noopener');

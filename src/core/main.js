@@ -4,6 +4,7 @@ import TasksApp from './views/TasksApp.vue';
 import { initTasksApi, ensureInboxFile } from './api/tasks.js';
 import { setColorScheme, setWeekStart } from './composables/tasks-logic.js';
 import { setupDevReload } from './dev/devReload.js';
+import { setupHoverPreview, teardownHoverPreview } from './hoverPreview.js';
 import { DadaTodoSettingTab } from './ui/settings.js';
 import { initI18n, t } from './i18n/index.js';
 import { tooltip } from './directives/tooltip.js';
@@ -131,6 +132,28 @@ export default class DadaTodoPlugin extends Plugin {
     if (__DADA_DEV__) {
       setupDevReload(this);
     }
+
+    // 复用核心「页面预览」：清单视图左侧文件列表悬停即弹出该清单笔记预览（无需自绘弹窗）
+    setupHoverPreview(this);
+
+    // 明暗主题切换后，自动重算依赖主题的配色（紫罗兰深/浅变体、块内文字等），无需手动切换视图
+    this.registerThemeColorRefresh();
+  }
+
+  /** 监听 Obsidian 明暗主题切换，自动重算依赖主题的配色（紫罗兰 dark/light 变体等） */
+  registerThemeColorRefresh() {
+    const body = document.body;
+    let dark = body.classList.contains('theme-dark');
+    const mo = new MutationObserver(() => {
+      const nowDark = body.classList.contains('theme-dark');
+      if (nowDark !== dark) {
+        dark = nowDark;
+        // 重算已打开视图的配色：与手动切换视图效果一致，块底色/标题字随主题即时更新
+        this.reloadOpenViews();
+      }
+    });
+    mo.observe(body, { attributes: true, attributeFilter: ['class'] });
+    this.register(() => mo.disconnect());
   }
 
   /** 在指定区域打开待办视图（left=左侧栏 / main=主窗口标签页 / right=右侧栏） */
@@ -163,6 +186,8 @@ export default class DadaTodoPlugin extends Plugin {
 
   onunload() {
     this.app.workspace.detachLeavesOfType(this.viewType);
+    // 反注册核心「页面预览」来源，清理设置项里的本插件条目
+    teardownHoverPreview(this);
   }
 
   async loadSettings() {

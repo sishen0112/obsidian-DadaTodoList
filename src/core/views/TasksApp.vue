@@ -1,5 +1,5 @@
 <template>
-  <div class="task-app" :class="{ 'tk-pro': verticalMenu, 'tk-pro-rail-open': verticalMenu && !proRailCollapsed }">
+  <div class="task-app" :data-color-scheme="plugin.settings.colorScheme" :class="{ 'tk-pro': verticalMenu, 'tk-pro-rail-open': verticalMenu && !proRailCollapsed }">
     <div v-if="error" class="tk-err">{{ error }}</div>
     <!-- 核心「日记」插件未启用：有日期任务无法读写（顶部常驻提醒，不可手动关闭；开启日记插件后自动消失） -->
     <div v-if="!canUseDaily()" class="tk-onboard tk-warn">
@@ -74,7 +74,7 @@
 
     <!-- 底部悬浮胶囊视图切换（日/周/月/日程/清单/全部）。
          Pro 版改为左侧固定可展开/收起菜单（由 ViewPill 内部按 isPro 分支渲染） -->
-    <view-pill :view="view" :vertical="verticalMenu" :rail-collapsed="proRailCollapsed"
+    <view-pill :view="view" :vertical="verticalMenu" :rail-collapsed="proRailCollapsed" :plugin="plugin"
                @switch-view="switchView" @update:rail-collapsed="v => proRailCollapsed = v" />
 
     <!-- 编辑器与完成日历改用 Obsidian 原生 Modal 外壳（Vue-in-Modal 桥），不再内嵌页面 -->
@@ -502,8 +502,8 @@ export default {
     // 时间轴块配色 / 农历 / 节假日：纯函数在 tasks-logic（周视图组件与月视图 ctx 共用），此处仅作委托
     colorOf(t) { return colorOf(t); },
     itemColor(t) { return itemColor(t); },
-    // 日程视图：左侧时间点 / 右侧卡片，沿用时间轴的莫兰迪配色
-    agendaCard(t) { const c = this.colorOf(t); return { background: c.bg, '--ag-bar': c.fg }; },
+    // 日程视图：左侧时间点 / 右侧卡片，沿用时间轴配色；文字色走 itemColor（皮卡丘近黑/焦棕深底色卡走亮字、其余亮底深字，紫罗兰走亮色字）
+    agendaCard(t) { const c = this.colorOf(t); return { background: c.bg, color: itemColor(t).color, '--ag-bar': c.fg }; },
     // 日程视图：已延期 / 更远 分组折叠切换
     toggleAgendaGroup(kind) { this.agendaCollapsed[kind] = !this.agendaCollapsed[kind]; },
     // 日程视图：回到今天——将「今日」分组滚动到可视区域顶部

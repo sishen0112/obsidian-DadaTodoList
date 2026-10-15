@@ -10,6 +10,7 @@
 
 import { Lunar, HolidayUtil } from 'lunar-javascript';
 import { t, currentLang } from '../i18n/index.js';
+import { IS_PRO } from '../../shared/flags.js';
 
 // 「无日期」任务所在收件箱文件的键名（与具体路径解耦）
 export const INBOX_KEY = 'inbox';
@@ -643,6 +644,34 @@ export const WINTER_COLORS = [
   { bg: 'rgba(150, 185, 205, .28)', fg: '#346066' }  // 松雪青（少量）
 ];
 
+// 皮卡丘（Pro 专属）：身体明黄 → 金黄 → 蜜橙拉开梯度，红脸颊，再加近黑尾巴 / 焦棕耳尖两支深底色卡。
+// 亮底深字（light mode）；dark mode 下整块切换为 bgDark（更深更实）+ fgDark（亮字），
+// 避免半透明浅色压在深色主题上看不清（与紫罗兰同机制）。仅 Pro 构建包含。
+export const PIKACHU_COLORS = IS_PRO ? [
+  { bg: 'rgba(255, 245, 150, .44)', fg: '#6B5A00', bgDark: 'rgba(190, 160, 40, .55)', fgDark: '#FFF3B0' }, // 浅柠檬
+  { bg: 'rgba(255, 208, 38, .42)', fg: '#5C4500', bgDark: 'rgba(205, 165, 15, .55)', fgDark: '#FFF0A0' }, // 皮卡丘黄
+  { bg: 'rgba(255, 176, 16, .40)', fg: '#6B3D00', bgDark: 'rgba(195, 135, 10, .55)', fgDark: '#FFE79A' }, // 金黄
+  { bg: 'rgba(255, 140, 0, .34)', fg: '#5E3300', bgDark: 'rgba(205, 115, 0, .55)', fgDark: '#FFDFAE' }, // 蜜橙
+  { bg: 'rgba(255, 74, 62, .30)', fg: '#7A170C', bgDark: 'rgba(195, 50, 42, .55)', fgDark: '#FFD0C6' }, // 脸颊红
+  { bg: 'rgba(214, 26, 50, .28)', fg: '#7A0A16', bgDark: 'rgba(165, 22, 46, .55)', fgDark: '#FFC2CC' }, // 莓红
+  { bg: 'rgba(26, 24, 22, .64)', fg: '#F4D97C', bgDark: 'rgba(18, 16, 14, .80)', fgDark: '#F4D97C', dark: true }, // 炭黑
+  { bg: 'rgba(78, 54, 32, .58)', fg: '#F0D9A8', bgDark: 'rgba(58, 40, 22, .74)', fgDark: '#F0D9A8', dark: true }, // 焦棕
+] : [];
+
+// 紫罗兰（Pro 专属）：沿色相弧拉开层次——粉紫→丁香→蓝长春花→蓝紫→紫水晶→紫罗兰→深紫→雾深紫，
+// 浅底深字（与全站卡片风格一致），只作用于任务块；每个变体同时给出 dark mode 配色（对应深底+亮字），
+// 由 colorOf 按当前主题切换，确保深浅两种主题都清晰。仅 Pro 构建包含。
+export const VIOLET_COLORS = IS_PRO ? [
+  { bg: 'rgba(247, 200, 234, .30)', fg: '#5E1F54', bgDark: 'rgba(80, 48, 78, .55)', fgDark: '#F8D2EC' }, // 浅粉紫
+  { bg: 'rgba(224, 200, 248, .30)', fg: '#3B2A66', bgDark: 'rgba(56, 42, 100, .54)', fgDark: '#DCC8FF' }, // 丁香
+  { bg: 'rgba(192, 188, 250, .30)', fg: '#2E3278', bgDark: 'rgba(48, 50, 104, .56)', fgDark: '#C2C4FF' }, // 长春花（偏蓝）
+  { bg: 'rgba(176, 168, 246, .32)', fg: '#322C82', bgDark: 'rgba(42, 44, 102, .58)', fgDark: '#B6B2F8' }, // 蓝雾（蓝紫）
+  { bg: 'rgba(212, 178, 248, .28)', fg: '#4A2C9E', bgDark: 'rgba(56, 38, 102, .58)', fgDark: '#D0AEF8' }, // 紫水晶
+  { bg: 'rgba(194, 150, 242, .32)', fg: '#3E208E', bgDark: 'rgba(62, 40, 110, .60)', fgDark: '#D6C0FF' }, // 紫罗兰
+  { bg: 'rgba(180, 142, 234, .34)', fg: '#381E84', bgDark: 'rgba(50, 32, 100, .60)', fgDark: '#C8AEF4' }, // 罗兰（深紫）
+  { bg: 'rgba(164, 126, 228, .36)', fg: '#301A78', bgDark: 'rgba(42, 28, 92, .62)', fgDark: '#BCA6F0' }, // 雾深紫
+] : [];
+
 // 配色方案注册表（设置项 colorScheme 的取值）
 export const COLOR_SCHEMES = {
   default: TIMELINE_COLORS,
@@ -652,6 +681,9 @@ export const COLOR_SCHEMES = {
   summer: SUMMER_COLORS,
   autumn: AUTUMN_COLORS,
   winter: WINTER_COLORS,
+  // 皮卡丘 / 紫罗兰：均为 Pro 专属方案，仅 Pro 构建注册，免费版无此配色
+  ...(IS_PRO ? { pikachu: PIKACHU_COLORS } : {}),
+  ...(IS_PRO ? { violet: VIOLET_COLORS } : {}),
 };
 
 // 当前生效的配色方案：由 main.js 在加载设置、以及设置变更时调用 setColorScheme 更新。
@@ -672,19 +704,34 @@ export function getWeekStart() {
   return weekStartDay;
 }
 
+// 是否处于 Obsidian 深色主题（dark mode 下紫罗兰配色需要切到深紫底 + 亮紫字）
+function isDarkMode() {
+  return typeof document !== 'undefined' && document.body && document.body.classList.contains('theme-dark');
+}
+
 // 时间轴任务块配色：按标题哈希取色（浅底深字）
 export function colorOf(t, scheme) {
   const arr = COLOR_SCHEMES[scheme] || COLOR_SCHEMES[activeColorScheme];
   const s = String((t && t.summary) || '');
   let h = 0;
   for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % arr.length;
-  return arr[h];
+  const c = arr[h];
+  // 紫罗兰 / 皮卡丘 在 dark mode 下切换为「深底 + 亮字」（各自 bgDark/fgDark），
+  // 否则用「浅底 + 深字」；其余方案不受影响
+  const eff = scheme || activeColorScheme;
+  if ((eff === 'violet' || eff === 'pikachu') && isDarkMode()) return { bg: c.bgDark, fg: c.fgDark };
+  return c;
 }
 
 // 全天 / 凌晨列表项的背景与文字色（与时间轴块同一套配色）
 export function itemColor(t, scheme) {
-  const c = colorOf(t, scheme);
-  return { background: c.bg, color: 'var(--ink)' };
+  const active = scheme || activeColorScheme;
+  const c = colorOf(t, active);
+  // 紫罗兰：深底配亮色字；皮卡丘：块内文字统一用各自 fg（固定色，浅黄底深棕字 / 深底亮金字），
+  //   不随主题变，dark mode 下浅底块也不会变成「浅灰字压浅底」而看不清；深底色卡（标记 dark）同理。
+  // 三者均为 Pro 专属，免费版恒为默认墨色，不受影响。
+  const useFg = active === 'violet' || active === 'pikachu' || !!(c && c.dark);
+  return { background: c.bg, color: useFg ? (c.fg || 'var(--ink)') : 'var(--ink)' };
 }
 
 // 农历日文案：中文用库自带词表（初一、十五…）；

@@ -297,8 +297,8 @@ export default {
         height: b.h + 'px',
         left: 'calc(' + b.left + '% + 2px)',
         width: 'calc(' + b.width + '% - 4px)',
-        background: c.bg,
-        color: 'var(--ink)'
+        // 复用 itemColor：皮卡丘近黑/焦棕深底色卡走亮字、其余亮底深字；紫罗兰走亮色字；其余保持默认墨色
+        ...itemColor(b.t)
       };
     },
     // 时间(分钟) → 像素：相对时间轴窗口起点；窗口外钳制到顶/底

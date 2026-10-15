@@ -5,7 +5,7 @@
       <div class="tk-cl-side-h"><i class="la la-tasks"></i><span>{{ $t('app.viewCl') }}</span></div>
       <div v-if="!lists.length" class="tk-cl-side-empty">{{ $t('app.clSideEmpty') }}</div>
       <div v-else class="tk-cl-list">
-        <div v-for="c in lists" :key="c.key" class="tk-cl-item">
+        <div v-for="c in lists" :key="c.key" class="tk-cl-item" :data-href="taskFilePath(c.key) || ''">
           <div class="tk-cl-item-main" :class="{ on: c.key === activeKey }"
                role="button" tabindex="0"
                @click="selectList(c.key)"
@@ -195,7 +195,7 @@ export default {
     }
   },
   methods: {
-    statusIcon, richSummaryNoTags, dateText, timeText,
+    statusIcon, richSummaryNoTags, dateText, timeText, taskFilePath,
     pct(c) { return c.total ? Math.round((c.done / c.total) * 100) : 0; },
     gKey(g) { return g.title || '___ungrouped'; },
     firstLine(s) { return String(s || '').split(/\r?\n/)[0]; },

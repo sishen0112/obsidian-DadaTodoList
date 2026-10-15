@@ -13,6 +13,11 @@
                   @click="$emit('switch-view', v.key)">
             <i :class="v.icon" class="vp-ico"></i><span class="vp-label">{{ $t(v.labelKey) }}</span>
           </button>
+          <span class="tk-pill-sep"></span>
+          <button class="tk-viewpill-item tk-viewpill-settings" type="button"
+                  :title="$t('app.settings')" @click="openSettings">
+            <i class="la la-cog vp-ico"></i><span class="vp-label">{{ $t('app.settings') }}</span>
+          </button>
         </div>
         <button class="tk-viewpill-toggle" type="button"
                 :title="$t('app.collapseViews')" @click="toggleCollapsed">
@@ -37,6 +42,10 @@
                     :title="$t(v.labelKey)"
                     @click="$emit('switch-view', v.key)">
               <i :class="v.icon" class="vp-ico"></i><span class="vp-label">{{ $t(v.labelKey) }}</span>
+            </button>
+            <button class="tk-viewpill-item tk-viewpill-settings" type="button"
+                    :title="$t('app.settings')" @click="openSettings">
+              <i class="la la-cog vp-ico"></i><span class="vp-label">{{ $t('app.settings') }}</span>
             </button>
           </div>
         </div>
@@ -63,6 +72,13 @@
         <span class="vp-label">{{ $t(v.labelKey) }}</span>
       </button>
     </div>
+    <!-- 设置：左侧导航最下方，点击打开插件设置页（基础版 / Pro 共用） -->
+    <button class="tk-pro-rail-item tk-pro-rail-settings" type="button"
+            v-tooltip="railCollapsed ? { text: $t('app.settings'), placement: 'right' } : null"
+            @click="openSettings">
+      <i class="la la-cog vp-ico"></i>
+      <span class="vp-label">{{ $t('app.settings') }}</span>
+    </button>
   </div>
 </template>
 
@@ -77,7 +93,9 @@ export default {
     // 是否竖向菜单模式：true 时渲染左侧固定菜单（取代底部胶囊）；由设置项 menuStyle 控制
     vertical: { type: Boolean, default: false },
     // 左侧菜单折叠态（由父组件持有并持久化）：true=收起(仅图标)，false=展开(图标+文字)
-    railCollapsed: { type: Boolean, default: true }
+    railCollapsed: { type: Boolean, default: true },
+    // 插件实例：用于打开本插件设置页（由父组件 TasksApp 传入，确保 this.plugin 可用）
+    plugin: { type: Object, default: null }
   },
   emits: ['switch-view', 'update:rail-collapsed'],
   data() {
@@ -110,6 +128,18 @@ export default {
     toggleCollapsed() {
       this.collapsed = !this.collapsed;
       this.saveCollapsed(this.collapsed);
+    },
+    // 打开本插件的设置页：先 open() 打开设置面板（任何 Obsidian 版本都支持），
+    // 再尽力 openTabById 直接定位到本插件 Tab；个别旧版本无该方法则忽略，仍停在设置首页。
+    // id 取 manifest.id（基础版 dada-todo-list / Pro dada-todo-pro 各自正确）
+    openSettings() {
+      const plugin = this.plugin;
+      const app = plugin && plugin.app;
+      const s = app && app.setting;
+      const id = plugin && plugin.manifest && plugin.manifest.id;
+      if (!s) return;
+      try { s.open(); } catch (e) { /* 忽略 */ }
+      try { if (typeof s.openTabById === 'function') s.openTabById(id); } catch (e) { /* 忽略 */ }
     }
   }
 };
@@ -333,4 +363,10 @@ export default {
 .tk-pro-rail.collapsed .vp-label { display: none; }
 .tk-pro-rail-item:not(.on):hover { background: var(--gold-bg); color: var(--ink); }
 .tk-pro-rail-item.on { background: var(--gold-bg); color: var(--gold); font-weight: 700; }
+/* 设置按钮：左侧导航最下方，与视图项分组隔开（视图项容器 flex:1 已将其推到底部） */
+.tk-pro-rail-settings { margin-top: 8px; border-top: 1px solid var(--line); border-radius: 0; }
+.tk-pro-rail.collapsed .tk-pro-rail-settings { margin-top: 4px; border-top: none; }
+
+/* 横向胶囊中设置按钮与视图项之间的竖向分隔线 */
+.tk-pill-sep { width: 1px; align-self: stretch; background: var(--line); margin: 6px 4px; flex: none; }
 </style>

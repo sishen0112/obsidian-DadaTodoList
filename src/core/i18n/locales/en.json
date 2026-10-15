@@ -156,7 +156,8 @@
     "locateFail": "Cannot locate the task's file",
     "fileMissing": "File not found: ",
     "noLineNo": "Task has no line number, cannot locate",
-    "openFileFail": "Failed to open the task's file: "
+    "openFileFail": "Failed to open the task's file: ",
+    "settings": "Settings"
   },
   "editor": {
     "editTitle": "Edit task",
@@ -229,6 +230,8 @@
     "schemeSummer": "Summer greens",
     "schemeAutumn": "Autumn",
     "schemeWinter": "Winter",
+    "schemePikachu": "Pikachu",
+    "schemeViolet": "Violet",
     "timelineRange": "Timeline display range",
     "timelineRangeDesc": "Day / week views show only this span on the timeline (whole hours, 0–24). End must be later than start. Default 00:00–24:00 (full day). Timed tasks outside the window are hidden from the timeline.",
     "timeStep": "Time picker step",
@@ -257,6 +260,7 @@
     "author": "Author",
     "github": "GitHub",
     "xiaohongshu": "Xiaohongshu",
+    "communityPage": "Community page",
     "feedbackTitle": "Feedback",
     "feedbackDesc": "If you run into issues, file a GitHub Issue or message the author on Xiaohongshu.",
     "feedbackLink": "Open a GitHub Issue"

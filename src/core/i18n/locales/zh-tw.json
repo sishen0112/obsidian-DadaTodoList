@@ -156,7 +156,8 @@
     "locateFail": "無法定位任務所在檔案",
     "fileMissing": "找不到檔案：",
     "noLineNo": "任務缺少行號，無法定位",
-    "openFileFail": "開啟任務所在檔案失敗："
+    "openFileFail": "開啟任務所在檔案失敗：",
+    "settings": "設定"
   },
   "editor": {
     "editTitle": "編輯任務",
@@ -229,6 +230,8 @@
     "schemeSummer": "夏木",
     "schemeAutumn": "秋楓",
     "schemeWinter": "冬雪",
+    "schemePikachu": "皮卡丘",
+    "schemeViolet": "紫羅蘭",
     "timelineRange": "時間軸顯示範圍",
     "timelineRangeDesc": "日 / 週視圖的時間軸只顯示該時間段（整點，0–24）。結束時間須晚於開始時間。預設 00:00–24:00（全天）。視窗之外的定時任務不會在時間軸中顯示。",
     "timeStep": "時間選擇器步長",
@@ -252,7 +255,8 @@
     "daysAll": "全部",
     "checklistTag": "清單檔案 tag 標記",
     "checklistTagDesc": "可新增多個。frontmatter 的 tags 含任一標籤（或其子標籤，如 todoList/工作）的筆記會被識別為清單檔案。",
-    "tagPlaceholder": "輸入標籤後按 Enter 新增（如 todoList）"
+    "tagPlaceholder": "輸入標籤後按 Enter 新增（如 todoList）",
+    "communityPage": "社區頁面"
   },
   "modals": {
     "linkAdd": "新增連結",

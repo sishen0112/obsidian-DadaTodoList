@@ -156,7 +156,8 @@
     "locateFail": "无法定位任务所在文件",
     "fileMissing": "找不到文件：",
     "noLineNo": "任务缺少行号，无法定位",
-    "openFileFail": "打开任务所在文件失败："
+    "openFileFail": "打开任务所在文件失败：",
+    "settings": "设置"
   },
   "editor": {
     "editTitle": "编辑任务",
@@ -229,6 +230,8 @@
     "schemeSummer": "夏木",
     "schemeAutumn": "秋枫",
     "schemeWinter": "冬雪",
+    "schemePikachu": "皮卡丘",
+    "schemeViolet": "紫罗兰",
     "timelineRange": "时间轴显示范围",
     "timelineRangeDesc": "日 / 周视图的时间轴只显示该时间段（整点，0–24）。结束时间须晚于开始时间。默认 00:00–24:00（全天）。窗口之外的定时任务不会在时间轴中显示。",
     "timeStep": "时间选择器步长",
@@ -257,6 +260,7 @@
     "author": "作者",
     "github": "GitHub",
     "xiaohongshu": "小红书",
+    "communityPage": "社区页面",
     "feedbackTitle": "问题反馈",
     "feedbackDesc": "使用中遇到问题，可在 GitHub 提交 Issue，或通过小红书私信联系作者。",
     "feedbackLink": "在 GitHub 提交 Issue"
