@@ -1,86 +1,54 @@
 # Dada Todo List
 
-> 一款基于 Obsidian 笔记的待办与清单管理插件，全部基于纯 Markdown 复选框。任务就在你自己的笔记里——日记、收件箱、清单文件。无账号、无云端、无锁定。
+> A task & checklist manager for Obsidian, built entirely on plain Markdown checkboxes. Your tasks live in your own notes — daily notes, an inbox note, and checklist files. No account, no cloud, no lock-in.
 
-[English](./README_en.md) · 简体中文
+[简体中文](./README_zh.md) · English
 
 ---
 
-**Dada Todo List（达达清单）** 是一款基于 Obsidian 笔记的待办与清单管理插件。所有任务就是你笔记里的 Markdown 复选框（`- [ ]` / `- [x]`），插件负责把它们聚合起来，提供日历、时间轴、日程等多种视图和顺手的编辑体验。
+**Dada Todo List** turns your Obsidian vault into a full-featured task and checklist manager — powered entirely by plain Markdown checkboxes (`- [ ]` / `- [x]`). No accounts, no cloud services, no proprietary database: your tasks are simply lines in your own notes, and the plugin brings them together with calendar, timeline and agenda views plus a polished editing experience.
 
-### 🎯 这个插件适合你吗？
+### Who is it for?
 
-- 🙋 **你已经在用 Obsidian 管理待办** —— 任务散落在日记和各处笔记里，找起来靠搜索、看起来只有干巴巴的列表？装上它，你写过的每一行待办都会聚合成日历、时间轴、日程和清单，**数据一行都不用搬**，还在你原来的笔记里。
-- 🌱 **你还没试过用 Obsidian 管理待办** —— 不必再注册第 N 个待办服务：你的库就是任务管理器，纯 Markdown 复选框、全本地、跟着笔记永久保存。从一行 `- [ ]` 开始，慢慢长出属于自己的任务系统。
+- **Already managing tasks in Obsidian?** If your to-dos are scattered across daily notes and scattered checklists — and finding them means searching — this plugin is for you. It gathers everything you've already written into six views (day / week / month / agenda / checklists / list) with zero migration: your notes stay exactly where they are.
+- **Haven't tried task management in Obsidian yet?** You don't need yet another to-do service. Your vault *is* your task manager: plain Markdown that stays readable forever, stored locally, synced with whatever you already use. Start with a single `- [ ]` and grow your own system from there.
 
-### 💡 快速上手
+### Quick start
 
-1. 建议开启核心插件「**日记**」（设置 → 核心插件）——有日期的任务就存在你的每日笔记里；
-2. 点击左侧栏的 ✅ 图标（或命令面板「打开 Dada Todo List」）打开面板；
-3. 在任意一篇每日笔记里写下一行 `- [ ] 买牛奶 #生活`，面板里立刻就能看到。
+1. Enable the core **Daily notes** plugin (Settings → Core plugins) so dated tasks land in your daily notes;
+2. Click the ✅ icon in the left ribbon (or run the command "Open Dada Todo List") to open the panel;
+3. Write a line `- [ ] Buy milk #life` in any daily note — it shows up in the panel instantly.
 
-### ✨ 功能特性
+### Highlights
 
-#### 🗓 六种视图，随意切换
+- **Six views** — day timeline, seven-day week timeline with lane layout, month calendar (with Chinese lunar dates, solar terms, festivals and statutory holidays), rolling agenda, grouped checklists, and a filterable list of everything
+- **Inline syntax** — write `#tags` and `[links](url)` right in the task title; they render as clickable pills and hyperlinks
+- **Flexible time** — single time, time ranges (start – end), all-day, or **cross-date** (start date – end date, shown across multiple days), switchable per task
+- **Subtasks** — indented lines become nested subtasks of any depth
+- **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
+- **Option/Alt + drag to copy** — hold Option (Mac) / Alt or Ctrl (Windows·Linux) while dragging to drop a copy at the target; the original stays put. In the month view the copy keeps its original times and only changes the date; on the week / day timeline the drop point becomes the new start time (original duration preserved)
+- **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note
 
-| 视图 | 适合场景 |
+### Installation
+
+**Manual**: download `main.js`, `styles.css` and `manifest.json` into
+`your-vault/.obsidian/plugins/dada-todo-list/`, then enable the plugin in Settings → Community plugins.
+
+**BRAT**: install [BRAT](https://github.com/TfTHacker/obsidian42-brat) and add this repository.
+
+### Where your data lives
+
+| Data | Location |
 |---|---|
-| **日视图** | 聚焦一天：时间轴 + 凌晨列表 + 全天任务 |
-| **周视图** | 一周七天并排时间轴，定时任务按泳道排布、互不遮挡 |
-| **月视图** | 整月日历格：农历、节气、节日、法定节假日（休/班）一目了然 |
-| **日程** | 按日期纵向滚动的议程：已延期 → 未来 7 天 → 更远 |
-| **清单** | 按 `###` 标题分组管理清单文件，支持列表 / 分栏两种布局 |
-| **列表** | 全部任务池：按标签、日期、清单、状态（已完成 / 已取消）多维筛选 |
+| Dated tasks | Your **core Daily notes** folder (follows its folder & date format) — tasks are checkboxes inside each daily note |
+| Dateless tasks (inbox) | `DadaTodoList.md` in the vault root by default; configurable, created automatically |
+| Checklists | Any note whose frontmatter `tags` include `todoList` (configurable), anywhere in the vault |
 
-#### ✏️ 顺手的任务编辑
+Everything is plain Markdown. Uninstalling the plugin changes nothing — your notes stay as they are.
 
-- **标题内联语法**：直接写 `#标签` 和 `[文字](链接)`，渲染为可点击的标签胶囊与超链接
-- **时间灵活**：单时间、时间段（开始 – 结束）、全天、**跨日期**（开始日期 – 结束日期，自动跨多天显示）四种形态一键切换
-- **子任务**：无限层级缩进即子任务，弹窗内直接增删改
+### Writing checklists
 
-#### 🖱 效率操作
-
-- **拖拽改期**：周 / 月视图之间拖拽任务即可改期；时间轴上还能拖动手柄精细调整开始 / 结束时间
-- **Option/Alt + 拖拽 = 复制任务**：按住 Option（Mac）/ Alt 或 Ctrl（Windows·Linux）拖动任务，落点会新建一份副本、原任务保留。月视图中副本保持原开始 / 结束时刻只换日期；周 / 日时间轴中拖到哪格哪条即以该位置为新的开始时间（按原时长保留结束）
-- **过期待办顺延**：一键把所有已过期任务顺延到今天（保留原时刻，全天任务保持全天）
-- **Ctrl/⌘ + 点击**：直接跳转到任务所在的笔记并高亮定位
-- **待办侧栏**：周 / 月视图左侧可展开「无日期 / 所有待办」列表，拖到日历即改期
-
-#### 🔒 数据与隐私
-
-- **纯 Markdown**：任务就是笔记里的复选框，插件删除后数据原样保留
-- **全本地**：不依赖任何外部服务，不联网，天然适配各种同步方案
-- **界面记忆**：视图、筛选等偏好存本机 localStorage，不污染 data.json、不触发云盘同步
-
-#### 📂 数据访问说明
-
-- **扫描文件列表**：插件会枚举库内 Markdown 文件的**路径与 frontmatter**，用于发现每日笔记与清单文件（清单通过标记全库识别）；**只有**命中的日记（限加载范围内）、收件箱、清单文件会被读取正文，其余文件一概不碰。
-- **localStorage**：仅存储非必要的界面偏好（当前视图、筛选状态、引导关闭标记等），只存在于本机、不含任何笔记内容、绝不联网同步；刻意不写入 `data.json`，避免频繁改写触发云盘同步服务。
-
-#### 🌍 界面
-
-- **中英双语**：跟随 Obsidian 界面语言自动切换
-- **农历支持**：月视图 / 周视图表头显示农历、节气与节日，英文界面下同样可用
-- **主题跟随**：配色全部走 Obsidian 原生变量，深浅色主题、自定义主题色都自动适配
-
-### 🚀 安装
-
-**手动安装**：下载 `main.js`、`styles.css`、`manifest.json` 三个文件，放入
-`你的库/.obsidian/plugins/dada-todo-list/` 目录，然后在设置中启用第三方插件并开启本插件。
-
-### 📁 数据存储
-
-| 数据 | 位置 |
-|---|---|
-| 有日期的任务 | **日记文件夹**设置指定的文件夹（插件扫描其中文件名含日期的笔记），任务即这些笔记正文中的复选框 |
-| 无日期的任务（收件箱） | 默认库根目录 `DadaTodoList.md`，可在设置中改为任意文件；不存在时启动自动创建 |
-| 清单 | frontmatter `tags` 中包含 `todoList`（可改）的笔记，**全库识别**，不限目录 |
-
-> 收件箱文件、清单 tag 标记与日记文件夹都是本插件的设置项。日记文件夹默认指向库根目录（扫描文件名含日期的笔记），可独立于核心「日记」插件使用。
-
-### 📝 清单文件的写法
-
-任意一篇笔记，只要 frontmatter `tags` 含有清单识别标记（默认 `todoList`）就会成为一份清单。文件里用 **`###` 三级标题作为分组依据**，清单视图按分组展示：
+Any note whose frontmatter `tags` include the checklist tag (default `todoList`) becomes a checklist. Use **`###` third-level headings as group separators** — the checklist view renders one group per heading:
 
 ```markdown
 ---
@@ -88,72 +56,78 @@ tags:
   - todoList
 ---
 
-### 工作
-- [ ] 完成季度汇报 #work
-    - [ ] 收集数据
-    - [ ] 制作图表
-- [x] 回复客户邮件
+### Work
+- [ ] Finish the quarterly report #work
+    - [ ] Collect data
+- [x] Reply to client emails
 
-### 生活
-- [ ] 预约牙医
-- [x] 给绿萝浇水
+### Life
+- [ ] Book a dentist appointment
 ```
 
-规则与技巧：
+- **`###` heading = group name**, freely added/renamed/removed; tasks before any heading fall into "Ungrouped"
+- **Indented checkboxes are subtasks**, nesting to any depth
+- Switch between **list / columns** layouts; **drag a task onto another group** to move it
+- Each group has a **+ button** to add tasks; the sidebar shows live total / done progress per checklist
 
-- **`###` 标题 = 分组名**，可增删改，无需任何额外配置；标题前的任务归入「未分组」
-- **缩进的复选框 = 子任务**，层级不限
-- 清单视图支持**列表 / 分栏**两种布局；**拖拽任务到其他分组**即可移动归属
-- 每个分组标题旁有 **+ 按钮**可向该分组新增任务；侧栏实时显示各清单的总数与完成进度
-- 一篇笔记就是一份清单，任务直接存在这篇笔记里——在编辑器里手动增删改，面板会自动刷新
+### Data access disclosure
 
-### ⚙️ 设置
+- **File enumeration**: the plugin lists Markdown file paths and their frontmatter to discover daily notes and checklist files (checklists are identified anywhere in the vault by their tags). Only matched daily notes (within the configured load window), the inbox file, and tag-matched checklist files are actually read — no other file's content is ever touched.
+- **localStorage**: stores only non-essential UI preferences (current view, filters, onboarding state) on the local device. It never contains note content and is never synced; it is deliberately *not* written to `data.json` to avoid triggering cloud-sync services on every interaction.
 
-| 设置项 | 说明 |
+### Settings
+
+| Option | Description |
 |---|---|
-| **打开位置** | 左侧栏 / 主工作区标签页 / 右侧栏 |
-| **主题配色** | 时间轴、日历等任务块的配色方案：默认 / 莫兰迪 / 卡通果冻 / 春樱 / 夏木 / 秋枫 / 冬雪；按任务标题取色，相同标题颜色一致 |
-| **显示农历与节假日** | 日 / 周 / 月视图中的农历、节气、节日及休 / 班标记，可关闭只显示公历 |
-| **日记文件夹** | 存放日记（有日期任务）的文件夹，插件扫描该目录及子目录里文件名含日期的笔记；默认 `/` 表示库根目录 |
-| **日记载入范围** | 仅加载最近 N 天的日记（近 30 / 90 / 180 天 / 一年 / 全部，默认全部）。笔记与任务较多时可调小以提升加载性能 |
-| **收件箱文件** | 无日期任务的存放文件（相对库根目录的路径）；更换路径时若旧文件还有任务，会主动询问是否整体迁移 |
-| **清单文件 tag 标记** | frontmatter `tags` 含任一标记的笔记即清单文件，可配置多个 |
-| **每周开始日** | 周视图起始列与月历首列以此为准，可选周日到周六，默认周一 |
-| **时间轴显示范围** | 时间轴视图的起止小时（0:00 – 24:00），聚焦常用时段 |
-| **完成任务时添加完成日期标记** | 勾选完成任务时，在任务行末尾追加完成日期（如 ✅ 2026-10-06）。默认开启，关闭后不再追加该标记，开始 / 结束等日期标记不受影响 |
+| Open location | Left sidebar / main workspace tab / right sidebar |
+| Theme color scheme | Color scheme for task blocks in the timeline, calendar and other views: Default / Morandi / Jelly / Spring / Summer greens / Autumn / Winter; color derived from the task title |
+| Show lunar calendar & holidays | Lunar dates, solar terms and holiday badges in day / week / month views; turn off for Gregorian only |
+| Journal folder | Folder holding your journals (dated tasks); the plugin scans it and subfolders for notes whose filename contains a date; default `/` means the vault root |
+| Journal load window | Load only the last N days of journals (30 / 90 / 180 / 365 / all; default all) — lower it on large vaults for better performance |
+| Inbox file | Where dateless tasks are stored (path relative to vault root); changing it offers to migrate existing tasks |
+| Checklist file tag(s) | Notes whose frontmatter `tags` include any of these become checklist files; multiple allowed |
+| Week starts on | First column of the week view and month calendar; Sunday through Saturday, default Monday |
+| Timeline display range | Start and end hours of the timeline view (0:00 – 24:00) to focus on the hours you use |
+| Add completion date marker when completing a task | Appends the completion date to the end of the task line when you check it off (e.g. ✅ 2026-10-06). On by default; turn off to skip the marker while keeping start / due date tags |
 
-### 🌐 语言
+### Interface
 
-界面跟随 Obsidian 的语言设置（简体中文 / English）。切换 Obsidian 语言后重启即可生效。
+- **Bilingual** — follows Obsidian's interface language (English / 简体中文)
+- **Lunar calendar** — lunar dates, solar terms and festivals in month / week view headers, available in English too
+- **Theme aware** — all colors use Obsidian's native variables, adapting to light / dark and custom accents
 
----
+### Language
 
-## 💖 赞赏支持
-
-如果这个插件对你有帮助，欢迎请作者喝杯咖啡，是我持续更新的动力～你也可以在 [我的小红书](https://xhslink.cn/o/2G9OTVU76WP) 找到我，分享使用技巧与更新动态。
-
-微信赞赏 WeChat Pay
-
-<img src="docs/donate-wechat.jpg" alt="微信赞赏码" width="300">
-
-支付宝赞赏 Alipay
-
-<img src="docs/donate-alipay.jpg" alt="支付宝赞赏码" width="300">
+The interface follows Obsidian's language setting (English / 简体中文). Restart Obsidian after switching.
 
 ---
 
-## 🛠 开发
+## 💖 Support the author
+
+If this plugin helps you, feel free to buy me a coffee — it keeps me motivated to keep improving it~ You can also find me on [Xiaohongshu](https://xhslink.cn/o/2G9OTVU76WP) for tips and updates.
+
+WeChat Pay
+
+<img src="docs/donate-wechat.jpg" alt="WeChat donation QR" width="300">
+
+Alipay
+
+<img src="docs/donate-alipay.jpg" alt="Alipay donation QR" width="300">
+
+---
+
+## 🛠 Development
 
 ```bash
 npm install
-npm run build     # 生产构建（产物：dada-todo-list/main.js、styles.css、manifest.json）
-npm run dev       # 开发模式：监听 src/ 改动自动重建
+npm run build     # production build (outputs: dada-todo-list/main.js, styles.css, manifest.json)
+npm run dev       # dev mode: rebuild automatically on src/ changes
 ```
 
-本地调试：把测试库的插件目录软链到产物目录即可（目录名与插件 id 一致）：
+Local debugging: symlink your test vault's plugin folder to the build output (folder name must match the plugin id):
 
 ```bash
-ln -s "$(pwd)/dada-todo-list" "你的库/.obsidian/plugins/dada-todo-list"
+ln -s "$(pwd)/dada-todo-list" "your-vault/.obsidian/plugins/dada-todo-list"
 ```
 
 ## 📄 License
