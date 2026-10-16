@@ -150,8 +150,8 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           dd.addOption('summer', T('schemeSummer'));
           dd.addOption('autumn', T('schemeAutumn'));
           dd.addOption('winter', T('schemeWinter'));
-          // Pro 专属配色由 src/pro 注入（EXTRA_SCHEME_OPTIONS），免费版该表为空则不显示
-          for (const opt of EXTRA_SCHEME_OPTIONS) dd.addOption(opt.key, t(opt.labelKey) + ' Pro');
+          // 额外配色选项由 EXTRA_SCHEME_OPTIONS 注入；免费版该表为空则不显示
+          for (const opt of EXTRA_SCHEME_OPTIONS) dd.addOption(opt.key, t(opt.labelKey));
           dd.setValue(plugin.settings.colorScheme || 'default');
           dd.onChange(async (value) => {
             plugin.settings.colorScheme = value;
@@ -402,13 +402,8 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       name: plugin.manifest.name,
       desc: 'v' + (plugin.manifest.version || ''),
       render: safe((s) => {
-        const baseName = plugin.manifest.name.replace(/\s+Pro$/i, '');
-        s.setName(baseName);
+        s.setName(plugin.manifest.name);
         s.setDesc('v' + (plugin.manifest.version || ''));
-        if (plugin.isPro) {
-          const badge = s.nameEl.createSpan({ cls: 'dt-pro-badge' });
-          badge.setText('Pro');
-        }
       }),
     };
 

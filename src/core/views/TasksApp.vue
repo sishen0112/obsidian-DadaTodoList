@@ -72,8 +72,8 @@
     <!-- 任务块右键菜单（单例，teleport 到 body；日/周/月/日程/清单 共用） -->
     <task-context-menu />
 
-    <!-- 底部悬浮胶囊视图切换（日/周/月/日程/清单/全部）。
-         Pro 版改为左侧固定可展开/收起菜单（由 ViewPill 内部按 isPro 分支渲染） -->
+    <!-- 底部悬浮胶囊视图切换（日/周/月/日程/清单/全部）；
+         vertical 菜单样式下则为左侧固定可展开/收起菜单 -->
     <view-pill :view="view" :vertical="verticalMenu" :rail-collapsed="proRailCollapsed" :plugin="plugin"
                @switch-view="switchView" @update:rail-collapsed="v => proRailCollapsed = v" />
 
@@ -797,7 +797,7 @@ export default {
   background: var(--paper);
 }
 
-/* Pro 版：左侧固定菜单时让出左内边距，避免遮挡内容（含日程视图左导航）；
+/* 左侧固定菜单（vertical 样式）时让出左内边距，避免遮挡内容（含日程视图左导航）；
    与 ViewPill 内 .tk-pro-rail 宽度同速动画，保持二者同步 */
 .task-app.tk-pro { padding-left: 52px; transition: padding-left .28s cubic-bezier(.4, 0, .2, 1); }
 .task-app.tk-pro.tk-pro-rail-open { padding-left: 132px; }

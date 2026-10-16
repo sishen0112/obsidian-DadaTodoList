@@ -643,14 +643,8 @@ export const WINTER_COLORS = [
   { bg: 'rgba(150, 185, 205, .28)', fg: '#346066' }  // 松雪青（少量）
 ];
 
-// 皮卡丘 / 紫罗兰 配色已迁移至私有 src/pro（由 installPro 通过 registerColorScheme 注入），
-// 公开仓库 src/core 不再含任何 Pro 主题源码；下方仅保留基础方案。
+// 配色方案注册表（设置项 colorScheme 的取值），基础方案如下。
 
-// 紫罗兰配色同上，已迁移至私有 src/pro（installPro registerColorScheme 注入）。
-
-// 配色方案注册表（设置项 colorScheme 的取值）。基础方案恒含；
-// 皮卡丘 / 紫罗兰 等 Pro 专属方案由 src/pro 的 installPro 通过 registerColorScheme 注入，
-// 故公开仓库 src/core 不含任何 Pro 主题源码，免费版此表仅为基
 export const COLOR_SCHEMES = {
   default: TIMELINE_COLORS,
   morandi: MORANDI_COLORS,
@@ -666,13 +660,13 @@ export const COLOR_SCHEMES = {
 //   useFg：任务块文字强制用各自 fg（而非 var(--ink)）；深底色卡（标记 dark）天然也用 fg。
 export const SCHEME_FLAGS = {};
 
-// 设置页「配色方案」下拉的额外项（由 Pro 等上层注入）；免费版恒为空，故基础版不显示任何 Pro 配色项。
+// 设置页「配色方案」下拉的额外项（由上层模块注入，可选）；免费版恒为空。
 export const EXTRA_SCHEME_OPTIONS = [];
 
-// 上层（Pro）调用，注入专属配色方案，使 src/core 不含 Pro 主题源码。
+// 注入额外的配色方案（由上层模块调用，可选）。
 //   colors：与基础方案同构的颜色数组（可含 bgDark/fgDark/dark）。
 //   opts.darkSwitch / opts.useFg：渲染标志（见 SCHEME_FLAGS 注释）。
-//   opts.labelKey：设置项下拉项的 i18n 键（Pro 需同时用 addI18nResources 注入对应文案）。
+//   opts.labelKey：设置项下拉项的 i18n 键（调用方需同时用 addI18nResources 注入对应文案）。
 export function registerColorScheme(key, colors, opts = {}) {
   COLOR_SCHEMES[key] = colors;
   SCHEME_FLAGS[key] = { darkSwitch: !!opts.darkSwitch, useFg: !!opts.useFg };

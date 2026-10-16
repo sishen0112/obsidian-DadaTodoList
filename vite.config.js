@@ -57,7 +57,6 @@ export default defineConfig({
   // 编译期注入 dev 标志 + 兜底手机端无 process 全局
   define: {
     __DADA_DEV__: JSON.stringify(isDev),
-    __DADA_PRO__: 'false',
     'process.env': JSON.stringify({ NODE_ENV: isDev ? 'development' : 'production' })
   },
   build: {

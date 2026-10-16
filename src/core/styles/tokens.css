@@ -83,5 +83,4 @@
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
 }
 
-/* 皮卡丘 / 紫罗兰 的时间文字规则已迁移至私有 src/pro/themes.css（由 Pro 构建打包），
-   公开仓库 src/core 不再含任何 Pro 主题源码；base 构建不会包含这些规则。 */
+/* 历史配色（皮卡丘 / 紫罗兰）相关的时间文字规则已单独迁出，base 构建不含这些规则。 */

@@ -1,22 +1,4 @@
 
-/* ---------- 设置页：标题变体徽标（小标签框，挂在 nameEl 内） ---------- */
-/* 仅 Pro 版本渲染对应元素；免费版不出现，CSS 处于休眠 */
-.dt-pro-badge {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  padding: 1px 9px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.6;
-  color: #6b4e00;
-  background: linear-gradient(180deg, #ffe9a8, #ffd34d);
-  border: 1px solid #e0a92e;
-  border-radius: 999px;
-  letter-spacing: .4px;
-  vertical-align: middle;
-}
-
 /* ---------- 设置页：关于区（版本标签 + 链接按钮） ---------- */
 .dt-about-version-tag {
   padding: 2px 10px;

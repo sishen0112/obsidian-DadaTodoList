@@ -35,7 +35,7 @@ export function currentLang() {
 }
 
 /**
- * 上层（Pro）注入额外 i18n 资源（嵌套对象结构，与 locales/*.json 一致）。
+ * 注入额外的 i18n 资源（嵌套对象结构，与 locales/*.json 一致）。
  * 例：addI18nResources('zh-cn', { settings: { schemePikachu: '皮卡丘' } })
  * 需在 i18next 初始化（插件 onload 内）之后调用；此处使用默认命名空间 translation。
  */

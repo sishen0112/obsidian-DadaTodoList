@@ -17,17 +17,14 @@ import './styles/settings.css';
 // ============================================================================
 // Dada Todo · Obsidian 插件入口（任务模块来自 myLife-Plugin）
 // ----------------------------------------------------------------------------
-// 免费版以本文件为入口；Pro 版由 src/core/main.pro.js 薄封装，onload 后注入 installPro（私有子模块 src/pro）。
 // 技术栈：Vue 3（createApp / unmount）。
 // 注意：本文件只允许 default 导出插件类（Obsidian 以 module.exports 取它）。
 //   插件实例同时挂到 app.config.globalProperties.plugin（TasksApp 等用 this.plugin）
 //   与 app.provide('plugin', this)（兼容 inject 写法），数据层走 saveData / api/tasks.js。
 // ============================================================================
 
-// 视图类型 / 命令 id 等标识符由 manifest.id 派生，确保「免费版 / Pro 版」作为两个独立插件
-// 互不冲突（否则两者注册同一 view type 会导致后加载者报「已注册」而加载失败，并互相顶掉页面）。
-// 免费版 manifest.id = dada-todo-list → 沿用历史值 dada-todo-view / open-dada-todo（不破坏老用户）；
-// 其它 id（如 Pro 版 dada-todo-pro）→ 自动派生为 dada-todo-pro-view / dada-todo-pro-open。
+// 视图类型 / 命令 id 等标识符：免费版 manifest.id = dada-todo-list →
+// 沿用历史值 dada-todo-view / open-dada-todo（不破坏老用户）。
 
 /** 待办视图：Obsidian 侧栏面板，挂载 Vue 应用 */
 class DadaTodoView extends ItemView {
@@ -37,23 +34,18 @@ class DadaTodoView extends ItemView {
     this.vueApp = null;
   }
 
-  // 视图类型 / 标题由 manifest.id 派生：免费版 dada-todo-list → dada-todo-view；
-  // 其它（如 Pro dada-todo-pro）→ dada-todo-pro-view，并显示名追加「 Pro」。
+  // 视图类型 / 标题 / 图标：固定为免费版取值（manifest.id = dada-todo-list）。
   // 直接读 plugin.manifest.id 而非 plugin.viewType：避免宿主在某些时序下构造视图时
   // 插件实例尚未注入（this.plugin 为空）而读到 undefined.viewType 崩溃。
   // && 短路保证 this.plugin / manifest 任意一层缺失时都有兜底，不会抛错。
   getViewType() {
-    const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
-    return (id === 'dada-todo-list' ? 'dada-todo' : id) + '-view';
+    return 'dada-todo-view';
   }
   getDisplayText() {
-    const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
-    return t('app.viewTitle') + (id === 'dada-todo-list' ? '' : ' Pro');
+    return t('app.viewTitle');
   }
   getIcon() {
-    // 免费版 check-square，Pro 版 crown；用 manifest.id 派生并短路兜底
-    const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
-    return id === 'dada-todo-list' ? 'check-square' : 'crown';
+    return 'check-square';
   }
 
   async onOpen() {
@@ -91,17 +83,11 @@ export default class DadaTodoPlugin extends Plugin {
     // 初始化 i18n：跟随 Obsidian 界面语言（zh-cn / en）
     await initI18n(this);
 
-    // 派生本插件专属标识符（view type / 命令 id / 显示名），避免与同源的另一插件（如 Pro）冲突：
-    // 免费版 manifest.id = dada-todo-list → 沿用历史值 dada-todo-view / open-dada-todo（不破坏老用户）；
-    // 其它 id（如 Pro 版 dada-todo-pro）→ 自动派生 dada-todo-pro-view / dada-todo-pro-open，并显示名追加「 Pro」。
-    const base = (this.manifest && this.manifest.id && this.manifest.id !== 'dada-todo-list') ? this.manifest.id : 'dada-todo';
-    this.viewType = base + '-view';
-    const variantSuffix = base === 'dada-todo' ? '' : ' Pro';
-    this.viewTitle = t('app.viewTitle') + variantSuffix;
-    const commandId = base === 'dada-todo' ? 'open-dada-todo' : base + '-open';
-    // 是否 Pro 变体（仅当 id 严格为 dada-todo-pro）；仅用于设置页徽标 / ribbon 图标等非菜单差异，菜单样式由 menuStyle 控制。
-    this.isPro = base === 'dada-todo-pro';
-    const ribbonIcon = this.isPro ? 'crown' : 'check-square';
+    // 本插件专属标识符（view type / 命令 id / 显示名）：免费版为历史兼容值 dada-todo-view / open-dada-todo。
+    this.viewType = 'dada-todo-view';
+    this.viewTitle = t('app.viewTitle');
+    const commandId = 'open-dada-todo';
+    const ribbonIcon = 'check-square';
 
     // 任务数据层注入插件实例（vault / metadataCache 读写）
     initTasksApi(this);
@@ -117,11 +103,11 @@ export default class DadaTodoPlugin extends Plugin {
 
     this.registerView(this.viewType, (leaf) => new DadaTodoView(leaf, this));
 
-    this.addRibbonIcon(ribbonIcon, t('app.openDada') + variantSuffix, () => this.activateView());
+    this.addRibbonIcon(ribbonIcon, t('app.openDada'), () => this.activateView());
 
     this.addCommand({
       id: commandId,
-      name: t('app.openDada') + variantSuffix,
+      name: t('app.openDada'),
       callback: () => this.activateView()
     });
 
@@ -137,7 +123,7 @@ export default class DadaTodoPlugin extends Plugin {
     // 复用核心「页面预览」：清单视图左侧文件列表悬停即弹出该清单笔记预览（无需自绘弹窗）
     setupHoverPreview(this);
 
-    // 明暗主题切换后，自动重算依赖主题的配色（紫罗兰深/浅变体、块内文字等），无需手动切换视图
+    // 明暗主题切换后，自动重算依赖主题的配色（如深色 / 浅色变体、块内文字等），无需手动切换视图
     this.registerThemeColorRefresh();
   }
 
@@ -202,7 +188,7 @@ export default class DadaTodoPlugin extends Plugin {
     this.settings = {
       // 打开位置：左侧栏 / 主工作区标签页 / 右侧栏
       openLocation: data.openLocation || 'main',
-      // 菜单样式：horizontal（默认，底部横向胶囊）/ vertical（左侧竖向菜单，Pro 同款可展开收起）
+      // 菜单样式：horizontal（默认，底部横向胶囊）/ vertical（左侧竖向菜单，可展开收起）
       menuStyle: data.menuStyle || 'horizontal',
       // 是否显示农历与节假日（日 / 周 / 月视图表头与日历格）
       showLunar: data.showLunar ?? true,

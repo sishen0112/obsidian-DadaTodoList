@@ -106,7 +106,7 @@ export default {
   emits: ['switch-view', 'update:rail-collapsed'],
   data() {
     return {
-      // 仅免费版使用内部折叠态；Pro 版由父组件通过 railCollapsed 控制
+      // 内部折叠态（竖向菜单收起 / 展开）
       collapsed: this.loadCollapsed(),
       views: [
         { key: 'day', labelKey: 'app.viewDay', icon: 'la la-sun-o' },
@@ -150,7 +150,7 @@ export default {
     },
     // 打开本插件的设置页：先 open() 打开设置面板（任何 Obsidian 版本都支持），
     // 再尽力 openTabById 直接定位到本插件 Tab；个别旧版本无该方法则忽略，仍停在设置首页。
-    // id 取 manifest.id（基础版 dada-todo-list / Pro dada-todo-pro 各自正确）
+    // id 取 manifest.id（即 dada-todo-list）
     openSettings() {
       const plugin = this.plugin;
       const app = plugin && plugin.app;
@@ -334,7 +334,7 @@ export default {
   .tk-pill-v-enter-active, .tk-pill-v-leave-active { transition: none !important; }
 }
 
-/* ===== Pro 版：左侧固定竖向菜单（可展开/收起） ===== */
+/* ===== 左侧固定竖向菜单（vertical 菜单样式，可展开/收起） ===== */
 /* 固定在视图左缘，整高竖栏；收起态仅图标、展开态图标+文字。
    宽度与 TasksApp 的 .task-app 左内边距同速动画，保证内容不被遮挡 */
 .tk-pro-rail {
