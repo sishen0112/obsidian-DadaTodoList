@@ -72,5 +72,16 @@
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-/* 皮卡丘 / 紫罗兰 的时间文字规则已迁移至私有 src/pro/themes.css（由 Pro / Personal 构建打包），
+/* 时间/日期数字：单独用回改动前的 CJK 优先字体（与 .task-app 的 Latin 优先栈隔离）。
+   时间文本（如 14:30 / 全天 / 10/16）不含变音符号，无错位 bug 风险；单独设定可保持
+   与全局改动前一致的观感，避免被 .task-app 字体栈变化牵连。切勿删除或合并回 .task-app。 */
+.tk-date,
+.tk-tl-time,
+.cel-task-time,
+.tk-ag-time,
+.tk-cl-date {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+/* 皮卡丘 / 紫罗兰 的时间文字规则已迁移至私有 src/pro/themes.css（由 Pro 构建打包），
    公开仓库 src/core 不再含任何 Pro 主题源码；base 构建不会包含这些规则。 */
