@@ -15,8 +15,8 @@
       </div>
     </div>
 
-    <!-- 顶部：各视图控件（左）+ 视图切换（右），抽离为 TaskTopBar 组件；个人版自定义空页面隐藏顶栏 -->
-    <task-top-bar v-if="!isCustomView" :view="view" :range-label="rangeLabel" :todo-panel-open="todoPanelOpen"
+    <!-- 顶部：各视图控件（左）+ 视图切换（右），抽离为 TaskTopBar 组件 -->
+    <task-top-bar :view="view" :range-label="rangeLabel" :todo-panel-open="todoPanelOpen"
                   :hide-done="hideDone" :cl-main-view="clMainView"
                   @navigate="onNav" @switch-view="switchView"
                   @toggle-todo-panel="todoPanelOpen = !todoPanelOpen"
@@ -63,13 +63,6 @@
       <div v-else-if="view === 'cl'" key="cl" class="tk-clview-wrap">
         <checklist-view :plugin="plugin" :checklists="checklists" :hide-done="hideDone" :main-view="clMainView" />
       </div>
-
-      <!-- ===== 个人版专属页面（影视 / 推荐 / 游玩 等占位，暂无内容） ===== -->
-      <div v-else-if="isCustomView && !customComponent" key="custom-empty" class="tk-custom-empty">
-        <div class="tk-custom-empty-t">{{ customTitle }}</div>
-        <div class="tk-custom-empty-d">{{ $t('app.comingSoon') }}</div>
-      </div>
-      <component v-else-if="isCustomView && customComponent" :is="customComponent" :plugin="plugin" :view="view" />
 
       <!-- ===== 列表视图（独立组件） ===== -->
       <task-list-view v-else key="list" :ctx="this" :plugin="plugin" />
@@ -341,26 +334,6 @@ export default {
       const idx = (ws + 6) % 7;
       return arr.slice(idx).concat(arr.slice(0, idx));
     },
-    // 个人版专属页面（影视 / 推荐 / 游玩 等）：plugin.customViews 键存在即视为自定义页；
-    // 值为 Vue 组件则渲染该组件，为 null/undefined 则渲染中性占位页（app.comingSoon）。
-    isCustomView() {
-      const cv = this.plugin && this.plugin.customViews;
-      return !!(cv && Object.prototype.hasOwnProperty.call(cv, this.view));
-    },
-    customComponent() {
-      const cv = this.plugin && this.plugin.customViews;
-      return cv ? cv[this.view] : null;
-    },
-    customTitle() {
-      const groups = this.plugin && this.plugin.extraNavGroups;
-      if (Array.isArray(groups)) {
-        for (const g of groups) {
-          const it = (g.items || []).find((i) => i.key === this.view);
-          if (it) return this.$t(it.labelKey || it.label || this.view);
-        }
-      }
-      return this.view;
-    }
   },
   provide() {
     return {
@@ -834,23 +807,20 @@ export default {
 /* ===== 主体 ===== */
 .tk-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .tk-loading { color: var(--ink-soft); padding: 40px; text-align: center; }
-/* 个人版专属空页面占位（影视 / 推荐 / 游玩 等暂无内容） */
-.tk-custom-empty { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--ink-soft); }
-.tk-custom-empty-t { font-size: 18px; font-weight: 800; color: var(--ink); }
-.tk-custom-empty-d { font-size: 13px; }
+
 
 /* 视图切换过渡：旧视图先淡出，新视图挂载完再淡入（out-in），
    把新视图重建 DOM 的开销藏在透明度为 0 的瞬间，观感更平顺 */
 .tk-view-enter-active, .tk-view-leave-active { transition: opacity .18s ease, transform .18s ease; }
 .tk-view-enter-from { opacity: 0; transform: translateY(8px); }
 .tk-view-leave-to { opacity: 0; transform: translateY(-6px); }
-.tk-err { color: var(--red); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+
 /* 首次使用引导（无任务时显示） */
 .tk-onboard { margin-bottom: 14px; padding: 14px 16px; border: 1px dashed var(--gold); border-radius: 10px; background: var(--gold-bg); }
 .tk-onboard-t { font-weight: 700; color: var(--ink); margin-bottom: 4px; }
 .tk-onboard-d { color: var(--ink-soft); font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
 .tk-onboard-a { display: flex; gap: 8px; }
-.tk-onboard.tk-warn { border-color: var(--red); background: var(--panel); }
+.tk-onboard.tk-warn { border-color: var(--el-color-danger, var(--text-error)); background: var(--panel); }
 
 
 

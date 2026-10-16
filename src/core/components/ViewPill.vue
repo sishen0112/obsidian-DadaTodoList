@@ -122,22 +122,10 @@ export default {
     this.collapsed = this.loadCollapsed();
   },
   computed: {
-    // 分组导航（个人版专属；免费/Pro 不传则退化为扁平菜单）：
-    // 基础 6 视图恒为第一组，标签由 plugin.baseNavGroupLabel 可选提供；
-    // 扩展点：extraNavGroups 可注入追加分组（如「预览」）；免费版不传则只有基础分组。
+    // 视图分组：基础 6 视图恒为一组（label 为 null 不渲染分组头）；供左侧竖向菜单遍历，
+    // 横向胶囊 / 折叠列表由 flatItems 扁平排布。
     groups() {
-      const base = this.views;
-      const baseGroup = { label: (this.plugin && this.plugin.baseNavGroupLabel) || null, items: base };
-      const extra = (this.plugin && this.plugin.extraNavGroups) || [];
-      // extraNavGroups 支持 position: 'before-base' → 插到基础分组之前；其余默认排在之后。
-      // 中性扩展点：免费/Pro 不传 extraNavGroups 时只有 baseGroup，行为不变。
-      const before = (Array.isArray(extra) ? extra : [])
-        .filter((g) => g && g.position === 'before-base')
-        .map((g) => ({ label: (g && g.label) || null, items: (g && g.items) || [] }));
-      const after = (Array.isArray(extra) ? extra : [])
-        .filter((g) => !(g && g.position === 'before-base'))
-        .map((g) => ({ label: (g && g.label) || null, items: (g && g.items) || [] }));
-      return [...before, baseGroup, ...after];
+      return [{ label: null, items: this.views }];
     },
     // 横向胶囊 / 竖向折叠列表沿用扁平排布（分组头在窄行内容易拥挤）；仅左侧竖栏渲染分组头
     flatItems() {
@@ -372,7 +360,7 @@ export default {
   display: flex; flex-direction: column; gap: 4px;
   padding: 0 6px; justify-content: flex-start;
 }
-/* 左侧竖栏分组标题（个人版分组导航；免费/Pro 无标签则不出）；收起态隐藏文字标题 */
+/* 左侧竖栏分组标题（无标签则不出）；收起态隐藏文字标题 */
 .tk-pro-rail-group-h {
   font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
   color: var(--text-faint); padding: 12px 12px 4px; white-space: nowrap;

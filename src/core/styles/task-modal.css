@@ -5,7 +5,7 @@
    ============================================================ */
 
 /* ---------- 遮罩 ---------- */
-.tk-mask, .lk-mask {
+.tk-mask {
   position: fixed;
   inset: 0;
   background: var(--background-modifier-cover, rgba(0, 0, 0, .5));
@@ -89,7 +89,6 @@
 .btn i { font-size: 13px; line-height: 1; }
 .btn:hover { background: var(--gold-bg); }
 .btn:disabled { opacity: .5; cursor: default; }
-.btn-ghost { background: transparent; border-color: transparent; }
 .btn-gold {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
@@ -174,10 +173,14 @@
   outline: none;
   border-color: var(--gold);
 }
-.tk-err, .lk-err {
+.tk-err {
   color: var(--el-color-danger, var(--text-error));
   font-size: 13px;
-  margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
 }
 
 /* ============================================================
@@ -186,8 +189,7 @@
    （原生 Modal 已提供遮罩 / 居中 / ESC 关闭），卡片边框也交给外壳。
    ============================================================ */
 .mylife-vue-modal .modal-content { padding: 0; }
-.mylife-vue-modal .mylife-vue-host .tk-mask,
-.mylife-vue-modal .mylife-vue-host .lk-mask {
+.mylife-vue-modal .mylife-vue-host .tk-mask {
   position: static;
   background: none;
   padding: 0;

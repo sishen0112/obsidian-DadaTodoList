@@ -61,8 +61,6 @@ export class FolderSuggest extends AbstractInputSuggest {
 // 最外层平铺各基础分区（面板与外观 / 日记设置 / 收件箱与清单 / 视图与日程 /
 // 任务标记 / 关于），每个分区用 `type:'group'` + `heading` 给出小标题，组内
 // 用 `type:'setting'` + `render` 渲染原有控件（外观与经典 SettingTab 一致）。
-// 扩展分节（扩展点）：上层可经 plugin.extraSettingsSections 以「内联分节」注入；
-// 无此字段则整组跳过（免费版无）。
 // ============================================================================
 
 export class DadaTodoSettingTab extends PluginSettingTab {

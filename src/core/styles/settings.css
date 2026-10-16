@@ -68,7 +68,7 @@
   text-decoration: underline;
 }
 
-/* 临时调试块样式（定位后移除） */
+/* 设置项渲染兜底：render 抛错时以等宽文本展示原始结构，便于排查 */
 .dt-debug {
   white-space: pre-wrap;
   font-family: var(--font-monospace);
