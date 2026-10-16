@@ -669,7 +669,7 @@ export const SCHEME_FLAGS = {};
 // 设置页「配色方案」下拉的额外项（由 Pro 等上层注入）；免费版恒为空，故基础版不显示任何 Pro 配色项。
 export const EXTRA_SCHEME_OPTIONS = [];
 
-// 上层（Pro / Personal）调用，注入专属配色方案，使 src/core 不含 Pro 主题源码。
+// 上层（Pro）调用，注入专属配色方案，使 src/core 不含 Pro 主题源码。
 //   colors：与基础方案同构的颜色数组（可含 bgDark/fgDark/dark）。
 //   opts.darkSwitch / opts.useFg：渲染标志（见 SCHEME_FLAGS 注释）。
 //   opts.labelKey：设置项下拉项的 i18n 键（Pro 需同时用 addI18nResources 注入对应文案）。

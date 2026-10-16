@@ -61,9 +61,8 @@ export class FolderSuggest extends AbstractInputSuggest {
 // 最外层平铺各基础分区（面板与外观 / 日记设置 / 收件箱与清单 / 视图与日程 /
 // 任务标记 / 关于），每个分区用 `type:'group'` + `heading` 给出小标题，组内
 // 用 `type:'setting'` + `render` 渲染原有控件（外观与经典 SettingTab 一致）。
-// 个人版专属三项（操课 / 光影推荐 / 目录）由 src/personal 经
-// plugin.extraSettingsSections 以「内联分节」方式注入（每节一个 group，
-// render 直接调用 personal 的 render 函数）；免费 / Pro 无此字段则整组跳过。
+// 扩展分节（扩展点）：上层可经 plugin.extraSettingsSections 以「内联分节」注入；
+// 无此字段则整组跳过（免费版无）。
 // ============================================================================
 
 export class DadaTodoSettingTab extends PluginSettingTab {
@@ -397,24 +396,6 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       },
     ]);
 
-    // 个人版专属分节：由 src/personal 注入 plugin.extraSettingsSections；无则跳过。
-    // 每个分节做成一个可折叠的「二层分组」（heading=分节标题），组内唯一 setting 渲染富内容
-    // （操课表格等），与 notebook-navigator「导航窗格」那种可展开分组的风格一致。
-    const personalDefs = (plugin.extraSettingsSections || []).map((sec) => {
-      const sectionSetting = {
-        type: 'setting',
-        name: t(sec.titleKey),
-        desc: '',
-        render: safe((s) => {
-          // 富内容挂到标准控件槽（controlEl），整行满宽、无外壳
-          const wrap = plainBlock(s).createDiv('dt-personal-section');
-          const inner = wrap.createDiv('dt-personal-inner');
-          sec.render(inner, plugin);
-        }),
-      };
-      return { type: 'group', heading: t(sec.titleKey), items: [sectionSetting] };
-    });
-
     // 标题：像 notebook-navigator 一样用标准 Setting API——setName 显示插件名、setDesc 显示版本、
     // 变体徽标直接挂到 nameEl。整行就是一个干净的 setting 行（Obsidian 顶部 tab 标题已是插件名，
     // 这里再补一行带版本的标题 + 变体徽标），不再用 h1 塞 controlEl 的野路子。
@@ -423,17 +404,17 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       name: plugin.manifest.name,
       desc: 'v' + (plugin.manifest.version || ''),
       render: safe((s) => {
-        const baseName = plugin.manifest.name.replace(/\s+(Pro|Personal)$/i, '');
+        const baseName = plugin.manifest.name.replace(/\s+Pro$/i, '');
         s.setName(baseName);
         s.setDesc('v' + (plugin.manifest.version || ''));
-        if (plugin.isPro || plugin.isPersonal) {
-          const badge = s.nameEl.createSpan({ cls: plugin.isPro ? 'dt-pro-badge' : 'dt-personal-badge' });
-          badge.setText(plugin.isPro ? 'Pro' : 'Personal');
+        if (plugin.isPro) {
+          const badge = s.nameEl.createSpan({ cls: 'dt-pro-badge' });
+          badge.setText('Pro');
         }
       }),
     };
 
-    const defs = [titleDef, appearance, journal, inbox, views, taskMark, ...personalDefs, about];
+    const defs = [titleDef, appearance, journal, inbox, views, taskMark, about];
     return defs;
     } catch (e) {
       // 定义阶段抛错（非常罕见）：直接显示错误

@@ -124,7 +124,7 @@ export default {
   computed: {
     // 分组导航（个人版专属；免费/Pro 不传则退化为扁平菜单）：
     // 基础 6 视图恒为第一组，标签由 plugin.baseNavGroupLabel 可选提供；
-    // 个人版经 installPersonal 注入 extraNavGroups 追加分组（如「预览」）。
+    // 扩展点：extraNavGroups 可注入追加分组（如「预览」）；免费版不传则只有基础分组。
     groups() {
       const base = this.views;
       const baseGroup = { label: (this.plugin && this.plugin.baseNavGroupLabel) || null, items: base };

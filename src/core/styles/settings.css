@@ -1,6 +1,6 @@
 
 /* ---------- 设置页：标题变体徽标（小标签框，挂在 nameEl 内） ---------- */
-/* 仅 Pro / Personal 版本渲染对应元素；免费版不出现，CSS 处于休眠 */
+/* 仅 Pro 版本渲染对应元素；免费版不出现，CSS 处于休眠 */
 .dt-pro-badge {
   display: inline-flex;
   align-items: center;
@@ -12,22 +12,6 @@
   color: #6b4e00;
   background: linear-gradient(180deg, #ffe9a8, #ffd34d);
   border: 1px solid #e0a92e;
-  border-radius: 999px;
-  letter-spacing: .4px;
-  vertical-align: middle;
-}
-
-.dt-personal-badge {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  padding: 1px 9px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.6;
-  color: #0b5563;
-  background: linear-gradient(180deg, #c8f0f5, #9fe2ec);
-  border: 1px solid #4cb6c6;
   border-radius: 999px;
   letter-spacing: .4px;
   vertical-align: middle;

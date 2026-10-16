@@ -47,12 +47,12 @@ class DadaTodoView extends ItemView {
   }
   getDisplayText() {
     const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
-    return t('app.viewTitle') + (id === 'dada-todo-list' ? '' : (id === 'dada-todo-personal' ? ' Personal' : ' Pro'));
+    return t('app.viewTitle') + (id === 'dada-todo-list' ? '' : ' Pro');
   }
   getIcon() {
-    // 免费版 check-square，Personal 版 user，Pro 版 crown；用 manifest.id 派生并短路兜底
+    // 免费版 check-square，Pro 版 crown；用 manifest.id 派生并短路兜底
     const id = (this.plugin && this.plugin.manifest && this.plugin.manifest.id) || 'dada-todo-list';
-    return id === 'dada-todo-list' ? 'check-square' : (id === 'dada-todo-personal' ? 'user' : 'crown');
+    return id === 'dada-todo-list' ? 'check-square' : 'crown';
   }
 
   async onOpen() {
@@ -95,14 +95,12 @@ export default class DadaTodoPlugin extends Plugin {
     // 其它 id（如 Pro 版 dada-todo-pro）→ 自动派生 dada-todo-pro-view / dada-todo-pro-open，并显示名追加「 Pro」。
     const base = (this.manifest && this.manifest.id && this.manifest.id !== 'dada-todo-list') ? this.manifest.id : 'dada-todo';
     this.viewType = base + '-view';
-    const variantSuffix = base === 'dada-todo' ? '' : (base === 'dada-todo-personal' ? ' Personal' : ' Pro');
+    const variantSuffix = base === 'dada-todo' ? '' : ' Pro';
     this.viewTitle = t('app.viewTitle') + variantSuffix;
     const commandId = base === 'dada-todo' ? 'open-dada-todo' : base + '-open';
-    // 是否 Pro 变体（仅当 id 严格为 dada-todo-pro）：注意 personal 的 id 含 "pro" 但不能误判为 Pro
+    // 是否 Pro 变体（仅当 id 严格为 dada-todo-pro）
     this.isPro = base === 'dada-todo-pro';
-    // 是否 Personal 变体（独立私有构建，id = dada-todo-personal）：设置页徽标等处呈现「Personal」
-    this.isPersonal = base === 'dada-todo-personal';
-    const ribbonIcon = this.isPersonal ? 'rocket' : (this.isPro ? 'crown' : 'check-square');
+    const ribbonIcon = this.isPro ? 'crown' : 'check-square';
 
     // 任务数据层注入插件实例（vault / metadataCache 读写）
     initTasksApi(this);
@@ -194,8 +192,6 @@ export default class DadaTodoPlugin extends Plugin {
 
   async loadSettings() {
     const data = (await this.loadData()) || {};
-    // 是否 Personal 变体（独立私有构建，id = dada-todo-personal）：驱动默认主题 / 菜单样式
-    const isPersonal = (this.manifest && this.manifest.id) === 'dada-todo-personal';
     // 清单识别标记（数组，任一命中即识别清单文件）：兼容旧单值 checklistTag → 数组
     const checklistTags = Array.isArray(data.checklistTags) && data.checklistTags.length
       ? data.checklistTags.map((s) => String(s).trim()).filter(Boolean)
@@ -206,7 +202,7 @@ export default class DadaTodoPlugin extends Plugin {
       // 打开位置：左侧栏 / 主工作区标签页 / 右侧栏
       openLocation: data.openLocation || 'main',
       // 菜单样式：horizontal（默认，底部横向胶囊）/ vertical（左侧竖向菜单，Pro 同款可展开收起）
-      menuStyle: data.menuStyle || (isPersonal ? 'vertical' : 'horizontal'),
+      menuStyle: data.menuStyle || 'horizontal',
       // 是否显示农历与节假日（日 / 周 / 月视图表头与日历格）
       showLunar: data.showLunar ?? true,
       // 完成任务时是否在任务行追加「✅ 完成日期」标记；默认开。关闭后完成不写 ✅，开始/结束等日期标记不受影响
@@ -225,20 +221,18 @@ export default class DadaTodoPlugin extends Plugin {
       // 每日笔记加载窗口（天）：以今天为中心的对称窗口（前后各 N 天），默认 'all'；大库可调小以提升加载性能
       dailyLoadWindow: data.dailyLoadWindow || 'all',
       // 任务块配色方案：default（默认）/ morandi（莫兰迪）/ jelly（卡通果冻），默认 default
-      colorScheme: data.colorScheme || (isPersonal ? 'violet' : 'default'),
+      colorScheme: data.colorScheme || 'default',
       // 日 / 周视图时间轴显示范围（整点小时）：开始 0–23、结束 1–24，结束须晚于开始；默认 0–24（全天）
-      timelineStartHour: Math.max(0, Math.min(23, Math.round(Number.isFinite(data.timelineStartHour) ? data.timelineStartHour : (isPersonal ? 8 : 0)))),
+      timelineStartHour: Math.max(0, Math.min(23, Math.round(Number.isFinite(data.timelineStartHour) ? data.timelineStartHour : 0))),
       timelineEndHour: (() => {
-        const s = Math.max(0, Math.min(23, Math.round(Number.isFinite(data.timelineStartHour) ? data.timelineStartHour : (isPersonal ? 8 : 0))));
+        const s = Math.max(0, Math.min(23, Math.round(Number.isFinite(data.timelineStartHour) ? data.timelineStartHour : 0)));
         let v = Math.max(1, Math.min(24, Math.round(Number.isFinite(data.timelineEndHour) ? data.timelineEndHour : 24)));
         if (v <= s) v = s + 1;
         if (v > 24) v = 24;
         return v;
       })(),
       // 时间选择器步长（分钟）：下拉以该步长生成可选项（5–60，默认 5）
-      timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || (isPersonal ? 15 : 5)))),
-      // 个人版专属配置（仅 Personal 构建生效；免费/Pro 不读此键）：影视墙 / 游玩墙 扫描目录
-      personal: Object.assign({ filmMediaDir: '3. Resources/08-影视', playDir: '3. Resources/09-游玩', feishu: { appId: '', appSecret: '', baseUrl: '', movieTable: '' } }, data.personal || {}),
+      timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || 5))),
     };
     // 让设置在 Vue 中具备响应式：菜单样式等设置改动后可即时生效，无需重启 Obsidian
     this.settings = reactive(this.settings);

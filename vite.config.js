@@ -58,7 +58,6 @@ export default defineConfig({
   define: {
     __DADA_DEV__: JSON.stringify(isDev),
     __DADA_PRO__: 'false',
-    __DADA_PERSONAL__: 'false',
     'process.env': JSON.stringify({ NODE_ENV: isDev ? 'development' : 'production' })
   },
   build: {
