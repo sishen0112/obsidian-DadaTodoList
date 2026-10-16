@@ -17,6 +17,7 @@ import './styles/settings.css';
 // ============================================================================
 // Dada Todo · Obsidian 插件入口（任务模块来自 myLife-Plugin）
 // ----------------------------------------------------------------------------
+// 免费版以本文件为入口；Pro 版由 src/core/main.pro.js 薄封装，onload 后注入 installPro（私有子模块 src/pro）。
 // 技术栈：Vue 3（createApp / unmount）。
 // 注意：本文件只允许 default 导出插件类（Obsidian 以 module.exports 取它）。
 //   插件实例同时挂到 app.config.globalProperties.plugin（TasksApp 等用 this.plugin）
@@ -98,7 +99,7 @@ export default class DadaTodoPlugin extends Plugin {
     const variantSuffix = base === 'dada-todo' ? '' : ' Pro';
     this.viewTitle = t('app.viewTitle') + variantSuffix;
     const commandId = base === 'dada-todo' ? 'open-dada-todo' : base + '-open';
-    // 是否 Pro 变体（仅当 id 严格为 dada-todo-pro）
+    // 是否 Pro 变体（仅当 id 严格为 dada-todo-pro）；仅用于设置页徽标 / ribbon 图标等非菜单差异，菜单样式由 menuStyle 控制。
     this.isPro = base === 'dada-todo-pro';
     const ribbonIcon = this.isPro ? 'crown' : 'check-square';
 
