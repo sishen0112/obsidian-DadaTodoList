@@ -1,4 +1,4 @@
-import { PluginSettingTab, Notice, Setting, AbstractInputSuggest, TFolder } from 'obsidian';
+import { PluginSettingTab, Notice, AbstractInputSuggest, TFolder, setIcon } from 'obsidian';
 import { t } from '../i18n/index.js';
 import { countInboxTasks, migrateInboxTasks } from '../api/tasks.js';
 import { setColorScheme, setWeekStart, EXTRA_SCHEME_OPTIONS } from '../composables/tasks-logic.js';
@@ -55,11 +55,15 @@ export class FolderSuggest extends AbstractInputSuggest {
 }
 
 // ============================================================================
-// Dada Todo · 设置页
+// Dada Todo · 设置页（Obsidian 1.13+ 声明式 API，getSettingDefinitions）
 // ----------------------------------------------------------------------------
-// 仅一个配置项：面板打开位置（左侧区域 / 主窗口 / 右侧区域），存于 data.json。
-// 官方声明式设置 API 在 1.13+ 才稳定，这里用经典 SettingTab 写法，兼容 minAppVersion 1.5.0。
-// 文案通过 i18n 的 t() 跟随 Obsidian 界面语言。
+// 注意：本版本 Obsidian 仅消费 getSettingDefinitions()，经典 display() 已不生效。
+// 最外层平铺各基础分区（面板与外观 / 日记设置 / 收件箱与清单 / 视图与日程 /
+// 任务标记 / 关于），每个分区用 `type:'group'` + `heading` 给出小标题，组内
+// 用 `type:'setting'` + `render` 渲染原有控件（外观与经典 SettingTab 一致）。
+// 个人版专属三项（操课 / 光影推荐 / 目录）由 src/personal 经
+// plugin.extraSettingsSections 以「内联分节」方式注入（每节一个 group，
+// render 直接调用 personal 的 render 函数）；免费 / Pro 无此字段则整组跳过。
 // ============================================================================
 
 export class DadaTodoSettingTab extends PluginSettingTab {
@@ -68,341 +72,384 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    // 设置页标题徽标：免费版仅标题；Personal 版显示「Personal」（青绿），Pro 版显示「Pro」（金）
-    const titleEl = containerEl.createEl('h2', { cls: 'dt-settings-title' });
-    titleEl.createSpan({ text: t('settings.title') });
-    if (this.plugin.isPersonal) titleEl.createSpan({ text: 'Personal', cls: 'dt-personal-badge' });
-    else if (this.plugin.isPro) titleEl.createSpan({ text: 'Pro', cls: 'dt-pro-badge' });
-
-    // 分组：面板与外观
-    new Setting(containerEl).setHeading().setName(t('settings.groupAppearance'));
-
-    new Setting(containerEl)
-      .setName(t('settings.openLocation'))
-      .setDesc(t('settings.openLocationDesc'))
-      .addDropdown((dd) => {
-        dd.addOption('left', t('settings.locLeft'));
-        dd.addOption('main', t('settings.locMain'));
-        dd.addOption('right', t('settings.locRight'));
-        dd.setValue(this.plugin.settings.openLocation || 'main');
-        dd.onChange(async (value) => {
-          this.plugin.settings.openLocation = value;
-          await this.plugin.saveSettings();
-          // 立即按新位置重新打开面板
-          await this.plugin.applyOpenLocation();
-        });
-      });
-
-    // 菜单样式：底部横向胶囊（默认）/ 左侧竖向菜单（Pro 同款，可展开收起）
-    new Setting(containerEl)
-      .setName(t('settings.menuStyle'))
-      .setDesc(t('settings.menuStyleDesc'))
-      .addDropdown((dd) => {
-        dd.addOption('horizontal', t('settings.menuHorizontal'));
-        dd.addOption('vertical', t('settings.menuVertical'));
-        dd.setValue(this.plugin.settings.menuStyle || 'horizontal');
-        dd.onChange(async (value) => {
-          this.plugin.settings.menuStyle = value;
-          await this.plugin.saveSettings();
-          // settings 已响应式，菜单样式即时重渲，无需重载面板（基础版与 Pro 共用此开关）
-        });
-      });
-
-    new Setting(containerEl)
-      .setName(t('settings.colorScheme'))
-      .setDesc(t('settings.colorSchemeDesc'))
-      .addDropdown((dd) => {
-        dd.addOption('default', t('settings.schemeDefault'));
-        dd.addOption('morandi', t('settings.schemeMorandi'));
-        dd.addOption('jelly', t('settings.schemeJelly'));
-        dd.addOption('spring', t('settings.schemeSpring'));
-        dd.addOption('summer', t('settings.schemeSummer'));
-        dd.addOption('autumn', t('settings.schemeAutumn'));
-        dd.addOption('winter', t('settings.schemeWinter'));
-        // 皮卡丘 / 紫罗兰 等 Pro 专属方案由 src/pro 注入（EXTRA_SCHEME_OPTIONS），
-        // 免费版该表为空，故基础版不显示任何 Pro 配色项；标签后追加 Pro 字样提示会员专属
-        for (const opt of EXTRA_SCHEME_OPTIONS) {
-          dd.addOption(opt.key, t(opt.labelKey) + ' Pro');
-        }
-        dd.setValue(this.plugin.settings.colorScheme || 'default');
-        dd.onChange(async (value) => {
-          this.plugin.settings.colorScheme = value;
-          await this.plugin.saveSettings();
-          // 立即生效：切换到对应配色方案并刷新已打开的面板
-          setColorScheme(value);
-          this.plugin.reloadOpenViews();
-        });
-      });
-
-    new Setting(containerEl)
-      .setName(t('settings.showLunar'))
-      .setDesc(t('settings.showLunarDesc'))
-      .addToggle((tg) => {
-        tg.setValue(this.plugin.settings.showLunar !== false);
-        tg.onChange(async (value) => {
-          this.plugin.settings.showLunar = value;
-          await this.plugin.saveSettings();
-          // 立即生效：刷新已打开的面板（农历渲染非响应式，靠重载触发重算）
-          this.plugin.reloadOpenViews();
-        });
-      });
-
-    // 分组：日记设置（日记文件夹 / 每日笔记加载范围）
-    new Setting(containerEl).setHeading().setName(t('settings.groupJournal'));
-
-    new Setting(containerEl)
-      .setName(t('settings.journalFolder'))
-      .setDesc(t('settings.journalFolderDesc'))
-      .addText((tx) => {
-        tx.setPlaceholder('/');
-        tx.setValue(this.plugin.settings.journalFolder || '/');
-        tx.onChange((value) => {
-          this.plugin.settings.journalFolder = (value || '/').trim() || '/';
-          this.plugin.saveSettings();
-        });
-        // 输入时浮层建议库内文件夹（含库根 /）
-        new FolderSuggest(this.app, tx.inputEl, (path) => {
-          this.plugin.settings.journalFolder = (path || '/').trim() || '/';
-          this.plugin.saveSettings();
-        });
-      });
-
-    // 日记文件宽松匹配：默认打开；暂不在设置页暴露开关，待用户反馈后再决定是否保留
-    // new Setting(containerEl)
-    //   .setName(t('settings.journalLooseMatch'))
-    //   .setDesc(t('settings.journalLooseMatchDesc'))
-    //   .addToggle((tg) => {
-    //     tg.setValue(this.plugin.settings.journalLooseMatch !== false); // 默认开
-    //     tg.onChange(async (value) => {
-    //       this.plugin.settings.journalLooseMatch = value;
-    //       await this.plugin.saveSettings();
-    //       this.plugin.reloadOpenViews();
-    //     });
-    //   });
-
-    new Setting(containerEl)
-      .setName(t('settings.dailyWindow'))
-      .setDesc(t('settings.dailyWindowDesc'))
-      .addDropdown((dd) => {
-        dd.addOption('30', t('settings.days30'));
-        dd.addOption('90', t('settings.days90'));
-        dd.addOption('180', t('settings.days180'));
-        dd.addOption('365', t('settings.days365'));
-        dd.addOption('all', t('settings.daysAll'));
-        dd.setValue(this.plugin.settings.dailyLoadWindow || 'all');
-        dd.onChange(async (value) => {
-          this.plugin.settings.dailyLoadWindow = value;
-          await this.plugin.saveSettings();
-          // 立即生效：加载范围影响每日笔记读取集合，刷新已打开的面板
-          this.plugin.reloadOpenViews();
-        });
-      });
-
-    // 分组：收件箱与清单（无日期任务文件 / 清单识别标记）
-    new Setting(containerEl).setHeading().setName(t('settings.groupInbox'));
-
-    new Setting(containerEl)
-      .setName(t('settings.inboxFile'))
-      .setDesc(t('settings.inboxFileDesc'))
-      .addText((tx) => {
-        tx.setPlaceholder('DadaTodoList.md');
-        tx.setValue(this.plugin.settings.inboxFile || 'DadaTodoList.md');
-        // 上次确认的收件箱路径（迁移询问以它为源，避免逐字符输入产生中间态）
-        this._inboxCommitted = this.plugin.settings.inboxFile || 'DadaTodoList.md';
-        tx.onChange((value) => this.handleInboxPathChange(value));
-        // 路径自动补全（输入时浮层建议库内 md 文件）
-        new MarkdownFileSuggest(this.app, tx.inputEl, (path) => this.handleInboxPathChange(path));
-      });
-
-    const tagSetting = new Setting(containerEl)
-      .setName(t('settings.checklistTag'))
-      .setDesc(t('settings.checklistTagDesc'));
-    // 多标签编辑器：回车添加 → 胶囊展示，× 移除
-    const editor = tagSetting.controlEl.createDiv('dt-tags-editor');
-    const renderChips = () => {
-      editor.querySelectorAll('.dt-chip').forEach((n) => n.remove());
-      const inputEl = editor.querySelector('input');
-      for (const tag of this.plugin.settings.checklistTags) {
-        const chip = editor.createDiv('dt-chip');
-        chip.createSpan({ text: tag });
-        const del = chip.createEl('button', { text: '×' });
-        del.setAttribute('aria-label', tag);
-        del.addEventListener('click', async () => {
-          this.plugin.settings.checklistTags = this.plugin.settings.checklistTags.filter((x) => x !== tag);
-          await this.plugin.saveSettings();
-          renderChips();
-        });
-        if (inputEl) editor.insertBefore(chip, inputEl); else editor.appendChild(chip);
+  getSettingDefinitions() {
+    try {
+    const plugin = this.plugin;
+    const app = this.app;
+    const T = (k) => t('settings.' + k);
+    // 临时调试：包裹每个渲染回调，抛错时把错误显示在对应项内而非中断整页渲染
+    const safe = (fn) => (s, g) => {
+      try { return fn(s, g); } catch (e) {
+        try {
+          s.setName('⚠ 渲染失败（调试）');
+          const pre = s.settingEl.createDiv('dt-debug');
+          pre.setText(String((e && e.stack) || e));
+        } catch (_) { /* 忽略 */ }
       }
     };
-    const tagInput = editor.createEl('input', { type: 'text', placeholder: t('settings.tagPlaceholder') });
-    tagInput.addEventListener('keydown', async (e) => {
-      if (e.key === 'Enter' && tagInput.value.trim()) {
-        e.preventDefault();
-        const v = tagInput.value.trim().replace(/^#/, '');
-        if (!this.plugin.settings.checklistTags.includes(v)) this.plugin.settings.checklistTags.push(v);
-        await this.plugin.saveSettings();
-        tagInput.value = '';
-        renderChips();
-      }
+    // 自定义内容挂到 s.controlEl（即 .setting-item-control）——声明式 API 下自定义内容的唯一可靠挂载点，
+    // 与 myPara-Plugin 的 s.controlEl.appendChild 写法一致。把整行 setting 改成「无外壳的整块容器」：
+    // 整块 block 布局、隐藏名称标签、控件槽占满整行，从而卡片/标题满宽、无 .setting-item 背景框。
+    const plainBlock = (s) => {
+      s.settingEl.style.display = 'block';
+      s.settingEl.style.border = 'none';
+      s.settingEl.style.background = 'transparent';
+      s.settingEl.style.boxShadow = 'none';
+      s.settingEl.style.padding = '0';
+      if (s.infoEl) s.infoEl.style.display = 'none';
+      s.controlEl.style.flex = '1 1 100%';
+      s.controlEl.style.width = '100%';
+      s.controlEl.style.marginLeft = '0';
+      s.controlEl.empty();
+      return s.controlEl;
+    };
+    // 分组：带小标题的一组设置项
+    const group = (headingKey, items) => ({ type: 'group', heading: T(headingKey), items });
+    // 行：名称 + 说明 + 控件。name/desc 既写进定义（供搜索/渲染），render 里也显式 set 一次，
+    // 兼容「声明式不自动渲染名称」的情况；两种路径文案一致，不会重复。
+    const row = (nameKey, descKey, render) => ({
+      type: 'setting',
+      name: T(nameKey),
+      desc: descKey ? T(descKey) : '',
+      render: safe((s, g) => {
+        s.setName(T(nameKey));
+        s.setDesc(descKey ? T(descKey) : '');
+        return render(s, g);
+      }),
     });
-    renderChips();
 
-    // 分组：视图与日程（周起始 / 时间轴范围）
-    new Setting(containerEl).setHeading().setName(t('settings.groupViews'));
+    // 分组：面板与外观
+    const appearance = group('groupAppearance', [
+      row('openLocation', 'openLocationDesc', (s) => {
+        s.addDropdown((dd) => {
+          dd.addOption('left', T('locLeft'));
+          dd.addOption('main', T('locMain'));
+          dd.addOption('right', T('locRight'));
+          dd.setValue(plugin.settings.openLocation || 'main');
+          dd.onChange(async (value) => {
+            plugin.settings.openLocation = value;
+            await plugin.saveSettings();
+            await plugin.applyOpenLocation();
+          });
+        });
+      }),
+      row('menuStyle', 'menuStyleDesc', (s) => {
+        s.addDropdown((dd) => {
+          dd.addOption('horizontal', T('menuHorizontal'));
+          dd.addOption('vertical', T('menuVertical'));
+          dd.setValue(plugin.settings.menuStyle || 'horizontal');
+          dd.onChange(async (value) => {
+            plugin.settings.menuStyle = value;
+            await plugin.saveSettings();
+          });
+        });
+      }),
+      row('colorScheme', 'colorSchemeDesc', (s) => {
+        s.addDropdown((dd) => {
+          dd.addOption('default', T('schemeDefault'));
+          dd.addOption('morandi', T('schemeMorandi'));
+          dd.addOption('jelly', T('schemeJelly'));
+          dd.addOption('spring', T('schemeSpring'));
+          dd.addOption('summer', T('schemeSummer'));
+          dd.addOption('autumn', T('schemeAutumn'));
+          dd.addOption('winter', T('schemeWinter'));
+          // Pro 专属配色由 src/pro 注入（EXTRA_SCHEME_OPTIONS），免费版该表为空则不显示
+          for (const opt of EXTRA_SCHEME_OPTIONS) dd.addOption(opt.key, t(opt.labelKey) + ' Pro');
+          dd.setValue(plugin.settings.colorScheme || 'default');
+          dd.onChange(async (value) => {
+            plugin.settings.colorScheme = value;
+            await plugin.saveSettings();
+            setColorScheme(value);
+            plugin.reloadOpenViews();
+          });
+        });
+      }),
+      row('showLunar', 'showLunarDesc', (s) => {
+        s.addToggle((tg) => {
+          tg.setValue(plugin.settings.showLunar !== false);
+          tg.onChange(async (value) => {
+            plugin.settings.showLunar = value;
+            await plugin.saveSettings();
+            plugin.reloadOpenViews();
+          });
+        });
+      }),
+    ]);
 
-    new Setting(containerEl)
-      .setName(t('settings.weekStart'))
-      .setDesc(t('settings.weekStartDesc'))
-      .addDropdown((dd) => {
-        dd.addOption('0', t('settings.weekSun'));
-        dd.addOption('1', t('settings.weekMon'));
-        dd.addOption('2', t('settings.weekTue'));
-        dd.addOption('3', t('settings.weekWed'));
-        dd.addOption('4', t('settings.weekThu'));
-        dd.addOption('5', t('settings.weekFri'));
-        dd.addOption('6', t('settings.weekSat'));
-        dd.setValue(String(this.plugin.settings.weekStart ?? 1)); // 默认周一
-        dd.onChange(async (value) => {
-          const n = parseInt(value, 10) || 0;
-          this.plugin.settings.weekStart = n;
-          await this.plugin.saveSettings();
-          // 立即生效：更新全局周起始并刷新已打开的面板（周 / 月视图与日历格首列重排）
-          setWeekStart(n);
-          this.plugin.reloadOpenViews();
+    // 分组：日记设置（日记文件夹 / 每日笔记加载范围）
+    const journal = group('groupJournal', [
+      row('journalFolder', 'journalFolderDesc', (s) => {
+        s.addText((tx) => {
+          tx.setPlaceholder('/');
+          tx.setValue(plugin.settings.journalFolder || '/');
+          tx.onChange((value) => {
+            plugin.settings.journalFolder = (value || '/').trim() || '/';
+            plugin.saveSettings();
+          });
+          new FolderSuggest(app, tx.inputEl, (path) => {
+            plugin.settings.journalFolder = (path || '/').trim() || '/';
+            plugin.saveSettings();
+          });
         });
-      });
+      }),
+      row('dailyWindow', 'dailyWindowDesc', (s) => {
+        s.addDropdown((dd) => {
+          dd.addOption('30', T('days30'));
+          dd.addOption('90', T('days90'));
+          dd.addOption('180', T('days180'));
+          dd.addOption('365', T('days365'));
+          dd.addOption('all', T('daysAll'));
+          dd.setValue(plugin.settings.dailyLoadWindow || 'all');
+          dd.onChange(async (value) => {
+            plugin.settings.dailyLoadWindow = value;
+            await plugin.saveSettings();
+            plugin.reloadOpenViews();
+          });
+        });
+      }),
+    ]);
 
-    new Setting(containerEl)
-      .setName(t('settings.timelineRange'))
-      .setDesc(t('settings.timelineRangeDesc'))
-      .addDropdown((dd) => {
-        for (let h = 0; h <= 23; h++) dd.addOption(String(h), (h < 10 ? '0' : '') + h + ':00');
-        dd.setValue(String(this.plugin.settings.timelineStartHour ?? 0));
-        dd.onChange(async (value) => {
-          const start = parseInt(value, 10);
-          let end = this.plugin.settings.timelineEndHour ?? 24;
-          if (end <= start) { end = start + 1; if (end > 24) end = 24; this.plugin.settings.timelineEndHour = end; }
-          this.plugin.settings.timelineStartHour = start;
-          await this.plugin.saveSettings();
-          this.plugin.reloadOpenViews();
-          this.display();
+    // 分组：收件箱与清单（无日期任务文件 / 清单识别标记）
+    const inbox = group('groupInbox', [
+      row('inboxFile', 'inboxFileDesc', (s) => {
+        s.addText((tx) => {
+          tx.setPlaceholder('DadaTodoList.md');
+          tx.setValue(plugin.settings.inboxFile || 'DadaTodoList.md');
+          this._inboxCommitted = plugin.settings.inboxFile || 'DadaTodoList.md';
+          tx.onChange((value) => this.handleInboxPathChange(value));
+          new MarkdownFileSuggest(app, tx.inputEl, (path) => this.handleInboxPathChange(path));
         });
-      })
-      .addDropdown((dd) => {
-        for (let h = 1; h <= 24; h++) dd.addOption(String(h), (h < 10 ? '0' : '') + h + ':00');
-        dd.setValue(String(this.plugin.settings.timelineEndHour ?? 24));
-        dd.onChange(async (value) => {
-          let end = parseInt(value, 10);
-          const start = this.plugin.settings.timelineStartHour ?? 0;
-          if (end <= start) end = start + 1;
-          if (end > 24) end = 24;
-          this.plugin.settings.timelineEndHour = end;
-          await this.plugin.saveSettings();
-          this.plugin.reloadOpenViews();
-          this.display();
+      }),
+      row('checklistTag', 'checklistTagDesc', (s) => {
+        // 多标签编辑器：回车添加 → 胶囊展示，× 移除
+        const editor = s.controlEl.createDiv('dt-tags-editor');
+        const renderChips = () => {
+          editor.querySelectorAll('.dt-chip').forEach((n) => n.remove());
+          const inputEl = editor.querySelector('input');
+          for (const tag of plugin.settings.checklistTags) {
+            const chip = editor.createDiv('dt-chip');
+            chip.createSpan({ text: tag });
+            const del = chip.createEl('button', { text: '×' });
+            del.setAttribute('aria-label', tag);
+            del.addEventListener('click', async () => {
+              plugin.settings.checklistTags = plugin.settings.checklistTags.filter((x) => x !== tag);
+              await plugin.saveSettings();
+              renderChips();
+            });
+            if (inputEl) editor.insertBefore(chip, inputEl); else editor.appendChild(chip);
+          }
+        };
+        const tagInput = editor.createEl('input', { type: 'text', placeholder: T('tagPlaceholder') });
+        tagInput.addEventListener('keydown', async (e) => {
+          if (e.key === 'Enter' && tagInput.value.trim()) {
+            e.preventDefault();
+            const v = tagInput.value.trim().replace(/^#/, '');
+            if (!plugin.settings.checklistTags.includes(v)) plugin.settings.checklistTags.push(v);
+            await plugin.saveSettings();
+            tagInput.value = '';
+            renderChips();
+          }
         });
-      });
+        renderChips();
+      }),
+    ]);
 
-    // 时间选择器步长（分钟）：下拉以该步长生成选项
-    new Setting(containerEl)
-      .setName(t('settings.timeStep'))
-      .setDesc(t('settings.timeStepDesc'))
-      .addDropdown((dd) => {
-        for (let m = 5; m <= 60; m += 5) dd.addOption(String(m), String(m) + t('settings.minuteUnit'));
-        dd.setValue(String(this.plugin.settings.timeStep || 5));
-        dd.onChange(async (value) => {
-          this.plugin.settings.timeStep = parseInt(value, 10) || 5;
-          await this.plugin.saveSettings();
-          this.plugin.reloadOpenViews();
+    // 分组：视图与日程（周起始 / 时间轴范围 / 时间选择器步长）
+    const views = group('groupViews', [
+      row('weekStart', 'weekStartDesc', (s) => {
+        s.addDropdown((dd) => {
+          dd.addOption('0', T('weekSun'));
+          dd.addOption('1', T('weekMon'));
+          dd.addOption('2', T('weekTue'));
+          dd.addOption('3', T('weekWed'));
+          dd.addOption('4', T('weekThu'));
+          dd.addOption('5', T('weekFri'));
+          dd.addOption('6', T('weekSat'));
+          dd.setValue(String(plugin.settings.weekStart ?? 1)); // 默认周一
+          dd.onChange(async (value) => {
+            const n = parseInt(value, 10) || 0;
+            plugin.settings.weekStart = n;
+            await plugin.saveSettings();
+            setWeekStart(n);
+            plugin.reloadOpenViews();
+          });
         });
-      });
+      }),
+      row('timelineRange', 'timelineRangeDesc', (s) => {
+        s.addDropdown((dd) => {
+          for (let h = 0; h <= 23; h++) dd.addOption(String(h), (h < 10 ? '0' : '') + h + ':00');
+          dd.setValue(String(plugin.settings.timelineStartHour ?? 0));
+          dd.onChange(async (value) => {
+            const start = parseInt(value, 10);
+            let end = plugin.settings.timelineEndHour ?? 24;
+            if (end <= start) { end = start + 1; if (end > 24) end = 24; plugin.settings.timelineEndHour = end; }
+            plugin.settings.timelineStartHour = start;
+            await plugin.saveSettings();
+            plugin.reloadOpenViews();
+          });
+        }).addDropdown((dd) => {
+          for (let h = 1; h <= 24; h++) dd.addOption(String(h), (h < 10 ? '0' : '') + h + ':00');
+          dd.setValue(String(plugin.settings.timelineEndHour ?? 24));
+          dd.onChange(async (value) => {
+            let end = parseInt(value, 10);
+            const start = plugin.settings.timelineStartHour ?? 0;
+            if (end <= start) end = start + 1;
+            if (end > 24) end = 24;
+            plugin.settings.timelineEndHour = end;
+            await plugin.saveSettings();
+            plugin.reloadOpenViews();
+          });
+        });
+      }),
+      row('timeStep', 'timeStepDesc', (s) => {
+        s.addDropdown((dd) => {
+          for (let m = 5; m <= 60; m += 5) dd.addOption(String(m), String(m) + T('minuteUnit'));
+          dd.setValue(String(plugin.settings.timeStep || 5));
+          dd.onChange(async (value) => {
+            plugin.settings.timeStep = parseInt(value, 10) || 5;
+            await plugin.saveSettings();
+            plugin.reloadOpenViews();
+          });
+        });
+      }),
+    ]);
 
     // 分组：任务标记（完成日期标记开关）
-    new Setting(containerEl).setHeading().setName(t('settings.groupTaskMark'));
-
-    new Setting(containerEl)
-      .setName(t('settings.addDoneDateMarker'))
-      .setDesc(t('settings.addDoneDateMarkerDesc'))
-      .addToggle((tg) => {
-        tg.setValue(this.plugin.settings.addDoneDateMarker !== false); // 默认开
-        tg.onChange(async (value) => {
-          this.plugin.settings.addDoneDateMarker = value;
-          await this.plugin.saveSettings();
+    const taskMark = group('groupTaskMark', [
+      row('addDoneDateMarker', 'addDoneDateMarkerDesc', (s) => {
+        s.addToggle((tg) => {
+          tg.setValue(plugin.settings.addDoneDateMarker !== false); // 默认开
+          tg.onChange(async (value) => {
+            plugin.settings.addDoneDateMarker = value;
+            await plugin.saveSettings();
+          });
         });
-      });
-
-    // 分组：个人版专属（动态注入，免费/Pro 无则整段跳过）
-    // 个人版由 src/personal 经 plugin.extraSettingsSections 提供分组标题 + 渲染回调；
-    // core 只暴露此中性扩展点，不夹带任何个人版内容
-    for (const sec of (this.plugin.extraSettingsSections || [])) {
-      new Setting(containerEl).setHeading().setName(t(sec.titleKey));
-      if (typeof sec.render === 'function') sec.render(containerEl, this.plugin);
-    }
+      }),
+    ]);
 
     // 分组：关于（软件信息 / 作者 / 反馈渠道）
     const GH_REPO = 'https://github.com/sishen0112/obsidian-DadaTodoList';
     const GH_ISSUES = GH_REPO + '/issues';
     // 作者小红书主页：用户提供链接后填入此处；留空则不显示小红书按钮
     const XIAOHONGSHU_URL = 'https://xhslink.cn/o/2G9OTVU76WP';
+    // 关于：三条标准 setting 行（左侧 name/desc，右侧 版本标签 / 链接按钮），布局参照 EasySync 的关于。
+    const COMMUNITY_URL = 'https://community.obsidian.md/plugins/' + plugin.manifest.id;
 
-    new Setting(containerEl).setHeading().setName(t('settings.groupAbout'));
+    // 右侧链接按钮：图标 + 文字，点击新窗打开
+    const aboutButton = (parent, icon, label, url) => {
+      const a = parent.createEl('a', { cls: 'dt-about-btn' });
+      a.setAttribute('href', url);
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener');
+      setIcon(a, icon);
+      a.createSpan({ text: label });
+    };
 
-    const about = containerEl.createDiv('dt-about-card');
+    const about = group('groupAbout', [
+      // 第一行：软件名（左） + 版本标签（右）
+      {
+        type: 'setting',
+        name: plugin.manifest.name,
+        desc: '',
+        render: safe((s) => {
+          s.setName(plugin.manifest.name);
+          s.descEl.empty();
+          s.controlEl.createSpan({ text: T('version') + ' ' + (plugin.manifest.version || ''), cls: 'dt-about-version-tag' });
+        }),
+      },
+      // 第二行：作者（左：label「作者」+ 作者名） + 插件首页 / GitHub / 小红书 按钮（右）
+      {
+        type: 'setting',
+        name: T('author'),
+        desc: plugin.manifest.author || '',
+        render: safe((s) => {
+          s.setName(T('author'));
+          s.setDesc(plugin.manifest.author || '');
+          const links = s.controlEl.createDiv('dt-about-links');
+          aboutButton(links, 'home', T('pluginHomepage'), COMMUNITY_URL);
+          aboutButton(links, 'github', T('github'), plugin.manifest.authorUrl || GH_REPO);
+          if (XIAOHONGSHU_URL) aboutButton(links, 'book', T('xiaohongshu'), XIAOHONGSHU_URL);
+        }),
+      },
+      // 第三行：问题反馈（label + 提示文案，「提交 Issue」为跳转 GitHub Issue 的超链接）
+      {
+        type: 'setting',
+        name: T('feedbackTitle'),
+        desc: T('feedbackDesc'),
+        render: safe((s) => {
+          s.setName(T('feedbackTitle'));
+          const descEl = s.descEl;
+          descEl.empty();
+          const tpl = T('feedbackDesc');
+          const token = '{issue}';
+          const idx = tpl.indexOf(token);
+          if (idx === -1) {
+            descEl.setText(tpl);
+            return;
+          }
+          descEl.appendText(tpl.slice(0, idx));
+          const a = descEl.createEl('a', { text: T('feedbackLink'), href: GH_ISSUES });
+          a.setAttribute('target', '_blank');
+          a.setAttribute('rel', 'noopener');
+          a.addClass('dt-about-feedback-link');
+          descEl.appendText(tpl.slice(idx + token.length));
+        }),
+      },
+    ]);
 
-    // 软件名 + 版本：名称在左，版本号右对齐
-    const infoRow = about.createDiv('dt-about-row');
-    infoRow.createSpan({ text: this.plugin.manifest.name, cls: 'dt-about-name' });
-    infoRow.createSpan({ text: 'v' + (this.plugin.manifest.version || ''), cls: 'dt-about-version-tag' });
+    // 个人版专属分节：由 src/personal 注入 plugin.extraSettingsSections；无则跳过。
+    // 每个分节做成一个可折叠的「二层分组」（heading=分节标题），组内唯一 setting 渲染富内容
+    // （操课表格等），与 notebook-navigator「导航窗格」那种可展开分组的风格一致。
+    const personalDefs = (plugin.extraSettingsSections || []).map((sec) => {
+      const sectionSetting = {
+        type: 'setting',
+        name: t(sec.titleKey),
+        desc: '',
+        render: safe((s) => {
+          // 富内容挂到标准控件槽（controlEl），整行满宽、无外壳
+          const wrap = plainBlock(s).createDiv('dt-personal-section');
+          const inner = wrap.createDiv('dt-personal-inner');
+          sec.render(inner, plugin);
+        }),
+      };
+      return { type: 'group', heading: t(sec.titleKey), items: [sectionSetting] };
+    });
 
-    about.createDiv('dt-about-hr');
+    // 标题：像 notebook-navigator 一样用标准 Setting API——setName 显示插件名、setDesc 显示版本、
+    // 变体徽标直接挂到 nameEl。整行就是一个干净的 setting 行（Obsidian 顶部 tab 标题已是插件名，
+    // 这里再补一行带版本的标题 + 变体徽标），不再用 h1 塞 controlEl 的野路子。
+    const titleDef = {
+      type: 'setting',
+      name: plugin.manifest.name,
+      desc: 'v' + (plugin.manifest.version || ''),
+      render: safe((s) => {
+        const baseName = plugin.manifest.name.replace(/\s+(Pro|Personal)$/i, '');
+        s.setName(baseName);
+        s.setDesc('v' + (plugin.manifest.version || ''));
+        if (plugin.isPro || plugin.isPersonal) {
+          const badge = s.nameEl.createSpan({ cls: plugin.isPro ? 'dt-pro-badge' : 'dt-personal-badge' });
+          badge.setText(plugin.isPro ? 'Pro' : 'Personal');
+        }
+      }),
+    };
 
-    // 作者 + 社交链接
-    const authorRow = about.createDiv('dt-about-row');
-    const authorLeft = authorRow.createDiv('dt-about-author');
-    authorLeft.createSpan({ text: t('settings.author'), cls: 'dt-about-label' });
-    authorLeft.createSpan({ text: this.plugin.manifest.author || '', cls: 'dt-about-author-name' });
-    const authorLinks = authorRow.createDiv('dt-about-links');
-    // Pro 版不提供 GitHub 仓库访问（避免与免费开源版混淆），仅免费版显示
-    if (!this.plugin.isPro) {
-      // 社区插件页（Obsidian 官方社区），放在 GitHub 之前；样式与下方链接按钮一致
-      const community = authorLinks.createEl('a', {
-        cls: 'dt-about-link',
-        href: 'https://community.obsidian.md/plugins/' + this.plugin.manifest.id,
-      });
-      community.setAttribute('target', '_blank');
-      community.setAttribute('rel', 'noopener');
-      community.createEl('i', { cls: 'la la-globe' });
-      community.createSpan({ text: t('settings.communityPage') });
-
-      const gh = authorLinks.createEl('a', { cls: 'dt-about-link', href: this.plugin.manifest.authorUrl || GH_REPO });
-      gh.setAttribute('target', '_blank');
-      gh.setAttribute('rel', 'noopener');
-      gh.createEl('i', { cls: 'la la-github' });
-      gh.createSpan({ text: t('settings.github') });
-    }
-    if (XIAOHONGSHU_URL) {
-      const xhs = authorLinks.createEl('a', { cls: 'dt-about-link', href: XIAOHONGSHU_URL });
-      xhs.setAttribute('target', '_blank');
-      xhs.setAttribute('rel', 'noopener');
-      xhs.createEl('i', { cls: 'la la-book' });
-      xhs.createSpan({ text: t('settings.xiaohongshu') });
-    }
-
-    // 反馈说明（仅免费版：Pro 版不提供问题反馈入口，连同上方分隔线一并隐藏）
-    if (!this.plugin.isPro) {
-      about.createDiv('dt-about-hr');
-      const fbRow = about.createDiv('dt-about-feedback');
-      fbRow.createEl('div', { text: t('settings.feedbackTitle'), cls: 'dt-about-label' });
-      fbRow.createEl('div', { text: t('settings.feedbackDesc'), cls: 'dt-about-fb-desc' });
-      const fbLink = fbRow.createEl('a', { cls: 'dt-about-link-fb', href: GH_ISSUES });
-      fbLink.setAttribute('target', '_blank');
-      fbLink.setAttribute('rel', 'noopener');
-      fbLink.createEl('i', { cls: 'la la-external-link-alt' });
-      fbLink.createSpan({ text: t('settings.feedbackLink') });
+    const defs = [titleDef, appearance, journal, inbox, views, taskMark, ...personalDefs, about];
+    return defs;
+    } catch (e) {
+      // 定义阶段抛错（非常罕见）：直接显示错误
+      return [{
+        type: 'group',
+        heading: '⚠ getSettingDefinitions 抛错（调试）',
+        items: [{
+          type: 'setting',
+          name: 'ERROR',
+          desc: String((e && e.message) || e),
+          render: (s) => {
+            const pre = s.settingEl.createDiv('dt-debug');
+            pre.setText(String((e && e.stack) || e));
+          }
+        }]
+      }];
     }
   }
 
@@ -433,7 +480,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       const moved = await migrateInboxTasks(oldPath, newPath);
       notice.hide();
       new Notice(t('settings.inboxMoved', { n: moved }));
-      this.plugin.reloadOpenViews(); // 迁移落盘后再刷新一次
+      this.plugin.reloadOpenViews();
     });
     const skip = notice.noticeEl.createEl('button', { text: t('common.cancel') });
     skip.addEventListener('click', () => notice.hide());

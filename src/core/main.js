@@ -98,8 +98,8 @@ export default class DadaTodoPlugin extends Plugin {
     const variantSuffix = base === 'dada-todo' ? '' : (base === 'dada-todo-personal' ? ' Personal' : ' Pro');
     this.viewTitle = t('app.viewTitle') + variantSuffix;
     const commandId = base === 'dada-todo' ? 'open-dada-todo' : base + '-open';
-    // 是否 Pro 变体（manifest.id 非 dada-todo-list）：驱动侧栏图标 / 设置页徽标等身份呈现差异
-    this.isPro = base !== 'dada-todo';
+    // 是否 Pro 变体（仅当 id 严格为 dada-todo-pro）：注意 personal 的 id 含 "pro" 但不能误判为 Pro
+    this.isPro = base === 'dada-todo-pro';
     // 是否 Personal 变体（独立私有构建，id = dada-todo-personal）：设置页徽标等处呈现「Personal」
     this.isPersonal = base === 'dada-todo-personal';
     const ribbonIcon = this.isPersonal ? 'rocket' : (this.isPro ? 'crown' : 'check-square');

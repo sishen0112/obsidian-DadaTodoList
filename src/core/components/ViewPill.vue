@@ -58,11 +58,6 @@
        absolute 轨道塌缩为 0 高度而不可见）。.task-app 为 position:relative 全高，
        故 top:0;bottom:0 才能铺满左侧；收起=仅图标竖栏，展开=图标+文字面板。 -->
   <div v-else class="tk-pro-rail" :class="{ collapsed: railCollapsed }">
-    <button class="tk-pro-rail-toggle" type="button"
-            v-tooltip="railCollapsed ? { text: $t('app.expandViews'), placement: 'right' } : null"
-            @click="$emit('update:rail-collapsed', !railCollapsed)">
-      <i class="la la-exchange-alt"></i>
-    </button>
     <div class="tk-pro-rail-items">
       <template v-for="(g, gi) in groups" :key="gi">
         <div v-if="gi > 0" class="tk-pro-rail-sep"></div>
@@ -76,6 +71,13 @@
         </button>
       </template>
     </div>
+    <!-- 折叠 / 展开：位于设置上方，与设置按钮同款样式；整组动作按钮置底，与上方导航以分隔线隔开 -->
+    <button class="tk-pro-rail-item tk-pro-rail-toggle" type="button"
+            v-tooltip="railCollapsed ? { text: $t('app.expandViews'), placement: 'right' } : null"
+            @click="$emit('update:rail-collapsed', !railCollapsed)">
+      <i class="la la-exchange-alt vp-ico"></i>
+      <span class="vp-label">{{ $t('app.collapseViews') }}</span>
+    </button>
     <!-- 设置：左侧导航最下方，点击打开插件设置页（基础版 / Pro 共用） -->
     <button class="tk-pro-rail-item tk-pro-rail-settings" type="button"
             v-tooltip="railCollapsed ? { text: $t('app.settings'), placement: 'right' } : null"
@@ -361,17 +363,10 @@ export default {
   overflow: hidden;
   transition: width .28s cubic-bezier(.4, 0, .2, 1);
 }
-.tk-pro-rail:not(.collapsed) { width: 100px; }   /* 展开态：图标 + 文字面板（收窄） */
-.tk-pro-rail-toggle {
-  flex: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; margin: 0 auto 10px;
-  border: none; background: transparent; color: var(--text-normal);
-  border-radius: 999px; cursor: pointer;
-  transition: background .15s ease, color .15s ease;
-}
-.tk-pro-rail-toggle:hover { background: var(--gold-bg); color: var(--ink); }
-.tk-pro-rail-toggle i { font-size: 18px; }
+.tk-pro-rail:not(.collapsed) { width: 124px; }   /* 展开态：图标 + 文字面板（加宽以容纳中英文标签，避免裁剪/错位） */
+/* 底部「折叠」按钮：复用 .tk-pro-rail-item 样式（与设置按钮同款：图标+文字、hover 金底、圆角 9px）；
+   顶部加分隔线 + 间距，与上方导航隔开，整组动作按钮（折叠+设置）置于底部 */
+.tk-pro-rail-toggle { flex: none; margin-top: 10px; border-top: 1px solid var(--line); }
 .tk-pro-rail-items {
   flex: 1 1 auto; min-height: 0;
   display: flex; flex-direction: column; gap: 4px;
@@ -400,14 +395,16 @@ export default {
   transition: background .15s ease, color .15s ease;
 }
 .tk-pro-rail-item .vp-ico { font-size: 18px; width: 22px; text-align: center; flex: none; }
+/* 标签单行显示、超长省略号收缩：避免中英文长度不一导致换行→图标垂直错位 */
+.tk-pro-rail-item .vp-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 收起态：居中仅图标，隐藏文字 */
 .tk-pro-rail.collapsed .tk-pro-rail-item { justify-content: center; padding: 9px 0; }
 .tk-pro-rail.collapsed .vp-label { display: none; }
 .tk-pro-rail-item:not(.on):hover { background: var(--gold-bg); color: var(--ink); }
 .tk-pro-rail-item.on { background: var(--gold-bg); color: var(--gold); font-weight: 700; }
-/* 设置按钮：左侧导航最下方，与视图项分组隔开（视图项容器 flex:1 已将其推到底部） */
-.tk-pro-rail-settings { margin-top: 8px; border-top: 1px solid var(--line); border-radius: 0; }
-.tk-pro-rail.collapsed .tk-pro-rail-settings { margin-top: 8px; border-top: 1px solid var(--line); }
+/* 设置按钮：底部动作组最下方；分隔线已上移到折叠按钮，此处仅保留与折叠按钮的间距 */
+.tk-pro-rail-settings { margin-top: 8px; border-radius: 0; }
+.tk-pro-rail.collapsed .tk-pro-rail-settings { margin-top: 8px; }
 
 /* 横向胶囊中设置按钮与视图项之间的竖向分隔线 */
 .tk-pill-sep { width: 1px; align-self: stretch; background: var(--line); margin: 6px 4px; flex: none; }

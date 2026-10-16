@@ -62,9 +62,14 @@
   --el-border-radius-base: 9px;
 }
 
-/* 任务视图根容器：补齐字体（原 .wb-root 负责的部分，这里只给任务模块用） */
+/* 任务视图根容器：补齐字体。
+   Latin 字体优先（system-ui / -apple-system / Segoe UI / Roboto 等系统 UI 字体对
+   caron/macron 等变音符号定位正确，且观感原生），中文回退到 PingFang / 系统 CJK。
+   原先 CJK 字体置前会导致拉丁变音符号（如 č/š/ž/ć）的附加标记错位到下一字母
+   （与 Obsidian 笔记编辑器表现不一致，见用户报的 diacritics bug）。不引入 Inter
+   （观感差且非必需，system-ui 已足够）。 */
 .task-app {
-  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 /* 皮卡丘 / 紫罗兰 的时间文字规则已迁移至私有 src/pro/themes.css（由 Pro / Personal 构建打包），

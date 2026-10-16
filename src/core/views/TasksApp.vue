@@ -827,7 +827,7 @@ export default {
 /* Pro 版：左侧固定菜单时让出左内边距，避免遮挡内容（含日程视图左导航）；
    与 ViewPill 内 .tk-pro-rail 宽度同速动画，保持二者同步 */
 .task-app.tk-pro { padding-left: 52px; transition: padding-left .28s cubic-bezier(.4, 0, .2, 1); }
-.task-app.tk-pro.tk-pro-rail-open { padding-left: 108px; }
+.task-app.tk-pro.tk-pro-rail-open { padding-left: 132px; }
 
 /* 顶栏样式已抽离至 TaskTopBar.vue */
 
