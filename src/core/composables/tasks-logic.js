@@ -30,7 +30,30 @@ const SYM_TO_FIELD = {};
 for (const pair of DATE_FIELDS) SYM_TO_FIELD[pair[1]] = pair[0];
 // 用「多选一」而非字符组，避免 emoji（星平面字符）在字符组里的代理对问题
 const DATE_TOKEN_RE = new RegExp('(' + DATE_FIELDS.map((p) => p[1]).join('|') + ')\\s*(\\d{4}-\\d{2}-\\d{2})', 'g');
+// 优先级（obsidian-tasks 风格图标）：档位 高 🔺(⏫) / 中 🔼 / 低 🔽(⏬) / 无（无图标）。
+// 解析时从描述尾部抽取，写回时置于描述之后、各日期之前（与 obsidian-tasks 一致）。
+// obsidian-tasks 中 🔺=高、⏫=最高；本插件四档模型把二者合并为「高(重要且紧急)」，
+// 故 🔺/⏫→高，🔼→中，🔽⏬→低；写回统一用 🔺 以与 tasks 的「高」对齐。
 const PRIORITY_RE = /⏫|🔺|🔼|🔽|⏬/g;
+
+// 档位 → 图标（编辑器与写回用）：高用 🔺（tasks 的「高」），确保新建/编辑任务与 tasks 兼容
+export const PRIORITY_ICON = { high: '🔺', medium: '🔼', low: '🔽', none: '' };
+// 图标 → 档位（解析用）：🔺 与 ⏫ 都归为「高」，兼容 tasks 的「高」与「最高」
+export function priorityToLevel(emoji) {
+  if (emoji === PRIORITY_ICON.high || emoji === '⏫') return 'high';
+  if (emoji === PRIORITY_ICON.medium) return 'medium';
+  if (emoji === PRIORITY_ICON.low || emoji === '⏬') return 'low';
+  return 'none';
+}
+// 档位 → 图标（写回用）
+export function levelToPriorityEmoji(level) {
+  return PRIORITY_ICON[level] || '';
+}
+// 排序权重：高(3) > 中(2) > 低(1) > 无(0)
+export function priorityRank(emoji) {
+  const lvl = priorityToLevel(emoji);
+  return lvl === 'high' ? 3 : lvl === 'medium' ? 2 : lvl === 'low' ? 1 : 0;
+}
 const RECURRENCE_CHAR = '🔁';
 // 新增子任务/描述行时使用的缩进单位（与用户既有笔记保持一致）
 export const CHILD_INDENT = '\t';
@@ -405,7 +428,8 @@ export function toRecord(dateKey, node, opts = {}) {
     file,
     time: node.time,
     timeEnd: node.timeEnd || '',
-    parentGuid: opts.parentGuid || ''
+    parentGuid: opts.parentGuid || '',
+    priority: node.priority || ''
   };
 }
 
@@ -463,7 +487,7 @@ export function nodeFromTask(task, dateKey, opts = {}) {
     time,
     timeEnd,
     created: '', start: '', scheduled: '', due: '', cancelled: '',
-    priority: '',
+    priority: t.priority || '',
     recurrence: '',
     done: (t.completed && opts.addDoneDate !== false) ? todayKey() : ''
   };

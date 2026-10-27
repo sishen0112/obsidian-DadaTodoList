@@ -409,7 +409,7 @@ export default {
 .tk-cl-sum { font-size: 14px; color: var(--ink); line-height: 1.5; word-break: break-word; }
 .tk-cl-sum :deep(a) { color: var(--accent, var(--gold)); }
 .tk-cl-desc { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-top: 2px; word-break: break-word; }
-.tk-cl-row.done .tk-cl-sum,
+.tk-cl-row.done .tk-cl-sum { color: var(--ink-soft); opacity: .75; }
 .tk-cl-row.cancel .tk-cl-sum { color: var(--ink-soft); text-decoration: line-through; opacity: .75; }
 .tk-cl-row.done .tk-cl-desc,
 .tk-cl-row.cancel .tk-cl-desc { opacity: .5; }

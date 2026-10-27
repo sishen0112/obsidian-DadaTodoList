@@ -3,6 +3,7 @@ dist/
 dada-todo-list/
 dada-todo-pro/
 dada-todo-personal/
+.codebuddy/
 *.log
 .DS_Store
 docs/产品介绍.md

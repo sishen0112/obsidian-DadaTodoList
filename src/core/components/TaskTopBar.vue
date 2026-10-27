@@ -46,6 +46,15 @@
           </button>
         </div>
       </template>
+
+      <!-- 四象限视图：视图名（左）+ 仅显示待办（右上） -->
+      <template v-else-if="view === 'matrix'">
+        <span class="tk-range">{{ $t('app.viewMatrix') }}</span>
+        <button class="tk-btn ico" type="button" :class="{ on: hideDone }"
+                v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
+          <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
+        </button>
+      </template>
     </div>
 
     <!-- 视图切换已迁至底部悬浮胶囊菜单 <view-pill />（见 TasksApp.vue） -->

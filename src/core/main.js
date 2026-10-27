@@ -3,6 +3,7 @@ import { createApp, reactive } from 'vue';
 import TasksApp from './views/TasksApp.vue';
 import { initTasksApi, ensureInboxFile } from './api/tasks.js';
 import { setColorScheme, setWeekStart } from './composables/tasks-logic.js';
+import { normalizeMenuViews, normalizeMenuHidden } from './composables/viewMenu.js';
 import { setupDevReload } from './dev/devReload.js';
 import { setupHoverPreview, teardownHoverPreview } from './hoverPreview.js';
 import { DadaTodoSettingTab } from './ui/settings.js';
@@ -220,6 +221,10 @@ export default class DadaTodoPlugin extends Plugin {
       })(),
       // 时间选择器步长（分钟）：下拉以该步长生成可选项（5–60，默认 5）
       timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || 5))),
+      // 视图菜单：完整视图顺序（含隐藏项，保持其排序记忆）；默认全部按当前顺序
+      menuViews: normalizeMenuViews(data.menuViews),
+      // 视图菜单：隐藏的视图 key（不显示在菜单上，但保留排序，可随时在设置页重新勾选显示）
+      menuHiddenViews: normalizeMenuHidden(data.menuHiddenViews),
     };
     // 让设置在 Vue 中具备响应式：菜单样式等设置改动后可即时生效，无需重启 Obsidian
     this.settings = reactive(this.settings);

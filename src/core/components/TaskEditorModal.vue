@@ -104,6 +104,17 @@
         <subtask-list :task-guid="task.guid" @change="$emit('subtasks-changed', $event)" />
       </div>
       <div v-if="error" class="tk-err">{{ error }}</div>
+      <!-- 优先级：置于表单最下方 -->
+      <label class="tk-field">
+        <span>{{ $t('editor.priority') }}</span>
+        <div class="tk-prio-sel">
+          <button v-for="opt in priorityOptions" :key="opt.level" type="button"
+            class="tk-prio-opt" :class="['lvl-' + opt.level, { 'prio-on': form.priority === opt.level }]"
+            @click="form.priority = opt.level">
+            <span v-if="opt.icon" class="tk-prio-ico">{{ opt.icon }}</span>{{ opt.label }}
+          </button>
+        </div>
+      </label>
       <!-- 底栏：左（状态操作 + 删除）· 右（唯一主按钮） -->
       <div class="tk-modal-ops">
         <template v-if="editing">
@@ -134,7 +145,7 @@
 
 <script>
 import { Tasks } from '../composables/useTasks.js';
-import { splitSummary, composeSummary, sanitizeTag } from '../composables/tasks-logic.js';
+import { splitSummary, composeSummary, sanitizeTag, PRIORITY_ICON, priorityToLevel, levelToPriorityEmoji } from '../composables/tasks-logic.js';
 import { LinkFormModal, ConfirmModal } from '../ui/modals.js';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
 import SubtaskList from './SubtaskList.vue';
@@ -156,7 +167,9 @@ export default {
     // VueModal 桥挂载的独立 app 拿不到全局 plugin，显式传入（打开原生链接弹窗用）
     plugin: { type: Object, default: null },
     // 清单分组内新建：传入 { list, group } 时，新任务追加到该分组最后一行（而非文件末尾）
-    createIn: { type: Object, default: null }
+    createIn: { type: Object, default: null },
+    // 四象限新建：预置优先级档位（high / medium / low / none），使新任务落入对应象限
+    defaultPriority: { type: String, default: '' }
   },
   data() {
     return {
@@ -176,7 +189,16 @@ export default {
     isAllDay() { return this.form.timeMode === 'allday'; },
     // 时间选择器步长：取自插件设置（timeStep），取不到时默认 5（分钟）
     timeStep() { return (this.plugin && this.plugin.settings && this.plugin.settings.timeStep) || 5; },
-    isCrossDate() { return this.form.timeMode === 'crossdate'; }
+    isCrossDate() { return this.form.timeMode === 'crossdate'; },
+    // 优先级四档（高 / 中 / 低 / 无，从左到右），图标取自 obsidian-tasks 风格；默认「无」
+    priorityOptions() {
+      return [
+        { level: 'high', icon: PRIORITY_ICON.high, label: this.$t('editor.prioHigh') },
+        { level: 'medium', icon: PRIORITY_ICON.medium, label: this.$t('editor.prioMedium') },
+        { level: 'low', icon: PRIORITY_ICON.low, label: this.$t('editor.prioLow') },
+        { level: 'none', icon: '', label: this.$t('editor.prioNone') }
+      ];
+    }
   },
   watch: {
     // immediate：VueModal 桥挂载时 open 已为 true，必须立即初始化预填表单
@@ -188,7 +210,8 @@ export default {
         guid: '', title: '', description: '', links: [], tags: [],
         dueDate: this.defaultDate || '', dueTime: this.defaultTime || '',
         timeMode: 'single', dueStart: this.defaultTime || '', dueEnd: '', startDate: '',
-        remind: true, completed: false, cancelled: false, cancelledAt: ''
+        remind: true, completed: false, cancelled: false, cancelledAt: '',
+        priority: this.defaultPriority || 'none'
       };
     },
     init() {
@@ -237,7 +260,8 @@ export default {
         remind: t.remind !== false,
         completed: !!t.completed,
         cancelled: !!t.cancelled,
-        cancelledAt: t.cancelledAt || ''
+        cancelledAt: t.cancelledAt || '',
+        priority: priorityToLevel(t.priority)
       };
     },
     // 下一个准点或半点：向上取整到 30 分钟边界（如 09:12 → 09:30，09:40 → 10:00）
@@ -340,7 +364,8 @@ export default {
         dueAt,
         dueEndAt,
         startAt,
-        dueAllDay: this.isAllDay || this.isCrossDate
+        dueAllDay: this.isAllDay || this.isCrossDate,
+        priority: levelToPriorityEmoji(this.form.priority)
       };
       if (this.editing) {
         payload.completed = this.form.completed;

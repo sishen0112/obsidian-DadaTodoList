@@ -7,10 +7,12 @@
     <transition name="tk-pill">
       <div class="tk-module-h tk-capsule" v-if="!collapsed" key="h">
         <div class="tk-module-h-items">
-          <button v-for="v in flatItems" :key="v.key" type="button"
-                  class="tk-viewpill-item" :class="{ on: view === v.key }"
+          <button v-for="v in flatItems" :key="v.key" type="button" draggable="true"
+                  class="tk-viewpill-item" :class="{ on: view === v.key, 'menu-drag-over': menuDragOverKey === v.key }"
                   :title="$t(v.labelKey)"
-                  @click="$emit('switch-view', v.key)">
+                  @click="$emit('switch-view', v.key)"
+                  @dragstart="onMenuDragStart(v.key, $event)" @dragover="onMenuDragOver(v.key, $event)"
+                  @dragleave="onMenuDragLeave(v.key)" @drop="onMenuDrop(v.key, $event)" @dragend="onMenuDragEnd">
             <i :class="v.icon" class="vp-ico"></i><span class="vp-label">{{ $t(v.labelKey) }}</span>
           </button>
           <span class="tk-pill-sep"></span>
@@ -37,10 +39,12 @@
         </div>
         <div class="tk-pill-v">
           <div class="tk-pill-v-inner">
-            <button v-for="v in flatItems" :key="v.key" type="button"
-                    class="tk-viewpill-item" :class="{ on: view === v.key }"
+            <button v-for="v in flatItems" :key="v.key" type="button" draggable="true"
+                    class="tk-viewpill-item" :class="{ on: view === v.key, 'menu-drag-over': menuDragOverKey === v.key }"
                     :title="$t(v.labelKey)"
-                    @click="$emit('switch-view', v.key)">
+                    @click="$emit('switch-view', v.key)"
+                    @dragstart="onMenuDragStart(v.key, $event)" @dragover="onMenuDragOver(v.key, $event)"
+                    @dragleave="onMenuDragLeave(v.key)" @drop="onMenuDrop(v.key, $event)" @dragend="onMenuDragEnd">
               <i :class="v.icon" class="vp-ico"></i><span class="vp-label">{{ $t(v.labelKey) }}</span>
             </button>
             <button class="tk-viewpill-item tk-viewpill-settings" type="button"
@@ -62,10 +66,12 @@
       <template v-for="(g, gi) in groups" :key="gi">
         <div v-if="gi > 0" class="tk-pro-rail-sep"></div>
         <div v-if="g.label" class="tk-pro-rail-group-h">{{ $t(g.label) }}</div>
-        <button v-for="v in g.items" :key="v.key" type="button"
-                class="tk-pro-rail-item" :class="{ on: view === v.key }"
+        <button v-for="v in g.items" :key="v.key" type="button" draggable="true"
+                class="tk-pro-rail-item" :class="{ on: view === v.key, 'menu-drag-over': menuDragOverKey === v.key }"
                 v-tooltip="railCollapsed ? { text: $t(v.labelKey), placement: 'right' } : null"
-                @click="$emit('switch-view', v.key)">
+                @click="$emit('switch-view', v.key)"
+                @dragstart="onMenuDragStart(v.key, $event)" @dragover="onMenuDragOver(v.key, $event)"
+                @dragleave="onMenuDragLeave(v.key)" @drop="onMenuDrop(v.key, $event)" @dragend="onMenuDragEnd">
           <i :class="v.icon" class="vp-ico"></i>
           <span class="vp-label">{{ $t(v.labelKey) }}</span>
         </button>
@@ -91,6 +97,8 @@
 <script>
 // 底部悬浮视图切换胶囊：从 TaskTopBar 的下拉抽离为独立组件，平铺全部视图。
 // 宽度响应由父容器（.task-app）的 container-type 提供，见 tasks-shared.css 的 @container 规则。
+import { VIEW_MENU_ITEMS } from '../composables/viewMenu.js';
+
 export default {
   name: 'ViewPill',
   props: {
@@ -101,31 +109,33 @@ export default {
     // 左侧菜单折叠态（由父组件持有并持久化）：true=收起(仅图标)，false=展开(图标+文字)
     railCollapsed: { type: Boolean, default: true },
     // 插件实例：用于打开本插件设置页（由父组件 TasksApp 传入，确保 this.plugin 可用）
-    plugin: { type: Object, default: null }
+    plugin: { type: Object, default: null },
+    // 菜单视图项（已按设置排序并过滤隐藏）：ViewPill 只负责渲染与拖拽，顺序/显隐由设置决定；
+    // 缺省（未传或为空）回退为全部视图按默认顺序
+    menuItems: { type: Array, default: null }
   },
-  emits: ['switch-view', 'update:rail-collapsed'],
+  emits: ['switch-view', 'update:rail-collapsed', 'reorder-menu'],
   data() {
     return {
       // 内部折叠态（竖向菜单收起 / 展开）
       collapsed: this.loadCollapsed(),
-      views: [
-        { key: 'day', labelKey: 'app.viewDay', icon: 'la la-sun-o' },
-        { key: 'four', labelKey: 'app.viewWeek', icon: 'la la-stream' },
-        { key: 'month', labelKey: 'app.viewMonth', icon: 'la la-calendar-alt' },
-        { key: 'agenda', labelKey: 'app.viewAgenda', icon: 'la la-list-alt' },
-        { key: 'cl', labelKey: 'app.viewCl', icon: 'la la-tasks' },
-        { key: 'all', labelKey: 'app.viewAll', icon: 'la la-list' }
-      ]
+      // 菜单拖拽排序的临时状态：正在拖拽的视图 key / 拖拽悬停目标 key
+      dragMenuKey: '',
+      menuDragOverKey: ''
     };
   },
   created() {
     this.collapsed = this.loadCollapsed();
   },
   computed: {
-    // 视图分组：基础 6 视图恒为一组（label 为 null 不渲染分组头）；供左侧竖向菜单遍历，
+    // 菜单视图项：优先用设置传入的 menuItems（已排序 + 已过滤隐藏），否则回退全部视图默认顺序
+    resolvedItems() {
+      return (Array.isArray(this.menuItems) && this.menuItems.length) ? this.menuItems : VIEW_MENU_ITEMS;
+    },
+    // 视图分组：基础视图恒为一组（label 为 null 不渲染分组头）；供左侧竖向菜单遍历，
     // 横向胶囊 / 折叠列表由 flatItems 扁平排布。
     groups() {
-      return [{ label: null, items: this.views }];
+      return [{ label: null, items: this.resolvedItems }];
     },
     // 横向胶囊 / 竖向折叠列表沿用扁平排布（分组头在窄行内容易拥挤）；仅左侧竖栏渲染分组头
     flatItems() {
@@ -147,6 +157,35 @@ export default {
     toggleCollapsed() {
       this.collapsed = !this.collapsed;
       this.saveCollapsed(this.collapsed);
+    },
+    // ===== 菜单拖拽排序：拖起某视图 → 悬停到另一视图上 → 松手即调序 =====
+    // 顺序变更不在本组件内修改，统一上抛 reorder-menu(dragKey, overKey)，由父组件写设置并持久化
+    onMenuDragStart(key, e) {
+      this.dragMenuKey = key;
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', key); } catch (err) { /* 忽略 */ }
+      }
+    },
+    onMenuDragOver(key, e) {
+      if (!this.dragMenuKey || this.dragMenuKey === key) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      this.menuDragOverKey = key;
+    },
+    onMenuDragLeave(key) {
+      if (this.menuDragOverKey === key) this.menuDragOverKey = '';
+    },
+    onMenuDrop(key, e) {
+      e.preventDefault();
+      const drag = this.dragMenuKey || (e.dataTransfer && e.dataTransfer.getData('text/plain')) || '';
+      this.dragMenuKey = '';
+      this.menuDragOverKey = '';
+      if (drag && drag !== key) this.$emit('reorder-menu', drag, key);
+    },
+    onMenuDragEnd() {
+      this.dragMenuKey = '';
+      this.menuDragOverKey = '';
     },
     // 打开本插件的设置页：先 open() 打开设置面板（任何 Obsidian 版本都支持），
     // 再尽力 openTabById 直接定位到本插件 Tab；个别旧版本无该方法则忽略，仍停在设置首页。
@@ -305,6 +344,8 @@ export default {
 .tk-viewpill-item:not(.on):hover { background: var(--gold-bg); color: var(--ink); }
 /* 当前视图：淡金底 + 金字（弱化实心金块的突兀感，仅以颜色/字重区分，不抢眼） */
 .tk-viewpill-item.on { background: var(--gold-bg); color: var(--gold); font-weight: 700; }
+/* 拖拽排序：悬停目标项描一圈金虚线，提示松手落点 */
+.tk-viewpill-item.menu-drag-over { box-shadow: inset 0 0 0 2px var(--gold); }
 
 /* 收起 / 展开按钮（两模块各一枚，图标方向不同） */
 .tk-viewpill-toggle {
@@ -390,6 +431,8 @@ export default {
 .tk-pro-rail.collapsed .vp-label { display: none; }
 .tk-pro-rail-item:not(.on):hover { background: var(--gold-bg); color: var(--ink); }
 .tk-pro-rail-item.on { background: var(--gold-bg); color: var(--gold); font-weight: 700; }
+/* 拖拽排序：悬停目标项描一圈金虚线，提示松手落点 */
+.tk-pro-rail-item.menu-drag-over { box-shadow: inset 0 0 0 2px var(--gold); }
 /* 设置按钮：底部动作组最下方；分隔线已上移到折叠按钮，此处仅保留与折叠按钮的间距 */
 .tk-pro-rail-settings { margin-top: 8px; border-radius: 0; }
 .tk-pro-rail.collapsed .tk-pro-rail-settings { margin-top: 8px; }

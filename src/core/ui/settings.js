@@ -2,6 +2,7 @@ import { PluginSettingTab, Notice, AbstractInputSuggest, TFolder, setIcon } from
 import { t } from '../i18n/index.js';
 import { countInboxTasks, migrateInboxTasks } from '../api/tasks.js';
 import { setColorScheme, setWeekStart, EXTRA_SCHEME_OPTIONS } from '../composables/tasks-logic.js';
+import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
 class MarkdownFileSuggest extends AbstractInputSuggest {
@@ -140,6 +141,70 @@ export class DadaTodoSettingTab extends PluginSettingTab {
             await plugin.saveSettings();
           });
         });
+      }),
+      // 视图菜单：勾选控制显示 / 隐藏，整行拖拽排序；默认全部显示、按当前顺序
+      row('menuViews', 'menuViewsDesc', (s) => {
+        // 控件整行换行到标题（名称 + 说明）下方，而不是挤在右侧控件列
+        s.settingEl.style.flexWrap = 'wrap';
+        s.controlEl.style.flex = '1 1 100%';
+        s.controlEl.style.width = '100%';
+        s.controlEl.style.marginLeft = '0';
+        s.controlEl.style.marginTop = '6px';
+        const st = plugin.settings;
+        const host = s.controlEl.createDiv('dt-menuviews');
+        const render = () => {
+          host.empty();
+          const order = (Array.isArray(st.menuViews) && st.menuViews.length) ? st.menuViews : DEFAULT_MENU_VIEWS;
+          const hidden = new Set(Array.isArray(st.menuHiddenViews) ? st.menuHiddenViews : []);
+          const byKey = {};
+          for (const v of VIEW_MENU_ITEMS) byKey[v.key] = v;
+          let dragKey = '';
+          for (const key of order) {
+            const def = byKey[key];
+            if (!def) continue;
+            const item = host.createDiv('dt-menuviews-item' + (hidden.has(key) ? ' is-hidden' : ''));
+            item.draggable = true;
+            const grip = item.createSpan({ cls: 'dt-menuviews-grip' });
+            setIcon(grip, 'grip-vertical');
+            const cb = item.createEl('input', { type: 'checkbox' });
+            cb.checked = !hidden.has(key);
+            cb.setAttribute('aria-label', t(def.labelKey));
+            cb.addEventListener('change', async () => {
+              const set = new Set(Array.isArray(st.menuHiddenViews) ? st.menuHiddenViews : []);
+              if (cb.checked) set.delete(key); else set.add(key);
+              st.menuHiddenViews = [...set];
+              await plugin.saveSettings();
+              item.toggleClass('is-hidden', !cb.checked);
+            });
+            item.createSpan({ text: t(def.labelKey), cls: 'dt-menuviews-label' });
+            // 拖拽排序：dragstart 记录源 key，drop 时重排完整顺序（含隐藏项）并重绘
+            item.addEventListener('dragstart', () => { dragKey = key; item.addClass('is-dragging'); });
+            item.addEventListener('dragend', () => {
+              dragKey = '';
+              item.removeClass('is-dragging');
+              host.querySelectorAll('.dt-menuviews-item.is-over').forEach((n) => n.removeClass('is-over'));
+            });
+            item.addEventListener('dragover', (e) => {
+              if (!dragKey || dragKey === key) return;
+              e.preventDefault();
+              if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+              item.addClass('is-over');
+            });
+            item.addEventListener('dragleave', () => item.removeClass('is-over'));
+            item.addEventListener('drop', async (e) => {
+              e.preventDefault();
+              item.removeClass('is-over');
+              if (!dragKey || dragKey === key) return;
+              const next = reorderViews(order, dragKey, key);
+              if (next !== order) {
+                st.menuViews = next;
+                await plugin.saveSettings();
+                render();
+              }
+            });
+          }
+        };
+        render();
       }),
       row('colorScheme', 'colorSchemeDesc', (s) => {
         s.addDropdown((dd) => {
@@ -394,20 +459,9 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       },
     ]);
 
-    // 标题：像 notebook-navigator 一样用标准 Setting API——setName 显示插件名、setDesc 显示版本、
-    // 变体徽标直接挂到 nameEl。整行就是一个干净的 setting 行（Obsidian 顶部 tab 标题已是插件名，
-    // 这里再补一行带版本的标题 + 变体徽标），不再用 h1 塞 controlEl 的野路子。
-    const titleDef = {
-      type: 'setting',
-      name: plugin.manifest.name,
-      desc: 'v' + (plugin.manifest.version || ''),
-      render: safe((s) => {
-        s.setName(plugin.manifest.name);
-        s.setDesc('v' + (plugin.manifest.version || ''));
-      }),
-    };
+    // 顶部不再单独渲染插件名 + 版本标题行：Obsidian 设置页 Tab 标题本身已是插件名，避免重复
 
-    const defs = [titleDef, appearance, journal, inbox, views, taskMark, about];
+    const defs = [appearance, journal, inbox, views, taskMark, about];
     return defs;
     } catch (e) {
       // 定义阶段抛错（非常罕见）：直接显示错误

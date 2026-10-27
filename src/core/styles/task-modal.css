@@ -183,6 +183,29 @@
   margin-bottom: 14px;
 }
 
+/* ---------- 优先级选择（编辑器） ----------
+   自包含：以 .tk-modal 为作用域，不依赖 .task-app（编辑器经 VueModal 桥可能挂在 body 下） */
+.tk-modal .tk-prio-sel { display: inline-flex; }
+.tk-modal .tk-prio-sel button.tk-prio-opt {
+  display: inline-flex; align-items: center; gap: 3px;
+  box-sizing: border-box; margin: 0;
+  appearance: none; -webkit-appearance: none; box-shadow: none;
+  font-family: inherit; font-size: 13px; line-height: 1; font-weight: 600;
+  height: 30px; padding: 0 12px;
+  background: var(--panel); color: var(--ink-soft);
+  border: 1px solid var(--line); border-radius: 0; cursor: pointer; white-space: nowrap;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.tk-modal .tk-prio-sel button.tk-prio-opt:first-child { border-top-left-radius: 9px; border-bottom-left-radius: 9px; }
+.tk-modal .tk-prio-sel button.tk-prio-opt:last-child { border-top-right-radius: 9px; border-bottom-right-radius: 9px; }
+.tk-modal .tk-prio-sel button.tk-prio-opt + button.tk-prio-opt { border-left: none; }
+.tk-modal .tk-prio-sel .tk-prio-ico { font-size: 14px; line-height: 1; }
+/* 选中档位：按优先级上色（与列表徽标一致） */
+.tk-modal .tk-prio-sel button.tk-prio-opt.prio-on.lvl-none { background: var(--gold); color: var(--text-on-accent); border-color: transparent; }
+.tk-modal .tk-prio-sel button.tk-prio-opt.prio-on.lvl-low { background: #4a90d2; color: #fff; border-color: transparent; }
+.tk-modal .tk-prio-sel button.tk-prio-opt.prio-on.lvl-medium { background: #e0a93b; color: #3a2c00; border-color: transparent; }
+.tk-modal .tk-prio-sel button.tk-prio-opt.prio-on.lvl-high { background: #e0584f; color: #fff; border-color: transparent; }
+
 /* ============================================================
    Vue-in-Modal 桥：Vue 弹窗组件渲染在 Obsidian 原生 Modal 内。
    组件自带的 fixed 遮罩在 Modal 内降级为普通区块

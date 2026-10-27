@@ -7,7 +7,7 @@
 import { computed, ref } from 'vue';
 import { Notice } from 'obsidian';
 import { Tasks } from './useTasks.js';
-import { weekdayLong, weekdayShort } from './tasks-logic.js';
+import { weekdayLong, weekdayShort, priorityRank } from './tasks-logic.js';
 import { t } from '../i18n/index.js';
 import { taskFilePath } from '../api/tasks.js';
 import { ConfirmModal } from '../ui/modals.js';
@@ -124,7 +124,7 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
           ? t('app.dateFull', { y: Number(k.slice(0, 4)), m: Number(k.slice(5, 7)), d: Number(k.slice(8, 10)), wd: wd(k) })
           : t('app.noDate'),
         n: list.length,
-        tasks: list.slice().sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0))
+        tasks: list.slice().sort((a, b) => priorityRank(b.priority) - priorityRank(a.priority) || (a.dueAt || 0) - (b.dueAt || 0))
       }))
       .sort((a, b) => b.key.localeCompare(a.key));
   });
@@ -165,7 +165,7 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
   const byDue = (a, b) => {
     const av = a.dueAt ? a.dueAt : Infinity;
     const bv = b.dueAt ? b.dueAt : Infinity;
-    return av - bv;
+    return priorityRank(b.priority) - priorityRank(a.priority) || av - bv;
   };
   const listIncomplete = computed(() => listSource.value.filter((t) => !t.completed && !t.cancelled).slice().sort(byDue));
   const listCompleted = computed(() => listSource.value.filter((t) => t.completed && !t.cancelled).slice().sort(byDue));
@@ -196,7 +196,7 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
       else idx = 4;
       buckets[idx].tasks.push(t);
     }
-    for (const b of buckets) b.tasks.sort((a, b2) => (a.dueAt || 0) - (b2.dueAt || 0));
+    for (const b of buckets) b.tasks.sort((a, b2) => priorityRank(b2.priority) - priorityRank(a.priority) || (a.dueAt || 0) - (b2.dueAt || 0));
     return buckets.filter((b) => b.tasks.length);
   });
   // 已过期待办（顺延的作用对象）
@@ -276,37 +276,45 @@ export function useListState({ tasks, checklists, view, plugin, setError, reload
     if (!path) { new Notice(t('app.checklistFileMissing')); return; }
     plugin().app.workspace.openLinkText(path, '', false);
   }
-  // 顺延确认（Obsidian 原生 Modal）
-  function openPostpone() {
-    if (postponing.value || !overdueTasks.value.length) return;
-    const n = overdueTasks.value.length;
+  // 顺延确认（Obsidian 原生 Modal）。tasks 不传时默认对列表「已过期」分桶生效；
+  // 传参则对该批次（如某象限 / 日程视图的已过期任务）生效。
+  function openPostpone(tasks) {
+    const list = (tasks && tasks.length) ? tasks : overdueTasks.value;
+    if (postponing.value || !list.length) return;
+    const n = list.length;
     new ConfirmModal(plugin().app, {
       title: t('app.postponeTitle'),
       message: t('app.postponeMsg', { n }),
       confirmText: t('app.postponeBtn'),
-      onConfirm: () => doPostpone()
+      onConfirm: () => doPostpone(list)
     }).open();
   }
-  // 顺延：所有已过期待办移到今天（保留原时分；全天任务保持全天）
-  async function doPostpone() {
-    const list = overdueTasks.value;
-    if (!list.length || postponing.value) return;
+  // 顺延：把给定批次的过期待办延期到今天。
+  // - 日记文件任务（dateKey 为真实日期）：整块移动到「当天日记」并删除结束日期（📅）标记，
+  //   使任务落在当天、不再跨天；同时保留原时分（全天任务保持全天）。
+  // - 非日记文件任务（清单 / 收件箱）：仅把行内 📅 日期改为今天，文件位置不变。
+  async function doPostpone(list) {
+    if (!list || !list.length || postponing.value) return;
     postponing.value = true;
     try {
       const base = today0();
       for (const t of list) {
         const d = new Date(t.dueAt);
-        const due = t.dueAllDay
+        const at = t.dueAllDay
           ? base
           : base + d.getHours() * 3600000 + d.getMinutes() * 60000;
         // 每移动一条，源文件行号都会漂移，guid 中的旧行号可能失配；
         // 传 expectSummary / expectCompleted 让数据层按内容「唯一匹配」兜底重新定位
-        await Tasks.updateTask(t.guid, {
-          dueAt: due,
-          dueAllDay: !!t.dueAllDay,
-          expectSummary: t.summary,
-          expectCompleted: !!t.completed
-        });
+        const patch = { dueAllDay: !!t.dueAllDay, expectSummary: t.summary, expectCompleted: !!t.completed };
+        if (/^\d{4}-\d{2}-\d{2}$/.test(t.date)) {
+          // 日记文件：开始/结束都置为今天 → updateTask 跨文件移动到当天日记，并因 cs===cd 剥离 📅 结束标记
+          patch.startAt = at;
+          patch.dueAt = at;
+        } else {
+          // 非日记文件：只改 📅
+          patch.dueAt = at;
+        }
+        await Tasks.updateTask(t.guid, patch);
       }
       await reloadTasks();
       new Notice(t('app.postponed', { n: list.length }));

@@ -102,6 +102,16 @@
 .task-app .tk-tag-input:focus { outline: none; }
 .task-app .tk-tag-input::placeholder { color: var(--ink-soft); }
 
+/* ===== 列表行优先级徽标（紧跟勾选圆圈，摘要之前） ===== */
+.task-app .tk-prio {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-top: 2px; border-radius: 5px;
+  font-size: 12px; line-height: 1;
+}
+.task-app .tk-prio.lvl-high { background: rgba(224, 88, 79, .16); }
+.task-app .tk-prio.lvl-medium { background: rgba(224, 169, 59, .18); }
+.task-app .tk-prio.lvl-low { background: rgba(74, 144, 210, .16); }
+
 /* ===== 列表行（TaskRow）与周/月视图共用的行内原语 ===== */
 .task-app .tk-row-wrap { width: 100%; }
 .task-app .tk-row {

@@ -50,6 +50,44 @@
   text-decoration: underline;
 }
 
+/* ---------- 设置页：视图菜单（显隐勾选 + 拖拽排序，横向胶囊排布） ---------- */
+.dt-menuviews {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.dt-menuviews-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  cursor: grab;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.dt-menuviews-item.is-dragging { opacity: .45; }
+.dt-menuviews-item.is-over { box-shadow: inset 0 0 0 2px var(--interactive-accent); }
+/* 隐藏视图：整行压淡但仍可拖拽排序 / 重新勾选显示 */
+.dt-menuviews-item.is-hidden { opacity: .5; }
+
+.dt-menuviews-grip {
+  display: inline-flex;
+  color: var(--text-faint);
+  flex: none;
+}
+.dt-menuviews-grip svg { width: 14px; height: 14px; }
+
+.dt-menuviews-item input[type='checkbox'] { flex: none; }
+
+.dt-menuviews-label { font-size: var(--font-ui-small); color: var(--text-normal); }
+
 /* 设置项渲染兜底：render 抛错时以等宽文本展示原始结构，便于排查 */
 .dt-debug {
   white-space: pre-wrap;

@@ -9,7 +9,8 @@ import { moment, TFile } from 'obsidian';
 import {
   INBOX_KEY, CHILD_INDENT,
   parseTasks, toRecord, serializeBlock, serializeTaskLine,
-  nodeFromTask, locateNode, collectLineNos, todayKey, parseGuid, msToTime, dateToMs, flattenTasks
+  nodeFromTask, locateNode, collectLineNos, todayKey, parseGuid, msToTime, dateToMs, flattenTasks,
+  priorityRank
 } from '../composables/tasks-logic.js';
 
 let plugin = null;
@@ -432,9 +433,12 @@ export async function loadChecklistGroups(listKey) {
     }
     if (gi < 0) ungrouped.push(t); else titled[gi].tasks.push(t);
   }
+  const sortGroup = (g) => Object.assign({}, g, {
+    tasks: g.tasks.slice().sort((a, b) => priorityRank(b.priority) - priorityRank(a.priority) || (a.dueAt || 0) - (b.dueAt || 0))
+  });
   const groups = [];
-  if (ungrouped.length) groups.push({ title: '', tasks: ungrouped });
-  groups.push(...titled);
+  if (ungrouped.length) groups.push(sortGroup({ title: '', tasks: ungrouped }));
+  groups.push(...titled.map(sortGroup));
   const done = records.filter((t) => t.completed && !t.cancelled).length;
   return res(200, { ok: true, key: listKey, name: listNameOf(listKey), groups, total: records.length, done });
 }
@@ -661,6 +665,8 @@ export async function updateTask(guid, patch) {
   if (p.description != null) {
     node.descTexts = String(p.description).split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
   }
+  // 优先级：空串表示清除优先级
+  if (p.priority !== undefined) node.priority = p.priority;
   if (p.completed != null) {
     node.completed = !!p.completed;
     node.done = node.completed ? completionDoneDate(node.done) : '';
@@ -697,7 +703,8 @@ export async function updateTask(guid, patch) {
       ? (p.dueEndAt != null ? Number(p.dueEndAt) : null)
       : (node.timeEnd ? dateToMs(cd || cs, node.timeEnd) : null);
     const endTime = (p.dueAllDay || !endMs) ? '' : (Number.isFinite(endMs) ? msToTime(endMs) : '');
-    if (isList) {
+    if (isList || g.dateKey === INBOX_KEY) {
+      // 清单 / 收件箱：日期仅行内 📅/🛫，文件位置不变（顺延时也只改 📅，不迁移）
       node.due = cd || '';
       node.start = cs || '';
       node.time = p.dueAllDay ? '' : (p.dueAt != null ? msToTime(Number(p.dueAt)) : node.time);

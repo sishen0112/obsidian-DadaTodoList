@@ -54,8 +54,8 @@
                   <i class="la la-caret-right tk-caret" :class="{ open: !ctx.todoCollapsed[b.key] }"></i>
                   <span>{{ b.label }}</span><span class="cnt">{{ b.n }}</span>
                 </button>
-                <button v-if="b.key === 'overdue'" class="tk-postpone-link" type="button"
-                        :title="$t('app.postponeAllTip')" @click="ctx.openPostpone">{{ $t('app.postponeBtn') }}</button>
+                <div v-if="b.key === 'overdue'" class="tk-postpone-link"
+                     :title="$t('app.postponeAllTip')" @click="ctx.openPostpone">{{ $t('app.postponeBtn') }}</div>
               </div>
               <template v-if="!ctx.todoCollapsed[b.key]">
                 <task-row v-for="t in b.tasks" :key="t.guid" :task="t"
@@ -183,13 +183,13 @@ export default {
 .tk-bucket-toggle:hover { background: var(--gold-bg); color: var(--ink); }
 .tk-bucket-toggle .cnt { font-size: 11px; opacity: .7; font-variant-numeric: tabular-nums; }
 .tk-postpone-link {
-  margin-left: auto; border: none !important; background: transparent;
+  margin-left: auto; border: none !important; background: rgba(224, 88, 79, .12);
   font: inherit; font-size: 12px; font-weight: 600; color: var(--c-cancel) !important;
   padding: 2px 8px; border-radius: 7px; cursor: pointer;
   box-shadow: none !important;
   transition: background .15s ease;
 }
-.tk-postpone-link:hover { background: var(--background-modifier-hover); }
+.tk-postpone-link:hover { background: rgba(224, 88, 79, .22); }
 .tk-groups { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 20px 20px; }
 .tk-group { margin-bottom: 12px; }
 .tk-group-h { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin: 4px 2px 8px; display: flex; align-items: center; gap: 8px; letter-spacing: .5px; text-align: left; }

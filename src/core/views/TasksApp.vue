@@ -59,6 +59,9 @@
         <task-agenda-view :ctx="this" :plugin="plugin" />
       </div>
 
+      <!-- ===== 四象限视图（按优先级分 2×2 象限） ===== -->
+      <four-quadrant-view v-else-if="view === 'matrix'" key="matrix" :ctx="this" :plugin="plugin" :hide-done="hideDone" />
+
       <!-- ===== 清单视图（左侧清单列表 + 右侧按 ### 标题分组） ===== -->
       <div v-else-if="view === 'cl'" key="cl" class="tk-clview-wrap">
         <checklist-view :plugin="plugin" :checklists="checklists" :hide-done="hideDone" :main-view="clMainView" />
@@ -75,7 +78,9 @@
     <!-- 底部悬浮胶囊视图切换（日/周/月/日程/清单/全部）；
          vertical 菜单样式下则为左侧固定可展开/收起菜单 -->
     <view-pill :view="view" :vertical="verticalMenu" :rail-collapsed="proRailCollapsed" :plugin="plugin"
-               @switch-view="switchView" @update:rail-collapsed="v => proRailCollapsed = v" />
+               :menu-items="menuItems"
+               @switch-view="switchView" @update:rail-collapsed="v => proRailCollapsed = v"
+               @reorder-menu="reorderMenu" />
 
     <!-- 编辑器与完成日历改用 Obsidian 原生 Modal 外壳（Vue-in-Modal 桥），不再内嵌页面 -->
   </div>
@@ -105,11 +110,13 @@ import ChecklistView from '../components/tasks/ChecklistView.vue';
 import TaskMonthView from '../components/tasks/TaskMonthView.vue';
 import TaskAgendaView from '../components/tasks/TaskAgendaView.vue';
 import TaskListView from '../components/tasks/TaskListView.vue';
+import FourQuadrantView from '../components/tasks/FourQuadrantView.vue';
 import TaskContextMenu from '../components/tasks/TaskContextMenu.vue';
 import ViewPill from '../components/ViewPill.vue';
 import { ConfirmModal } from '../ui/modals.js';
 import { getTaskViewPref, setTaskViewPref, getClMainViewPref, setClMainViewPref } from '../composables/viewPrefs.js';
 import { useListState } from '../composables/useListState.js';
+import { VIEW_MENU_ITEMS, reorderViews } from '../composables/viewMenu.js';
 import { VueModal } from '../ui/VueModal.js';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
@@ -118,7 +125,7 @@ function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + p
 export default {
   name: 'TasksApp',
   components: {
-    TaskRow, ChecklistView,
+    TaskRow, ChecklistView, FourQuadrantView,
     TaskMonthView, TaskAgendaView, TaskListView, TaskTopBar, WeekDayView, TaskContextMenu, ViewPill
   },
   setup() {
@@ -195,6 +202,16 @@ export default {
     // 是否采用左侧竖向菜单：由设置项 menuStyle 控制（horizontal=底部胶囊 / vertical=左侧竖向菜单）。
     // 直接读取响应式 settings，设置页改动后即时生效（无需重启）。基础版与 Pro 共用此开关，体验一致。
     verticalMenu() { return (this.plugin.settings && this.plugin.settings.menuStyle) === 'vertical'; },
+    // 视图菜单项：按设置的顺序（menuViews）排列并过滤隐藏项（menuHiddenViews）。
+    // settings 为响应式对象，设置页改动后菜单即时更新，无需重载视图。
+    menuItems() {
+      const s = this.plugin.settings || {};
+      const order = Array.isArray(s.menuViews) ? s.menuViews : [];
+      const hidden = new Set(Array.isArray(s.menuHiddenViews) ? s.menuHiddenViews : []);
+      const byKey = {};
+      for (const v of VIEW_MENU_ITEMS) byKey[v.key] = v;
+      return order.map((k) => byKey[k]).filter(Boolean).filter((v) => !hidden.has(v.key));
+    },
     // 顶栏区间文案：随当前视图取对应标签（周区间 / 日日期 / 月份 / 日程区间）
     rangeLabel() {
       if (this.view === 'four') return this.tlRange;
@@ -405,12 +422,13 @@ export default {
   },
   methods: {
     // ---------- 弹窗（Obsidian 原生 Modal 外壳 + Vue 组件内容） ----------
-    openEditor(task, defaultDate, defaultTime) {
+    openEditor(task, defaultDate, defaultTime, defaultPriority) {
       new VueModal(this.plugin.app, TaskEditorModal, {
         open: true,
         task,
         defaultDate,
         defaultTime,
+        defaultPriority,
         plugin: this.plugin,
         onSaved: () => this.onSaved(),
         onDeleted: (guid) => this.onDeleted(guid),
@@ -475,6 +493,16 @@ export default {
       this.selectedGuid = again ? again.guid : '';
     },
     switchView(v) { this.view = v; if (v === 'day') this.tlDayOffset = 0; this.persistTaskView(); },
+    // 视图菜单拖拽排序（菜单上直接拖 或 设置页列表拖）：dragKey 移动到 overKey 前/后，
+    // 写回完整顺序（含隐藏项，保持其相对位置）并持久化
+    async reorderMenu(dragKey, overKey) {
+      const s = this.plugin.settings;
+      if (!s || !dragKey || !overKey || dragKey === overKey) return;
+      const next = reorderViews(Array.isArray(s.menuViews) ? s.menuViews : [], dragKey, overKey);
+      if (next === s.menuViews) return;
+      s.menuViews = next;
+      await this.plugin.saveSettings();
+    },
     // 顶栏导航（prev / this / next）：按当前视图分发到 周 / 日 / 月 的偏移
     onNav(dir) {
       if (this.view === 'four') { if (dir === 'prev') this.prevWeek(); else if (dir === 'next') this.nextWeek(); else this.thisWeek(); }
@@ -556,8 +584,8 @@ export default {
       const bv = b.dueAt ? b.dueAt : Infinity;
       return av - bv;
     },
-    openNew(dayKey) {
-      this.openEditor(null, dayKey || '');
+    openNew(dayKey, defaultPriority) {
+      this.openEditor(null, dayKey || '', '', defaultPriority);
     },
     /* ---------- 列表视图写回：子组件通过 ctx 调用（prop 只读，不可直接赋值） ---------- */
     setError(v) { this.error = v; },
@@ -916,13 +944,13 @@ export default {
 .tk-bucket-toggle:hover { background: var(--gold-bg); color: var(--ink); }
 .tk-bucket-toggle .cnt { font-size: 11px; opacity: .7; font-variant-numeric: tabular-nums; }
 .tk-postpone-link {
-  margin-left: auto; border: none; background: transparent;
-  font: inherit; font-size: 12px; font-weight: 600; color: var(--c-cancel);
+  margin-left: auto; border: none !important; background: rgba(224, 88, 79, .12);
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--c-cancel) !important;
   padding: 2px 8px; border-radius: 7px; cursor: pointer;
-  box-shadow: none;
+  box-shadow: none !important;
   transition: background .15s ease;
 }
-.tk-postpone-link:hover { background: var(--background-modifier-hover); }
+.tk-postpone-link:hover { background: rgba(224, 88, 79, .22); }
 .tk-groups { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .tk-group { margin-bottom: 12px; }
 .tk-group-h { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin: 4px 2px 8px; display: flex; align-items: center; gap: 8px; letter-spacing: .5px; text-align: left; }

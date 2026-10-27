@@ -2,6 +2,7 @@
   <div class="tk-row-wrap" :class="{ done: task.completed || task.cancelled, sel: selected }">
     <div class="tk-row" @click="onClickRow" :title="$t('app.rowJumpTip')">
       <i class="tk-check" :class="[{ done: task.completed || task.cancelled }, statusIcon(task)]" @click.stop.prevent="$emit('toggle', task)"></i>
+      <span v-if="task.priority" class="tk-prio" :class="'lvl-' + prioLevel">{{ task.priority }}</span>
       <!-- 名称在前（占满剩余宽度，撑开右侧留白），日期时间在右 -->
       <div class="tk-body">
         <span class="tk-sum" v-html="richSummaryNoTags(task)" @click="onRichClick"></span>
@@ -18,7 +19,7 @@
 <script>
 // 任务列表行（待办/已办分组共用）。
 // 纯展示组件：勾选 / 选中 / 编辑等动作全部上抛，由容器统一处理。
-import { statusIcon, dateText, timeText, richSummaryNoTags } from '../../composables/tasks-logic.js';
+import { statusIcon, dateText, timeText, richSummaryNoTags, priorityToLevel } from '../../composables/tasks-logic.js';
 
 export default {
   name: 'TaskRow',
@@ -29,6 +30,8 @@ export default {
     showDate: { type: Boolean, default: false }
   },
   computed: {
+    // 优先级档位（用于列表行徽标配色）
+    prioLevel() { return priorityToLevel(this.task.priority); },
     // 右侧日期/时间展示：根据分组模式返回图标与文案
     right() {
       const t = this.task;

@@ -27,7 +27,7 @@
         </template>
       </div>
       <!-- 右侧：任务列表（整体居中） -->
-      <div class="tk-ag-main" v-show="!ctx.agendaCollapsed[g.kind]">
+      <div class="tk-ag-main" :class="{ 'has-postpone': g.kind === 'overdue' }" v-show="!ctx.agendaCollapsed[g.kind]">
         <div v-if="!g.tasks.length" class="tk-ag-none" :class="{ 'is-today': g.isToday }">{{ $t('app.dayEmpty') }}</div>
         <div v-for="t in g.tasks" :key="t.guid" class="tk-ag-row"
              :class="{ done: t.completed || t.cancelled, dragging: ctx.dragGuid === t.guid }"
@@ -40,13 +40,15 @@
                @click.stop.prevent="ctx.toggle(t)" :title="(t.completed || t.cancelled) ? $t('app.markUndone') : $t('app.markDone')"></i>
           </span>
           <div class="tk-ag-card" :style="ctx.agendaCard(t)">
-            <span class="tk-ag-sum" :class="{ done: t.completed || t.cancelled }" v-html="ctx.richSummaryNoTags(t)" @click="ctx.onRichClick"></span>
+            <span class="tk-ag-sum" :class="{ done: t.completed || t.cancelled, cancel: t.cancelled }" v-html="ctx.richSummaryNoTags(t)" @click="ctx.onRichClick"></span>
             <!-- 跨日期任务右侧小字：显示开始-结束日期区间（如 10/2-10/7） -->
             <span v-if="ctx.spanRange(t)" class="tk-ag-range">{{ ctx.spanRange(t) }}</span>
           </div>
         </div>
       </div>
-      <button v-if="g.kind === 'day'" class="tk-add tk-ag-add" type="button" @click.stop="ctx.openNew(g.key)" :title="$t('app.addDayTask')"><i class="la la-plus-circle"></i></button>
+      <button v-if="g.kind === 'day'" class="tk-add tk-ag-add" type="button" @click.stop="ctx.openNew(g.key)" v-tooltip="$t('app.addDayTask')"><i class="la la-plus-circle"></i></button>
+      <button v-if="g.kind === 'overdue' && !ctx.agendaCollapsed[g.kind]" class="tk-ag-postpone" type="button"
+              v-tooltip="$t('app.postponeAllTip')" @click.stop="ctx.openPostpone(g.tasks)">{{ $t('app.postponeBtn') }}</button>
     </section>
   </div>
 </template>
@@ -111,7 +113,7 @@ export default {
         }
       }
       const out = [];
-      if (overdue.length) out.push({ kind: 'overdue', key: 'overdue', label: this.$t('app.agendaOverdue'), tasks: overdue.sort(ctx.byDue) });
+      if (overdue.length) out.push({ kind: 'overdue', key: 'overdue', label: this.$t('app.overdue'), tasks: overdue.sort(ctx.byDue) });
       for (const [k, list] of dayMap) {
         const tasks = ctx.visibleTasks(list).slice().sort(ctx.byDue);
         if (!tasks.length && k !== ctx.todayKey) continue; // 空的天跳过，但今天始终保留
@@ -165,8 +167,19 @@ export default {
 .tk-ag-label.is-overdue { color: var(--c-cancel); }
 /* 右侧列表：紧贴日期向右铺开（不再整体居中，解决偏右问题） */
 .tk-ag-main { position: relative; flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-direction: column; }
+/* 已过期分组展开后，任务列表顶部下挪，避开右上角绝对定位的「顺延」按钮 */
+.tk-ag-main.has-postpone { padding-top: 26px; }
 /* 加号按钮定位：每日段右上角（外观与显示逻辑统一走全局 .tk-add / .task-app .tk-ag:hover .tk-ag-add） */
 .tk-ag-add { position: absolute; top: 4px; right: 0; }
+/* 已过期分组：右上角「顺延」按钮（一键把该组已过期任务延期到今天）；样式对齐列表视图 .tk-postpone-link */
+.tk-ag-postpone {
+  position: absolute; top: 4px; right: 0;
+  margin-left: auto; border: none !important; background: rgba(224, 88, 79, .12);
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--c-cancel) !important;
+  padding: 2px 8px; border-radius: 7px; cursor: pointer;
+  box-shadow: none !important; transition: background .15s ease;
+}
+.tk-ag-postpone:hover { background: rgba(224, 88, 79, .22); }
 .tk-ag-none { color: var(--ink-soft); font-size: 12px; padding: 4px 2px 2px; }
 /* 今日空状态：居中、加大留白与字号 */
 .tk-ag-none.is-today { text-align: center; font-size: 14px; color: var(--ink-soft); padding: 22px 10px; }
@@ -190,7 +203,10 @@ export default {
 .tk-ag-sum { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 /* 跨日期任务右侧小字：开始-结束日期区间（如 10/2-10/7），靠右、小号、低透明度 */
 .tk-ag-range { flex: none; margin-left: auto; padding-left: 8px; font-size: 9px; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tk-ag-sum.done { text-decoration: line-through; opacity: .55; }
+.tk-ag-sum.done { opacity: .55; }
+.tk-ag-sum.cancel { text-decoration: line-through; }
+/* 已完成 / 已取消：整块卡片（含彩色背景）降透明，与日视图 .tk-tl-aditem.done 一致 */
+.tk-ag-row.done .tk-ag-card { opacity: .6; }
 .tk-ag-row.done .tk-ag-time { opacity: .55; }
 .tk-ag-row.dragging { opacity: .5; }
 /* 视图变窄时：日期信息移到任务列表上方，让列表占满整宽。
