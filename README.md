@@ -10,7 +10,7 @@
 
 ### Who is it for?
 
-- **Already managing tasks in Obsidian?** If your to-dos are scattered across daily notes and scattered checklists — and finding them means searching — this plugin is for you. It gathers everything you've already written into six views (day / week / month / agenda / checklists / list) with zero migration: your notes stay exactly where they are.
+- **Already managing tasks in Obsidian?** If your to-dos are scattered across daily notes and scattered checklists — and finding them means searching — this plugin is for you. It gathers everything you've already written into seven views (day / week / month / agenda / quadrants / checklists / list) with zero migration: your notes stay exactly where they are.
 - **Haven't tried task management in Obsidian yet?** You don't need yet another to-do service. Your vault *is* your task manager: plain Markdown that stays readable forever, stored locally, synced with whatever you already use. Start with a single `- [ ]` and grow your own system from there.
 
 ### Quick start
@@ -21,13 +21,15 @@
 
 ### Highlights
 
-- **Six views** — day timeline, seven-day week timeline with lane layout, month calendar (with Chinese lunar dates, solar terms, festivals and statutory holidays), rolling agenda, grouped checklists, and a filterable list of everything
+- **Seven views** — day timeline, seven-day week timeline with lane layout, month calendar (with Chinese lunar dates, solar terms, festivals and statutory holidays), rolling agenda, a 2×2 priority quadrants matrix, grouped checklists, and a filterable list of everything
 - **Inline syntax** — write `#tags` and `[links](url)` right in the task title; they render as clickable pills and hyperlinks
 - **Flexible time** — single time, time ranges (start – end), all-day, or **cross-date** (start date – end date, shown across multiple days), switchable per task
 - **Subtasks** — indented lines become nested subtasks of any depth
+- **Task priority** — mark tasks high / medium / low (🔺 / 🔼 / 🔽); the format is read & write compatible with the obsidian-tasks plugin, set right in the task editor
 - **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
 - **Option/Alt + drag to copy** — hold Option (Mac) / Alt or Ctrl (Windows·Linux) while dragging to drop a copy at the target; the original stays put. In the month view the copy keeps its original times and only changes the date; on the week / day timeline the drop point becomes the new start time (original duration preserved)
-- **Smart extras** — overdue postponement in one click, `Ctrl/⌘+click` to jump to the source note
+- **Customizable view menu** — choose which views appear in the switcher menu and drag to reorder them; hidden views keep their order and can be restored anytime
+- **Smart extras** — overdue postponement in one click (diary tasks move into today's daily note), `Ctrl/⌘+click` to jump to the source note
 
 ### Installation
 
@@ -88,6 +90,7 @@ tags:
 | Checklist file tag(s) | Notes whose frontmatter `tags` include any of these become checklist files; multiple allowed |
 | Week starts on | First column of the week view and month calendar; Sunday through Saturday, default Monday |
 | Timeline display range | Start and end hours of the timeline view (0:00 – 24:00) to focus on the hours you use |
+| View menu | Choose which views show in the switcher menu; drag rows to reorder — all views shown in default order by default |
 | Add completion date marker when completing a task | Appends the completion date to the end of the task line when you check it off (e.g. ✅ 2026-10-06). On by default; turn off to skip the marker while keeping start / due date tags |
 
 ### Interface
