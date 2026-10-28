@@ -10,7 +10,7 @@
       </div>
       <label class="tk-field">
         <span>{{ $t('editor.fieldTitle') }}</span>
-        <input ref="sumInput" v-model="form.title" type="text" :placeholder="$t('editor.titlePh')" @keyup.enter="save" />
+        <input ref="sumInput" v-model="form.title" type="text" :placeholder="$t('editor.titlePh')" @keydown.enter="onTitleEnter" />
       </label>
       <!-- 链接：胶囊右侧按钮可编辑，末尾 + 可新增 -->
       <div class="tk-links">
@@ -36,7 +36,7 @@
         </span>
         <span v-if="addingTag" class="tk-tag-chip is-editing">
           <input ref="tagInput" v-model="tagDraft" class="tk-tag-input" type="text" :placeholder="$t('editor.tagName')"
-                 @keyup.enter="commitTag" @keyup.esc="cancelAddTag" @blur="commitTag" />
+                 @keydown.enter="onTagEnter" @keydown.esc="onTagEsc" @blur="commitTag" />
         </span>
         <button v-else class="tk-add-mini" type="button" :title="$t('editor.addTag')" @click="startAddTag">
           <i class="la la-plus"></i>
@@ -145,7 +145,7 @@
 
 <script>
 import { Tasks } from '../composables/useTasks.js';
-import { splitSummary, composeSummary, sanitizeTag, PRIORITY_ICON, priorityToLevel, levelToPriorityEmoji } from '../composables/tasks-logic.js';
+import { splitSummary, composeSummary, sanitizeTag, isImeKey, PRIORITY_ICON, priorityToLevel, levelToPriorityEmoji } from '../composables/tasks-logic.js';
 import { LinkFormModal, ConfirmModal } from '../ui/modals.js';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
 import SubtaskList from './SubtaskList.vue';
@@ -347,6 +347,8 @@ export default {
     },
     // opts.cancelled 存在时同时写入取消态（「取消任务/恢复任务」按钮直达）
     async save(opts) {
+      // keydown 阶段触发，长按回车会连发：saving 锁防重复创建
+      if (this.saving) return;
       const title = (this.form.title || '').trim();
       if (!title) return;
       // 时间段：结束须晚于开始，否则提示并阻止保存（不再静默吸附，避免改期被悄悄改写）
@@ -460,6 +462,20 @@ export default {
     },
     removeTag(i) {
       this.form.tags.splice(i, 1);
+    },
+    /* ---------- 键盘：输入法组字期间的回车 / esc 不算快捷键 ---------- */
+    // 标题回车 = 保存；中文输入法按回车是「上屏候选词」，那一下必须放行
+    onTitleEnter(e) {
+      if (isImeKey(e)) return;
+      this.save();
+    },
+    onTagEnter(e) {
+      if (isImeKey(e)) return;
+      this.commitTag();
+    },
+    onTagEsc(e) {
+      if (isImeKey(e)) return;
+      this.cancelAddTag();
     },
     close() { this.$emit('update:open', false); }
   }

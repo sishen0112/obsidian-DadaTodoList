@@ -375,6 +375,14 @@ export function sanitizeTag(name) {
   return String(name == null ? '' : name).trim().replace(/^#+/, '').replace(/[\s]+/g, '-');
 }
 
+// 输入法正在组字时按下的键不算快捷键：中文输入法用回车/退格上屏候选词，
+// 这时的回车不能当成「保存/提交」。只有 keydown 阶段的 isComposing 可靠
+// （compositionend 夹在 keydown 与 keyup 之间，keyup 时已为 false）；
+// keyCode 229 兜底 Safari / 部分输入法下 isComposing 不可靠的情况。
+export function isImeKey(e) {
+  return !!e && (e.isComposing === true || e.keyCode === 229);
+}
+
 // 标题 → 纯文本（用于 tooltip 等场景：链接只留文字）
 export function plainInline(text) {
   return stripMute(String(text == null ? '' : text))

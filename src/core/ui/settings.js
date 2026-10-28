@@ -1,7 +1,7 @@
 import { PluginSettingTab, Notice, AbstractInputSuggest, TFolder, setIcon } from 'obsidian';
 import { t } from '../i18n/index.js';
 import { countInboxTasks, migrateInboxTasks } from '../api/tasks.js';
-import { setColorScheme, setWeekStart, EXTRA_SCHEME_OPTIONS } from '../composables/tasks-logic.js';
+import { setColorScheme, setWeekStart, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
 import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
@@ -303,6 +303,8 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         };
         const tagInput = editor.createEl('input', { type: 'text', placeholder: T('tagPlaceholder') });
         tagInput.addEventListener('keydown', async (e) => {
+          // 输入法组字中的回车只上屏候选词，不提交标签
+          if (isImeKey(e)) return;
           if (e.key === 'Enter' && tagInput.value.trim()) {
             e.preventDefault();
             const v = tagInput.value.trim().replace(/^#/, '');

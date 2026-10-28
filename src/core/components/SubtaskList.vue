@@ -3,7 +3,7 @@
     <ul v-if="items.length" class="sub-list">
       <li v-for="s in items" :key="s.guid" class="sub-item" :class="{ done: s.completed, editing: editingGuid === s.guid }">
         <i class="sub-check" :class="[{ done: s.completed }, subIcon(s)]" @click.stop="toggle(s, !s.completed)"></i>
-        <input v-if="editingGuid === s.guid" v-focus class="sub-edit" v-model="draft" @keyup.enter="saveEdit(s)" @keyup.esc="cancelEdit" @blur="saveEdit(s)" />
+        <input v-if="editingGuid === s.guid" v-focus class="sub-edit" v-model="draft" @keydown.enter="onEditEnter($event, s)" @keydown.esc="onEditEsc" @blur="saveEdit(s)" />
         <span v-else class="sub-sum" @dblclick="startEdit(s)">{{ s.summary }}</span>
         <button v-if="editingGuid !== s.guid" class="sub-del" type="button" :title="$t('app.delSubtask')" @click.stop="remove(s)">×</button>
       </li>
@@ -28,7 +28,7 @@
         class="sub-input"
         :placeholder="$t('app.addSubtask')"
         :disabled="adding"
-        @keyup.enter="add"
+        @keydown.enter="onAddEnter"
       />
     </div>
   </div>
@@ -36,6 +36,7 @@
 
 <script>
 import { Tasks } from '../composables/useTasks.js';
+import { isImeKey } from '../composables/tasks-logic.js';
 
 export default {
   name: 'SubtaskList',
@@ -71,6 +72,19 @@ export default {
   methods: {
     subIcon(s) {
       return s.completed ? 'la la-check-circle-o' : 'la la-circle-o';
+    },
+    /* ---------- 键盘：输入法组字期间的回车 / esc 不算快捷键 ---------- */
+    onEditEnter(e, s) {
+      if (isImeKey(e)) return;
+      this.saveEdit(s);
+    },
+    onEditEsc(e) {
+      if (isImeKey(e)) return;
+      this.cancelEdit();
+    },
+    onAddEnter(e) {
+      if (isImeKey(e)) return;
+      this.add();
     },
     startEdit(s) {
       this.editingGuid = s.guid;
