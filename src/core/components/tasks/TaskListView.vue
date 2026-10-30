@@ -17,7 +17,7 @@
         <div class="tk-quick">
           <input ref="quickInput" :value="ctx.quick" class="tk-quick-input" type="text"
                  :placeholder="ctx.activeList ? $t('app.quickAddTo', { name: ctx.activeListName }) : $t('app.quickAdd')"
-                 :disabled="ctx.adding" @keyup.enter="quickAdd" @input="ctx.setQuick($event.target.value)" />
+                 :disabled="ctx.adding" @keydown.enter="onQuickEnter" @input="ctx.setQuick($event.target.value)" />
           <button class="tk-quick-btn" type="button" :disabled="ctx.adding || !ctx.quick.trim()" @click="quickAdd" :title="$t('common.save')"><i class="la la-save"></i></button>
         </div>
 
@@ -107,6 +107,7 @@
 // 列表视图（所有）：左侧筛选 + 右侧分组列表 / 卡片。
 // 共享状态与方法都在父级（ctx）；仅「快速新增」交互在此组件内（需本地 ref 聚焦）。
 import { Tasks } from '../../composables/useTasks.js';
+import { isImeKey } from '../../composables/tasks-logic.js';
 import TaskFilters from './TaskFilters.vue';
 import TaskRow from './TaskRow.vue';
 
@@ -118,6 +119,11 @@ export default {
     plugin: { type: Object, default: null }
   },
   methods: {
+    // 输入法组字中的回车是「上屏候选词」，不能当成提交
+    onQuickEnter(e) {
+      if (isImeKey(e)) return;
+      this.quickAdd();
+    },
     async quickAdd() {
       const summary = (this.ctx.quick || '').trim();
       if (!summary || this.ctx.adding) return;
