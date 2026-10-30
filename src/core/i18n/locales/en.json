@@ -50,7 +50,7 @@
     "viewCl": "Checklists",
     "viewMatrix": "Quadrants",
     "matrixTitleHigh": "Important & Urgent",
-    "matrixTitleMedium": "Not Important but Urgent",
+    "matrixTitleMedium": "Important but Not Urgent",
     "matrixTitleLow": "Urgent but Not Important",
     "matrixTitleNone": "Not Urgent, Not Important",
     "matrixEmpty": "No tasks",

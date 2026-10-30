@@ -50,7 +50,7 @@
     "viewCl": "清单",
     "viewMatrix": "四象限",
     "matrixTitleHigh": "重要且紧急",
-    "matrixTitleMedium": "不重要但紧急",
+    "matrixTitleMedium": "重要不紧急",
     "matrixTitleLow": "紧急不重要",
     "matrixTitleNone": "不重要不紧急",
     "matrixEmpty": "暂无任务",

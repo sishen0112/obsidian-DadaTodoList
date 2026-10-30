@@ -48,9 +48,9 @@
 import { Tasks } from '../../composables/useTasks.js';
 import { renderInlineHtml, dateText, timeText, statusIcon, priorityToLevel, levelToPriorityEmoji, weekdayShort } from '../../composables/tasks-logic.js';
 
-// 四象限：按优先级把任务分到 2×2 网格（行占 50% 高、列占 50% 宽）
+// 四象限（艾森豪威尔矩阵）：按优先级把任务分到 2×2 网格（行占 50% 高、列占 50% 宽）
 //   左上 红 重要且紧急   → 高优先级
-//   右上 橙 不重要但紧急 → 中优先级
+//   右上 橙 重要不紧急   → 中优先级
 //   左下 蓝 紧急不重要   → 低优先级
 //   右下 绿 不重要不紧急 → 无优先级
 const QUADS = [
