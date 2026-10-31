@@ -1,8 +1,6 @@
 node_modules/
 dist/
 dada-todo-list/
-dada-todo-pro/
-dada-todo-personal/
 .codebuddy/
 *.log
 .DS_Store

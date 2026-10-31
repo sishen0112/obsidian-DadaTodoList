@@ -7,6 +7,7 @@ import { normalizeMenuViews, normalizeMenuHidden } from './composables/viewMenu.
 import { setupDevReload } from './dev/devReload.js';
 import { setupHoverPreview, teardownHoverPreview } from './hoverPreview.js';
 import { DadaTodoSettingTab } from './ui/settings.js';
+import { ReminderService } from './services/reminder.js';
 import { initI18n, t } from './i18n/index.js';
 import { tooltip } from './directives/tooltip.js';
 import 'line-awesome/dist/line-awesome/css/line-awesome.min.css';
@@ -124,6 +125,11 @@ export default class DadaTodoPlugin extends Plugin {
     // 复用核心「页面预览」：清单视图左侧文件列表悬停即弹出该清单笔记预览（无需自绘弹窗）
     setupHoverPreview(this);
 
+    // 任务到点提醒：仅在 Obsidian 运行时生效（无后台推送）。开关默认关，
+    // 设置里打开后即时生效（服务每次扫描都读最新设置，无需重启）。
+    this.reminder = new ReminderService(this);
+    this.reminder.start();
+
     // 明暗主题切换后，自动重算依赖主题的配色（如深色 / 浅色变体、块内文字等），无需手动切换视图
     this.registerThemeColorRefresh();
   }
@@ -173,6 +179,7 @@ export default class DadaTodoPlugin extends Plugin {
   }
 
   onunload() {
+    if (this.reminder) { this.reminder.stop(); this.reminder = null; }
     this.app.workspace.detachLeavesOfType(this.viewType);
     // 反注册核心「页面预览」来源，清理设置项里的本插件条目
     teardownHoverPreview(this);
@@ -225,6 +232,17 @@ export default class DadaTodoPlugin extends Plugin {
       menuViews: normalizeMenuViews(data.menuViews),
       // 视图菜单：隐藏的视图 key（不显示在菜单上，但保留排序，可随时在设置页重新勾选显示）
       menuHiddenViews: normalizeMenuHidden(data.menuHiddenViews),
+      // 任务到点提醒总开关：默认关（避免更新后对所有任务突然弹通知），开启后即时生效并自带提示音
+      remindEnabled: data.remindEnabled === true,
+      // 提醒通道：system=系统通知（桌面端，需授权，不可用自动回落）/ in-app=只用 Obsidian 内提示
+      remindChannel: data.remindChannel === 'in-app' ? 'in-app' : 'system',
+      // 全天任务是否提醒（独立开关，默认关：只提醒有具体时刻的任务）
+      remindAllDay: data.remindAllDay === true,
+      // 全天任务的提醒时刻（HH:MM）：当天该时刻提醒当天的全天任务
+      remindAllDayTime: (() => {
+        const v = typeof data.remindAllDayTime === 'string' ? data.remindAllDayTime.trim() : '';
+        return /^(\d{1,2}):(\d{2})$/.test(v) ? v : '10:00';
+      })(),
     };
     // 让设置在 Vue 中具备响应式：菜单样式等设置改动后可即时生效，无需重启 Obsidian
     this.settings = reactive(this.settings);

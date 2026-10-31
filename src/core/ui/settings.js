@@ -378,6 +378,84 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       }),
     ]);
 
+    // 全天任务时间行的 DOM：由开关联动显示 / 隐藏（声明式渲染后再补一次，避免样式被覆盖）
+    let allDayTimeRowEl = null;
+    const setAllDayTimeVisible = (on) => {
+      if (!allDayTimeRowEl) return;
+      allDayTimeRowEl.style.display = on ? '' : 'none';
+    };
+    // 分组：提醒（顺序：总开关 → 全天任务开关 + 时间 → 通知方式 → 测试按钮）
+    //   平台限制写在总开关的说明里（带 ⚠️），不再单列提示行
+    //   - 提示音：开启提醒即自带，不做开关与音量设置
+    //   - 通知方式：系统通知优先，拿不到权限自动回落应用内
+    //   - 系统通知权限：打开总开关时顺便申请（点击即用户手势），不单列设置项
+    const reminder = group('groupReminder', [
+      row('remindEnabled', 'remindEnabledDesc', (s) => {
+        s.addToggle((tg) => {
+          tg.setValue(plugin.settings.remindEnabled === true); // 默认关
+          tg.onChange(async (value) => {
+            plugin.settings.remindEnabled = value;
+            await plugin.saveSettings();
+            if (!value || !plugin.reminder) return;
+            // 打开总开关时申请系统通知权限（此刻正处于点击手势中，浏览器才接受申请）
+            if (plugin.reminder.permission === 'default') await plugin.reminder.requestPermission();
+            // 立刻扫描一遍，不用等下一个 5 分钟窗口
+            await plugin.reminder.refresh();
+          });
+        });
+      }),
+      row('remindAllDay', 'remindAllDayDesc', (s) => {
+        s.addToggle((tg) => {
+          tg.setValue(plugin.settings.remindAllDay === true); // 默认关
+          tg.onChange(async (value) => {
+            plugin.settings.remindAllDay = value;
+            await plugin.saveSettings();
+            setAllDayTimeVisible(value);
+            if (value && plugin.reminder) await plugin.reminder.refresh();
+          });
+        });
+      }),
+      row('remindAllDayTime', 'remindAllDayTimeDesc', (s) => {
+        // 全天任务开关关闭时整行隐藏（开关与时间在视觉上成一组）
+        allDayTimeRowEl = s.settingEl;
+        setAllDayTimeVisible(plugin.settings.remindAllDay === true);
+        // 声明式渲染可能随后重置行样式，下一帧再补一次
+        requestAnimationFrame(() => setAllDayTimeVisible(plugin.settings.remindAllDay === true));
+        s.addText((tx) => {
+          // 时间选择器：Obsidian 无内置时间控件，用原生 <input type="time">（Electron/Chromium 均支持）
+          tx.inputEl.type = 'time';
+          tx.inputEl.step = '60';
+          tx.setValue(plugin.settings.remindAllDayTime || '10:00');
+          tx.onChange(async (value) => {
+            const v = String(value || '').trim();
+            if (!/^(\d{1,2}):(\d{2})$/.test(v)) return; // 非法值不落盘
+            plugin.settings.remindAllDayTime = v;
+            await plugin.saveSettings();
+            if (plugin.reminder) await plugin.reminder.refresh();
+          });
+        });
+      }),
+      row('remindChannel', 'remindChannelDesc', (s) => {
+        s.addDropdown((dd) => {
+          dd.addOption('system', T('remindSystem'));
+          dd.addOption('in-app', T('remindInApp'));
+          dd.setValue(plugin.settings.remindChannel === 'in-app' ? 'in-app' : 'system');
+          dd.onChange(async (value) => {
+            plugin.settings.remindChannel = value;
+            await plugin.saveSettings();
+          });
+        });
+      }),
+      row('remindTest', 'remindTestDesc', (s) => {
+        s.addButton((b) => {
+          b.setButtonText(T('remindTestBtn'));
+          b.onClick(async () => {
+            if (plugin.reminder) await plugin.reminder.sendTest();
+          });
+        });
+      }),
+    ]);
+
     // 分组：任务标记（完成日期标记开关）
     const taskMark = group('groupTaskMark', [
       row('addDoneDateMarker', 'addDoneDateMarkerDesc', (s) => {
@@ -463,7 +541,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
 
     // 顶部不再单独渲染插件名 + 版本标题行：Obsidian 设置页 Tab 标题本身已是插件名，避免重复
 
-    const defs = [appearance, journal, inbox, views, taskMark, about];
+    const defs = [appearance, journal, inbox, views, reminder, taskMark, about];
     return defs;
     } catch (e) {
       // 定义阶段抛错（非常罕见）：直接显示错误

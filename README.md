@@ -29,6 +29,7 @@
 - **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
 - **Option/Alt + drag to copy** — hold Option (Mac) / Alt or Ctrl (Windows·Linux) while dragging to drop a copy at the target; the original stays put. In the month view the copy keeps its original times and only changes the date; on the week / day timeline the drop point becomes the new start time (original duration preserved)
 - **Customizable view menu** — choose which views appear in the switcher menu and drag to reorder them; hidden views keep their order and can be restored anytime
+- **Due-time reminders** — get a system notification or an in-app notice when a task comes due, with a short "da-da" chime; all-day tasks can share one fixed reminder time (e.g. 10:00). ⚠️ Desktop only: there is no background push, so nothing fires while Obsidian is closed or in the background
 - **Smart extras** — overdue postponement in one click (diary tasks move into today's daily note), `Ctrl/⌘+click` to jump to the source note
 
 ### Installation
@@ -92,6 +93,10 @@ tags:
 | Timeline display range | Start and end hours of the timeline view (0:00 – 24:00) to focus on the hours you use |
 | View menu | Choose which views show in the switcher menu; drag rows to reorder — all views shown in default order by default |
 | Add completion date marker when completing a task | Appends the completion date to the end of the task line when you check it off (e.g. ✅ 2026-10-06). On by default; turn off to skip the marker while keeping start / due date tags |
+| Notify when tasks are due | Remind you with a notification plus a short sound when a task comes due. Off by default. ⚠️ Desktop only, no background push |
+| Remind all-day tasks | All-day tasks have no time of day; turn on to remind them at the time below. Off by default |
+| All-day reminder time | Every all-day task of the day is reminded at this time, e.g. 10:00 |
+| Notification channel | System notification (desktop popup) or in-app notice; falls back to in-app when system permission is missing |
 
 ### Interface
 
