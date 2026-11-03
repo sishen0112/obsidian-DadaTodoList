@@ -729,7 +729,7 @@ export default {
         const d = new Date(t.dueAt); // 保留原来的时刻
         dueAt = new Date(dayKey + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00').getTime();
       }
-      const payload = { summary: t.summary, description: t.description, dueAt, dueAllDay: allDay };
+      const payload = { summary: t.summary, description: t.description, priority: t.priority, dueAt, dueAllDay: allDay };
       // 跨日期全天任务：落点作为开始日，结束日按原跨度顺延，保持原天数不变
       if (allDay && t.startAt && t.startAt !== t.dueAt) {
         const day = 86400000;

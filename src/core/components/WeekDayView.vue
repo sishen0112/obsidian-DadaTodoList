@@ -368,7 +368,7 @@ export default {
       min = Math.max(this.axisStartMin, Math.min(this.axisEndMin - 1, Math.round(min / 30) * 30)); // 吸附到整点 / 半点，限制在窗口内
       const hh = Math.floor(min / 60), mm = min % 60;
       const dueAt = new Date(dayKey + 'T' + pad(hh) + ':' + pad(mm) + ':00').getTime();
-      const payload = { summary: t.summary, description: t.description, dueAt, dueAllDay: false };
+      const payload = { summary: t.summary, description: t.description, priority: t.priority, dueAt, dueAllDay: false };
       const dur = this.dragDuration(t);
       if (dur > 0) {
         let endMin = min + dur;
@@ -464,6 +464,7 @@ export default {
       const payload = {
         summary: t.summary,
         description: t.description,
+        priority: t.priority,
         startAt: isSpan ? base : undefined,
         dueAt: isSpan ? base + Math.max(0, Math.round((Number(t.dueAt) - Number(t.startAt)) / day)) * day : base,
         dueAllDay: true
