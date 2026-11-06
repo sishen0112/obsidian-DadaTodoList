@@ -228,6 +228,8 @@ export default class DadaTodoPlugin extends Plugin {
       })(),
       // 时间选择器步长（分钟）：下拉以该步长生成可选项（5–60，默认 5）
       timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || 5))),
+      // 时间轴吸附粒度（分钟）：拖动 / 拉伸任务块与拖入落点按该步长吸附（5/10/15/30，默认 30）
+      snapMinutes: [5, 10, 15, 30].includes(Number(data.snapMinutes)) ? Number(data.snapMinutes) : 30,
       // 视图菜单：完整视图顺序（含隐藏项，保持其排序记忆）；默认全部按当前顺序
       menuViews: normalizeMenuViews(data.menuViews),
       // 视图菜单：隐藏的视图 key（不显示在菜单上，但保留排序，可随时在设置页重新勾选显示）

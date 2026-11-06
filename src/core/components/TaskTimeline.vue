@@ -107,7 +107,7 @@
               <i class="tk-check" :class="[{ done: b.t.completed || b.t.cancelled }, helpers.statusIcon(b.t)]" @click.stop.prevent="handlers.toggle(b.t)"></i>
               <span class="tk-tl-sum" :class="{ done: b.t.completed || b.t.cancelled }" v-html="helpers.richSummaryNoTags(b.t)" @click="helpers.richClick"></span>
             </div>
-            <span class="tk-tl-time">{{ helpers.timeText(b.t) }}</span>
+            <span class="tk-tl-time" v-tooltip="$t('app.dblclickTimeTip')" @dblclick.stop="openTimePop(b, $event)">{{ helpers.timeText(b.t) }}</span>
           </div>
           <div class="tk-tl-rsz tk-tl-rsz-bot" :title="$t('app.resizeEndTip')"
                @pointerdown.stop.prevent="onResizeDown('bottom', b, $event)" @mousedown.stop.prevent @click.stop.prevent
@@ -115,17 +115,32 @@
         </div>
       </div>
     </div>
+
+    <!-- 双击块内时间：就地小浮层复用编辑器的 TimePicker（issue #18）；
+         点击浮层外任意处 / 滚动 / Esc 关闭（输入框内 Esc 先由 TimePicker 还原文本） -->
+    <div v-if="timePop" class="tk-tl-timepop" :style="{ left: timePop.x + 'px', top: timePop.y + 'px' }" @pointerdown.stop>
+      <div class="tk-tl-timepop-row">
+        <span v-if="timePop.hasEnd" class="tk-tl-timepop-label">{{ $t('editor.startDate') }}</span>
+        <TimePicker :model-value="timePop.start" :step="timeStep" :max="timePop.hasEnd ? timePop.end : ''" placeholder="HH:MM" @update:model-value="onPopStartInput" @change="onTimePopChange" />
+      </div>
+      <div v-if="timePop.hasEnd" class="tk-tl-timepop-row">
+        <span class="tk-tl-timepop-label">{{ $t('editor.endDate') }}</span>
+        <TimePicker :model-value="timePop.end" :step="timeStep" :min="timePop.start" placeholder="HH:MM" @update:model-value="onPopEndInput" @change="onTimePopChange" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { layoutSpanBars, spansDays, spanDateText } from '../composables/tasks-logic.js';
-// 时间轴范围（分钟）由父级经 props 传入（默认 00:00–24:00）；吸附步长整点/半点
-const SNAP = 30;
+import TimePicker from './TimePicker.vue';
+// 时间轴范围（分钟）由父级经 props 传入（默认 00:00–24:00）；吸附步长见 props.snap（设置项 snapMinutes）
 // 单时间任务在时间轴上的绘制时长（分钟），与 WeekDayView.layoutBlocks 的 DEFAULT_MIN 一致
 const DEFAULT_MIN = 60;
 export default {
   name: 'TaskTimeline',
+  components: { TimePicker },
+  inject: ['plugin'],
   props: {
     cols: { type: Array, required: true },
     todayKey: { type: String, required: true },
@@ -138,12 +153,19 @@ export default {
     isWeek: { type: Boolean, default: false },
     // 时间轴显示窗口（分钟）：开始 / 结束，由父级按设置传入
     axisStart: { type: Number, default: 0 },
-    axisEnd: { type: Number, default: 24 * 60 }
+    axisEnd: { type: Number, default: 24 * 60 },
+    // 吸附粒度（分钟）：父级取设置项 snapMinutes 传入（5/10/15/30）
+    snap: { type: Number, default: 30 }
   },
   data() {
-    return { resizing: null, selectedGuid: '' };
+    return { resizing: null, selectedGuid: '', timePop: null };
   },
   computed: {
+    // 时间选择器步长：取自插件设置（timeStep），取不到时默认 5（分钟）
+    timeStep() {
+      const st = this.plugin && this.plugin.settings;
+      return (st && Number(st.timeStep)) || 5;
+    },
     // 时间轴刻度：按显示窗口逐整点（小时数由 axisStart / axisEnd 决定）
     axisRows() {
       const h = this.hourH;
@@ -175,6 +197,7 @@ export default {
       window.removeEventListener('pointermove', this.onResizeMove);
       window.removeEventListener('pointerup', this.onResizeUp);
     }
+    this.unbindTimePopClosers();
   },
   methods: {
     minOfDay(ms) {
@@ -260,10 +283,10 @@ export default {
       window.removeEventListener('pointerup', this.onSpanResizeUp);
       this.handlers.resizeSpanCommit(r.t);
     },
-    // 像素 Y（相对列顶，窗口起点对应 0）→ 当日分钟，吸附 SNAP 并限制在窗口内
+    // 像素 Y（相对列顶，窗口起点对应 0）→ 当日分钟，按吸附步长（this.snap，设置项 snapMinutes）限制在窗口内
     yToMin(y) {
       const min = this.axisStart + (y / this.hourH) * 60;
-      return Math.max(this.axisStart, Math.min(this.axisEnd, Math.round(min / SNAP) * SNAP));
+      return Math.max(this.axisStart, Math.min(this.axisEnd, Math.round(min / this.snap) * this.snap));
     },
     // 单击任务：Ctrl/⌘ 时直接跳转到任务所在笔记并高亮；否则选中并显示拖动柄
     onBlockClick(t, e) {
@@ -272,6 +295,89 @@ export default {
     },
     clearSelection() {
       this.selectedGuid = '';
+    },
+    // ---------- 双击块内时间：就地浮层改时间（issue #18） ----------
+    openTimePop(b, e) {
+      const t = b.t;
+      const sd = t.dueAt ? new Date(t.dueAt) : null;
+      if (!sd || !this.handlers.resize) return;
+      const pad = (n) => (n < 10 ? '0' + n : '' + n);
+      const ed = (t.dueEndAt && !t.dueAllDay) ? new Date(t.dueEndAt) : null;
+      // 绝对定位于时间轴根容器（.tk-tl 同时是滚动容器，坐标需补滚动偏移；
+      // 注意 .tk-tl 的 container-type 会使 position:fixed 相对它而非视口定位，故不用 fixed）。
+      // 坐标跟手（双击点），靠右 / 靠下时收进可视区
+      const root = this.$el;
+      const rect = root.getBoundingClientRect();
+      const px = e.clientX - rect.left + root.scrollLeft;
+      const py = e.clientY - rect.top + root.scrollTop + 10;
+      this.timePop = {
+        t,
+        start: pad(sd.getHours()) + ':' + pad(sd.getMinutes()),
+        end: ed ? pad(ed.getHours()) + ':' + pad(ed.getMinutes()) : '',
+        hasEnd: !!ed,
+        x: Math.max(root.scrollLeft + 8, Math.min(px, root.scrollLeft + root.clientWidth - 170)),
+        y: Math.max(root.scrollTop + 8, Math.min(py, root.scrollTop + root.clientHeight - 120))
+      };
+      this.bindTimePopClosers();
+      this.$nextTick(() => {
+        const input = this.$el.querySelector('.tk-tl-timepop input');
+        if (input) input.focus({ preventScroll: true });
+      });
+    },
+    // 浮层内时间变化：复用手柄同一落盘通道（resize 实时改本地 + resizeCommit 落盘）。
+    // 单时间任务：确认一个值即完成修改，直接关闭浮层；时间段任务保持浮层打开以便继续调整另一端
+    onTimePopChange() {
+      const p = this.timePop;
+      if (!p) return;
+      const sm = this.popToMin(p.start);
+      if (sm == null) return;
+      const startMin = Math.max(this.axisStart, Math.min(this.axisEnd - 1, sm));
+      let endMin = null;
+      if (p.hasEnd) {
+        const em = this.popToMin(p.end);
+        if (em == null) return;
+        endMin = Math.max(this.axisStart, Math.min(this.axisEnd, em));
+        if (endMin <= startMin) endMin = Math.min(this.axisEnd, startMin + this.snap);
+      }
+      this.handlers.resize(p.t, startMin, endMin);
+      if (this.handlers.resizeCommit) this.handlers.resizeCommit(p.t);
+      if (!p.hasEnd) this.closeTimePop();
+    },
+    closeTimePop() { this.timePop = null; },
+    // 浮层关闭（timePop 置 null）后 TimePicker 失焦提交仍会发出 update:modelValue，
+    // 显式更新必须判空，否则 v-model 直接赋值会抛 Cannot set properties of null
+    onPopStartInput(v) { if (this.timePop) this.timePop.start = v; },
+    onPopEndInput(v) { if (this.timePop) this.timePop.end = v; },
+    bindTimePopClosers() {
+      if (this._popClosers) return;
+      this._popClosers = true;
+      this._popOnDocDown = () => this.closeTimePop();
+      // 捕获监听 scroll：TimePicker 下拉面板自身滚动忽略，其余（时间轴 / 页面）滚动即关闭避免错位
+      this._popOnScroll = (ev) => {
+        const popEl = this.$el && this.$el.querySelector('.tk-tl-timepop');
+        if (popEl && popEl.contains(ev.target)) return;
+        this.closeTimePop();
+      };
+      this._popOnKey = (ev) => {
+        if (ev.key !== 'Escape') return;
+        const popEl = this.$el && this.$el.querySelector('.tk-tl-timepop');
+        if (popEl && popEl.contains(ev.target)) return; // 输入框内 Esc 先由 TimePicker 还原文本
+        this.closeTimePop();
+      };
+      document.addEventListener('pointerdown', this._popOnDocDown);
+      window.addEventListener('scroll', this._popOnScroll, true);
+      document.addEventListener('keydown', this._popOnKey);
+    },
+    unbindTimePopClosers() {
+      if (!this._popClosers) return;
+      this._popClosers = false;
+      document.removeEventListener('pointerdown', this._popOnDocDown);
+      window.removeEventListener('scroll', this._popOnScroll, true);
+      document.removeEventListener('keydown', this._popOnKey);
+    },
+    popToMin(hhmm) {
+      const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm || '').trim());
+      return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
     },
     // 全天 / 其他时间条：单击选中（跨日期条由此显示首/尾日期柄），Ctrl/⌘ 单击直达编辑框
     onAdClick(t, e) {
@@ -328,30 +434,30 @@ export default {
     onResizeMove(e) {
       const r = this.resizing;
       if (!r) return;
-      const deltaMin = Math.round(((e.clientY - r.y0) / this.hourH) * 60 / SNAP) * SNAP;
+      const deltaMin = Math.round(((e.clientY - r.y0) / this.hourH) * 60 / this.snap) * this.snap;
       let { startMin, endMin } = r;
       if (r.which === 'top') {
         if (r.endMin != null) {
           // 时间段任务：结束固定，拖动上方手柄调整开始
           startMin = r.startMin + deltaMin;
-          if (startMin > r.endMin - SNAP) startMin = r.endMin - SNAP;
-          startMin = Math.max(this.axisStart, Math.min(this.axisEnd - SNAP, startMin));
+          if (startMin > r.endMin - this.snap) startMin = r.endMin - this.snap;
+          startMin = Math.max(this.axisStart, Math.min(this.axisEnd - this.snap, startMin));
         } else {
           // 单时间任务：把「原时间 + 1 小时」视为结束锚点（即该任务在时间轴上的绘制底边），
           // 上方手柄只调整开始时间；块底边不动，呈拉伸效果。
           endMin = r.startMin + DEFAULT_MIN;
-          startMin = Math.max(this.axisStart, Math.min(endMin - SNAP, r.startMin + deltaMin));
+          startMin = Math.max(this.axisStart, Math.min(endMin - this.snap, r.startMin + deltaMin));
         }
       } else if (r.endMin != null) {
         endMin = r.endMin + deltaMin;
-        if (endMin < r.startMin + SNAP) endMin = r.startMin + SNAP;
+        if (endMin < r.startMin + this.snap) endMin = r.startMin + this.snap;
         endMin = Math.min(this.axisEnd, endMin);
       } else {
         // 单时间任务：向下拖动底部 → 生成时间段。
         // 结束初始 = 开始 + 1 小时（与时间轴上的绘制底边一致，避免一动手就先缩回半小时），
-        // 之后随拖动量增减；最小不小于开始 + SNAP，最多到当天 23:59。
+        // 之后随拖动量增减；最小不小于开始 + this.snap，最多到当天 23:59。
         endMin = Math.min(this.axisEnd, r.startMin + DEFAULT_MIN + deltaMin);
-        if (endMin < r.startMin + SNAP) endMin = r.startMin + SNAP;
+        if (endMin < r.startMin + this.snap) endMin = r.startMin + this.snap;
       }
       this.handlers.resize(r.t, startMin, endMin);
     },
@@ -368,7 +474,7 @@ export default {
 </script>
 
 <style scoped>
-.tk-tl { flex: 1 1 auto; padding-bottom: 8px; min-height: 0; overflow: auto; align-self: stretch; container-type: inline-size; }
+.tk-tl { flex: 1 1 auto; padding-bottom: 8px; min-height: 0; overflow: auto; align-self: stretch; container-type: inline-size; position: relative; }
 /* 表头：日期行（吸顶） */
 .tk-tl-top {
   display: grid; grid-template-columns: 54px repeat(var(--tl-cols, 7), minmax(0, 1fr));
@@ -477,8 +583,8 @@ export default {
 .tk-tl-aditem.cont-start { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .tk-tl-aditem.cont-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .tk-tl-aditem .tk-tl-time { margin-left: auto; padding-left: 6px; }
-/* 全天 / 凌晨项：已完成、已取消置灰（与月视图 .cel-task.done 一致） */
-.tk-tl-aditem.done { color: var(--ink-soft); opacity: .6; }
+/* 全天 / 凌晨项：已完成、已取消置灰（与月视图 .cel-task.done 一致，统一用 --done-* 令牌） */
+.tk-tl-aditem.done { color: var(--done-color); opacity: var(--done-opacity); }
 /* 其他时间行：早于 / 晚于时间轴窗口的定时任务，归到时间轴上方的单独格子 */
 .tk-tl-other {
   display: grid; grid-template-columns: 54px repeat(var(--tl-cols, 7), minmax(0, 1fr));
@@ -547,8 +653,20 @@ export default {
 .tk-tl-bt .tk-check { flex: none; }
 .tk-tl-bt .tk-tl-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-tl-block .tk-tl-sum { font-weight: 400; }
-.tk-tl-time { display: block; margin-left: 24px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.tk-tl-block.done { opacity: .45; }
+.tk-tl-time { display: block; margin-left: 24px; padding: 0 4px; margin-right: -4px; width: fit-content; color: var(--ink-soft); font-variant-numeric: tabular-nums; border-radius: 4px; transition: background .12s ease; }
+/* hover 提示可双击快速改时间（弹 TimePicker 浮层） */
+.tk-tl-time:hover { cursor: text; background: var(--hover); }
+/* 双击块内时间的小浮层：绝对定位于 .tk-tl 内、跟双击点，点击外部 / 滚动 / Esc 关闭 */
+.tk-tl-timepop {
+  position: absolute; z-index: 60; display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; border-radius: 8px; background: var(--panel);
+  border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+}
+.tk-tl-timepop-row { display: flex; align-items: center; gap: 6px; }
+.tk-tl-timepop-row .tk-time-picker { flex: 1; }
+/* 时间段任务的开始 / 结束行标签（复用编辑器文案） */
+.tk-tl-timepop-label { flex: none; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+.tk-tl-block.done { opacity: var(--done-opacity); }
 /* 选中态：描边高亮，提示可拖动调整 */
 .tk-tl-block.selected { box-shadow: 0 0 0 2px var(--gold); z-index: 5; }
 /* 上下拖动调整时间的手柄：主题色小圆圈，平时隐藏，仅选中(可操作)时显示 */

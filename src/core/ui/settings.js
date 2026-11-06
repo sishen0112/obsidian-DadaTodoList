@@ -376,6 +376,17 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           });
         });
       }),
+      row('snapMinutes', 'snapMinutesDesc', (s) => {
+        s.addDropdown((dd) => {
+          for (const m of [5, 10, 15, 30]) dd.addOption(String(m), String(m) + T('minuteUnit'));
+          dd.setValue(String(plugin.settings.snapMinutes || 30));
+          dd.onChange(async (value) => {
+            plugin.settings.snapMinutes = parseInt(value, 10) || 30;
+            await plugin.saveSettings();
+            plugin.reloadOpenViews();
+          });
+        });
+      }),
     ]);
 
     // 全天任务时间行的 DOM：由开关联动显示 / 隐藏（声明式渲染后再补一次，避免样式被覆盖）

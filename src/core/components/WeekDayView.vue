@@ -8,6 +8,7 @@
         :now-top="nowTop"
         :axis-start="axisStartMin"
         :axis-end="axisEndMin"
+        :snap="snapMinutes"
         :drag-over-key="dragOverKey"
         :drag-guid="dragGuid"
         :helpers="tlHelpers"
@@ -88,6 +89,12 @@ export default {
     },
     // 时间轴每小时像素高：窗口宽度 >700 → 48，否则（≤700）→ 60
     hourH() { return this.winW > 700 ? 48 : 60; },
+    // 时间轴吸附粒度（分钟）：来自设置 snapMinutes（5/10/15/30，默认 30），替换原硬编码 30
+    snapMinutes() {
+      const st = this.plugin && this.plugin.settings;
+      const v = Number(st && st.snapMinutes);
+      return [5, 10, 15, 30].includes(v) ? v : 30;
+    },
     // 时间轴显示窗口起始小时（整点，0–23），来自设置
     tlStartHour() {
       const s = this.plugin && this.plugin.settings;
@@ -322,7 +329,7 @@ export default {
     dropInfo(key) {
       if (!this.dragTask || this.dragOverKey !== key || this.dropY < 0) return null;
       let min = this.minForY(this.dropY);
-      min = Math.max(this.axisStartMin, Math.min(this.axisEndMin - 1, Math.round(min / 30) * 30)); // 整点 / 半点，限制在窗口内
+      min = Math.max(this.axisStartMin, Math.min(this.axisEndMin - 1, Math.round(min / this.snapMinutes) * this.snapMinutes)); // 按设置吸附，限制在窗口内
       const hh = Math.floor(min / 60), mm = min % 60;
       const dur = this.dragDuration();
       let endMin = min + dur;
@@ -365,7 +372,7 @@ export default {
         y = e.clientY - rect.top;
       }
       let min = this.minForY(y);
-      min = Math.max(this.axisStartMin, Math.min(this.axisEndMin - 1, Math.round(min / 30) * 30)); // 吸附到整点 / 半点，限制在窗口内
+      min = Math.max(this.axisStartMin, Math.min(this.axisEndMin - 1, Math.round(min / this.snapMinutes) * this.snapMinutes)); // 按设置吸附，限制在窗口内
       const hh = Math.floor(min / 60), mm = min % 60;
       const dueAt = new Date(dayKey + 'T' + pad(hh) + ':' + pad(mm) + ':00').getTime();
       const payload = { summary: t.summary, description: t.description, priority: t.priority, dueAt, dueAllDay: false };

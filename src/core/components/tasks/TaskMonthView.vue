@@ -301,7 +301,7 @@ export default {
 .task-app .cel-task .tk-check { flex: none; width: 12px; height: 12px; font-size: 14px; line-height: 12px; }
 .cel-task-sum { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cel-task-time { flex: none; margin-left: auto; font-size: 9px; opacity: .65; font-variant-numeric: tabular-nums; }
-.cel-task.done { color: var(--ink-soft); opacity: .6; }
+.cel-task.done { color: var(--done-color); opacity: var(--done-opacity); }
 /* 跨日横跨条层：与日期格同列模板，按泳道逐行排布；跨到下一周由父级另起一条 */
 .tk-mbars {
   position: absolute; inset: 0; pointer-events: none;
@@ -342,7 +342,7 @@ export default {
 .cel-task.selected .cel-span-h:hover::before { filter: brightness(1.12); }
 .cel-bar:not(.selected):hover { box-shadow: var(--shadow); }
 .cel-bar.dragging { opacity: .4; cursor: grabbing; }
-.cel-bar.done { color: var(--ink-soft); opacity: .6; }
+.cel-bar.done { color: var(--done-color); opacity: var(--done-opacity); }
 /* 续接端（非真实起止）不收圆角，以示「仍在延续」 */
 .cel-bar.cont-start { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .cel-bar.cont-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }

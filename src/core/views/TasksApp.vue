@@ -887,7 +887,7 @@ export default {
   transition: border-color .15s ease, background .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 .tk-item:hover { border-color: var(--gold-soft); box-shadow: var(--shadow); }
-.tk-item.done { color: var(--ink-soft); opacity: .75; }
+.tk-item.done { color: var(--done-color); opacity: var(--done-opacity); }
 .tk-item.dragging { opacity: .4; cursor: grabbing; }
 .tk-item-top { display: flex; align-items: flex-start; gap: 6px; }
 /* 取消共享样式里 tk-check 的 line-height:26px（会使图标下沉，顶对齐时错位） */

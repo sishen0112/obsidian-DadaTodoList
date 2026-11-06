@@ -239,7 +239,7 @@ export default {
 .tk-q-item .tk-check:hover { color: var(--q-color); opacity: .8; }
 .tk-q-body { flex: 1 1 auto; min-width: 0; }
 .tk-q-title { font-size: 13.5px; line-height: 1.45; color: var(--ink); word-break: break-word; }
-.tk-q-title.is-done { opacity: .55; }
+.tk-q-title.is-done { color: var(--done-color); opacity: var(--done-opacity); }
 .tk-q-title :deep(a) { color: var(--text-accent); text-decoration: none; }
 /* 日期与时间靠右、同一行内展示 */
 .tk-q-meta { flex: none; text-align: right; display: flex; flex-direction: row; align-items: baseline; gap: 6px; }

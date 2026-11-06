@@ -125,7 +125,7 @@
 .task-app .tk-sum { color: var(--ink); word-break: break-word; }
 .task-app .tk-item .tk-sum { flex: 6 1 0; min-width: 0; color: var(--ink); line-height: 1.5; word-break: break-word; }
 .task-app .tk-row .tk-sum { color: var(--ink); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; min-width: 0; }
-.task-app .tk-sum.done, .task-app .tk-row.done .tk-sum { color: var(--ink-soft); text-decoration: line-through; }
+.task-app .tk-sum.done, .task-app .tk-row.done .tk-sum { color: var(--done-color); text-decoration: line-through; }
 /* 日期时间：右对齐（撑满左侧名称后自然靠右），字号/颜色对齐清单列表项 .tk-cl-date */
 .task-app .tk-row .tk-date {
   flex: none; margin-left: auto; width: auto; white-space: nowrap;

@@ -203,11 +203,11 @@ export default {
 .tk-ag-sum { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 /* 跨日期任务右侧小字：开始-结束日期区间（如 10/2-10/7），靠右、小号、低透明度 */
 .tk-ag-range { flex: none; margin-left: auto; padding-left: 8px; font-size: 9px; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tk-ag-sum.done { opacity: .55; }
 .tk-ag-sum.cancel { text-decoration: line-through; }
-/* 已完成 / 已取消：整块卡片（含彩色背景）降透明，与日视图 .tk-tl-aditem.done 一致 */
-.tk-ag-row.done .tk-ag-card { opacity: .6; }
-.tk-ag-row.done .tk-ag-time { opacity: .55; }
+/* 已完成 / 已取消：整块卡片（含彩色背景）统一降透明（--done-* 令牌）；
+   摘要文字不再单独降透明（原先嵌套叠加 .6*.55 反而过淡），时间在卡片外故单独引用同一令牌 */
+.tk-ag-row.done .tk-ag-card { opacity: var(--done-opacity); }
+.tk-ag-row.done .tk-ag-time { opacity: var(--done-opacity); }
 .tk-ag-row.dragging { opacity: .5; }
 /* 视图变窄时：日期信息移到任务列表上方，让列表占满整宽。
    改用 @container（面板宽度）而非 @media（主窗口），使其与左侧日期导航行为一致 */

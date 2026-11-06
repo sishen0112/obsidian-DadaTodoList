@@ -409,10 +409,10 @@ export default {
 .tk-cl-sum { font-size: 14px; color: var(--ink); line-height: 1.5; word-break: break-word; }
 .tk-cl-sum :deep(a) { color: var(--accent, var(--gold)); }
 .tk-cl-desc { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-top: 2px; word-break: break-word; }
-.tk-cl-row.done .tk-cl-sum { color: var(--ink-soft); opacity: .75; }
-.tk-cl-row.cancel .tk-cl-sum { color: var(--ink-soft); text-decoration: line-through; opacity: .75; }
+.tk-cl-row.done .tk-cl-sum { color: var(--done-color); opacity: var(--done-opacity); }
+.tk-cl-row.cancel .tk-cl-sum { color: var(--done-color); text-decoration: line-through; opacity: var(--done-opacity); }
 .tk-cl-row.done .tk-cl-desc,
-.tk-cl-row.cancel .tk-cl-desc { opacity: .5; }
+.tk-cl-row.cancel .tk-cl-desc { opacity: var(--done-opacity); }
 .tk-cl-date { flex: none; font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; padding-top: 3px; }
 /* 分栏视图下：日期时间作为任务文字下方的副行（块级、与正文留间距） */
 .tk-cl-date-sub { display: block; margin-top: 3px; }

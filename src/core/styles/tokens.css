@@ -45,6 +45,12 @@
   --c-done: #52B434;
   --c-cancel: #D12C1E;
 
+  /* 已完成 / 已取消任务的统一淡出强度与文字色（issue #16：
+     各视图原为 .45/.55/.6/.75 分散硬编码，现统一引用这两个令牌）。
+     调整淡出深浅只改 --done-opacity 一处即全局生效；文字色统一跟随 --ink-soft。 */
+  --done-color: var(--ink-soft);
+  --done-opacity: .45;
+
   /* Element Plus 组件跟随主题（任务编辑器沿用原生 input，这里仅做兜底映射） */
   --el-color-primary: var(--interactive-accent);
   --el-color-danger: var(--text-error, #e0524b);
