@@ -230,6 +230,8 @@ export default class DadaTodoPlugin extends Plugin {
       timeStep: Math.max(1, Math.min(60, Math.round(Number(data.timeStep) || 5))),
       // 时间轴吸附粒度（分钟）：拖动 / 拉伸任务块与拖入落点按该步长吸附（5/10/15/30，默认 30）
       snapMinutes: [5, 10, 15, 30].includes(Number(data.snapMinutes)) ? Number(data.snapMinutes) : 30,
+      // 计划时间（⏳ scheduled）：默认关闭；开启后编辑弹窗可设置计划日期，各视图显示计划日期徽标
+      showScheduled: data.showScheduled === true,
       // 视图菜单：完整视图顺序（含隐藏项，保持其排序记忆）；默认全部按当前顺序
       menuViews: normalizeMenuViews(data.menuViews),
       // 视图菜单：隐藏的视图 key（不显示在菜单上，但保留排序，可随时在设置页重新勾选显示）

@@ -99,6 +99,11 @@
           </label>
         </template>
       </div>
+      <!-- 计划日期（⏳ scheduled）：设置「启用计划时间」开启时显示（issue #13） -->
+      <label v-if="showScheduled" class="tk-field">
+        <span>{{ $t('editor.scheduledDate') }}</span>
+        <DatePicker v-model="form.scheduledDate" :disabled="saving" />
+      </label>
       <div v-if="editing" class="tk-sub">
         <div class="tk-sub-title">{{ $t('editor.subtasks') }}</div>
         <subtask-list :task-guid="task.guid" @change="$emit('subtasks-changed', $event)" />
@@ -189,6 +194,11 @@ export default {
     isAllDay() { return this.form.timeMode === 'allday'; },
     // 时间选择器步长：取自插件设置（timeStep），取不到时默认 5（分钟）
     timeStep() { return (this.plugin && this.plugin.settings && this.plugin.settings.timeStep) || 5; },
+    // 计划日期（⏳ scheduled）编辑开关：跟随设置「启用计划时间」（issue #13）
+    showScheduled() {
+      const st = this.plugin && this.plugin.settings;
+      return !!(st && st.showScheduled === true);
+    },
     isCrossDate() { return this.form.timeMode === 'crossdate'; },
     // 优先级四档（高 / 中 / 低 / 无，从左到右），图标取自 obsidian-tasks 风格；默认「无」
     priorityOptions() {
@@ -210,6 +220,7 @@ export default {
         guid: '', title: '', description: '', links: [], tags: [],
         dueDate: this.defaultDate || '', dueTime: this.defaultTime || '',
         timeMode: 'single', dueStart: this.defaultTime || '', dueEnd: '', startDate: '',
+        scheduledDate: '',
         remind: true, completed: false, cancelled: false, cancelledAt: '',
         priority: this.defaultPriority || 'none'
       };
@@ -257,6 +268,7 @@ export default {
         links: parts.links.slice(),
         tags: parts.tags.slice(),
         dueDate, dueTime, timeMode, dueStart, dueEnd, startDate,
+        scheduledDate: t.scheduledAt ? ymd(new Date(t.scheduledAt)) : '',
         remind: t.remind !== false,
         completed: !!t.completed,
         cancelled: !!t.cancelled,
@@ -367,7 +379,9 @@ export default {
         dueEndAt,
         startAt,
         dueAllDay: this.isAllDay || this.isCrossDate,
-        priority: levelToPriorityEmoji(this.form.priority)
+        priority: levelToPriorityEmoji(this.form.priority),
+        // 计划日期（⏳）：仅在「启用计划时间」时随 payload 传出（未传 = 数据层保持不动）
+        ...(this.showScheduled ? { scheduledDate: this.form.scheduledDate || '' } : {})
       };
       if (this.editing) {
         payload.completed = this.form.completed;

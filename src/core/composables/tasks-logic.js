@@ -397,6 +397,8 @@ export function toRecord(dateKey, node, opts = {}) {
   //   - 每日笔记文件名表示「开始日」，📅 表示结束日（结束 > 开始时写入），🛫 可覆盖开始日。
   const isDatedFile = !(dateKey === INBOX_KEY || String(dateKey || '').indexOf('cl:') === 0);
   const fileMs = dateToMs(dateKey, node.time || '00:00');
+  // ⏳（scheduled，计划日期）：仅解析进记录供展示，不参与排期（issue #13）
+  const scheduledMs = node.scheduled ? dateToMs(node.scheduled, node.time || '00:00') : null;
   let startAt = null;
   let dueAt = null;
   if (!isDatedFile) {
@@ -425,6 +427,7 @@ export function toRecord(dateKey, node, opts = {}) {
     completedAt: completed && node.done ? dateToMs(node.done) : null,
     dueAt,
     startAt,
+    scheduledAt: scheduledMs,
     dueAllDay: !node.time,
     dueEndAt: (dueAt != null && node.timeEnd) ? dateToMs(todayKey(dueAt), node.timeEnd) : null,
     subtaskCount: (node.children || []).length,
@@ -494,7 +497,9 @@ export function nodeFromTask(task, dateKey, opts = {}) {
     summary: String(t.summary || '').trim(),
     time,
     timeEnd,
-    created: '', start: '', scheduled: '', due: '', cancelled: '',
+    created: '', start: '', due: '', cancelled: '',
+    // ⏳ 计划日期（YYYY-MM-DD）：来自编辑弹窗的 scheduledDate 字段（issue #13）
+    scheduled: String(t.scheduledDate || '').trim(),
     priority: t.priority || '',
     recurrence: '',
     done: (t.completed && opts.addDoneDate !== false) ? todayKey() : ''
@@ -561,6 +566,12 @@ export function timeText(task) {
     return s + '-' + pad2(e.getHours()) + ':' + pad2(e.getMinutes());
   }
   return s;
+}
+
+// ⏳ 计划日期（scheduled）展示文本，如 "⏳ 2026-12-11"；仅解析展示，不参与排期（issue #13）
+export function scheduledText(task) {
+  if (!task || !task.scheduledAt) return '';
+  return '⏳ ' + todayKey(task.scheduledAt);
 }
 
 // 任务状态图标（Line Awesome 圆形勾选 / 取消减号）

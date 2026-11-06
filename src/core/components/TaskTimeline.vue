@@ -37,12 +37,13 @@
       <div v-for="b in alldayBars" :key="b.t.guid" class="tk-tl-aditem"
            :class="{ done: b.t.completed || b.t.cancelled, dragging: dragGuid === b.t.guid, selected: selectedGuid === b.t.guid, 'cont-start': b.contStart, 'cont-end': b.contEnd }"
            :style="alldayBarStyle(b)"
-           :draggable="!resizing" :title="helpers.dragHint(b.t)"
+           :draggable="!resizing" v-tooltip="helpers.dragHint(b.t)"
            @dragstart="onAdDragStart(b.t, $event)" @dragend="handlers.dragEnd"
            @click.stop="onAdClick(b.t, $event)" @dblclick.stop="handlers.open(b.t, $event)"
            @contextmenu.prevent="handlers.ctx(b.t, $event)">
         <i class="tk-check" :class="[{ done: b.t.completed || b.t.cancelled }, helpers.statusIcon(b.t)]" @click.stop.prevent="handlers.toggle(b.t)"></i>
         <span class="tk-tl-sum" :class="{ done: b.t.completed || b.t.cancelled }" v-html="helpers.richSummaryNoTags(b.t)" @click="helpers.richClick"></span>
+        <span v-if="b.t.scheduledAt" class="tk-sched" v-tooltip="helpers.scheduledText(b.t)">{{ helpers.scheduledText(b.t) }}</span>
         <!-- 跨日期横跨条右侧小字：显示开始-结束日期区间（如 10/2-10/7） -->
         <span v-if="spanRange(b.t)" class="tk-tl-adrange">{{ spanRange(b.t) }}</span>
         <!-- 跨日期横跨条：选中后首/尾出现拖动柄（拖左柄改开始日、拖右柄改结束日，另一端不变） -->
@@ -63,13 +64,16 @@
         <div v-for="t in col.other" :key="t.guid" class="tk-tl-aditem tk-tl-other-item"
              :class="{ done: t.completed || t.cancelled, dragging: dragGuid === t.guid, selected: selectedGuid === t.guid }"
              :style="helpers.itemColor(t)"
-             :draggable="!resizing" :title="helpers.dragHint(t)"
+             :draggable="!resizing" v-tooltip="helpers.dragHint(t)"
              @dragstart="handlers.dragStart(t, $event)" @dragend="handlers.dragEnd"
              @click.stop="onAdClick(t, $event)" @dblclick.stop="handlers.open(t, $event)"
              @contextmenu.prevent="handlers.ctx(t, $event)">
           <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, helpers.statusIcon(t)]" @click.stop.prevent="handlers.toggle(t)"></i>
           <div class="tk-tl-other-body">
-            <span class="tk-tl-sum" :class="{ done: t.completed || t.cancelled }" v-html="helpers.richSummaryNoTags(t)" @click="helpers.richClick"></span>
+            <div class="tk-tl-sumrow">
+              <span class="tk-tl-sum" :class="{ done: t.completed || t.cancelled }" v-html="helpers.richSummaryNoTags(t)" @click="helpers.richClick"></span>
+              <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="helpers.scheduledText(t)">{{ helpers.scheduledText(t) }}</span>
+            </div>
             <span class="tk-tl-time">{{ helpers.timeText(t) }}</span>
           </div>
         </div>
@@ -95,7 +99,7 @@
         <div v-for="b in col.blocks" :key="b.t.guid" class="tk-tl-block"
              :class="{ done: b.t.completed || b.t.cancelled, dragging: dragGuid === b.t.guid, selected: selectedGuid === b.t.guid }"
              :style="helpers.blockStyle(b)"
-             :draggable="!resizing" :title="helpers.dragHint(b.t)"
+             :draggable="!resizing" v-tooltip="helpers.dragHint(b.t)"
              @dragstart="onBlockDragStart(b.t, $event)" @dragend="handlers.dragEnd"
              @click.stop="onBlockClick(b.t, $event)" @dblclick.stop="handlers.open(b.t)"
              @contextmenu.prevent="handlers.ctx(b.t, $event)">
@@ -106,6 +110,7 @@
             <div class="tk-tl-bt">
               <i class="tk-check" :class="[{ done: b.t.completed || b.t.cancelled }, helpers.statusIcon(b.t)]" @click.stop.prevent="handlers.toggle(b.t)"></i>
               <span class="tk-tl-sum" :class="{ done: b.t.completed || b.t.cancelled }" v-html="helpers.richSummaryNoTags(b.t)" @click="helpers.richClick"></span>
+              <span v-if="b.t.scheduledAt" class="tk-sched" v-tooltip="helpers.scheduledText(b.t)">{{ helpers.scheduledText(b.t) }}</span>
             </div>
             <span class="tk-tl-time" v-tooltip="$t('app.dblclickTimeTip')" @dblclick.stop="openTimePop(b, $event)">{{ helpers.timeText(b.t) }}</span>
           </div>
@@ -653,6 +658,9 @@ export default {
 .tk-tl-bt .tk-check { flex: none; }
 .tk-tl-bt .tk-tl-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-tl-block .tk-tl-sum { font-weight: 400; }
+/* 「其他时间」行：标题与 ⏳ 徽标同一行（外层为纵向 flex，需行内容器） */
+.tk-tl-sumrow { display: flex; align-items: center; min-width: 0; gap: 2px; }
+.tk-tl-sumrow .tk-tl-sum { flex: 1 1 auto; }
 .tk-tl-time { display: block; margin-left: 24px; padding: 0 4px; margin-right: -4px; width: fit-content; color: var(--ink-soft); font-variant-numeric: tabular-nums; border-radius: 4px; transition: background .12s ease; }
 /* hover 提示可双击快速改时间（弹 TimePicker 浮层） */
 .tk-tl-time:hover { cursor: text; background: var(--hover); }

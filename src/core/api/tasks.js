@@ -22,6 +22,15 @@ let lastSelfWriteAt = 0;
 function noteSelfWrite() { lastSelfWriteAt = Date.now(); }
 export function isExternalChange() { return Date.now() - lastSelfWriteAt > 1200; }
 
+// 任务记录统一出口：⏳ 计划日期（scheduledAt）仅在设置「启用计划时间」开启时对外可见，
+// 关闭时置 null（各视图的 v-if 随之隐藏徽标）；行内 ⏳ 本身不受影响，仍解析并原样保留（issue #13）
+function recordOf(...args) {
+  const r = toRecord(...args);
+  const on = plugin && plugin.settings && plugin.settings.showScheduled === true;
+  if (!on) r.scheduledAt = null;
+  return r;
+}
+
 // 清单键前缀：键形如 `cl:<相对路径（不含 .md）>`，guid 形如 `cl:路径#行号`
 const CL_PREFIX = 'cl:';
 const isListKey = (k) => String(k || '').indexOf(CL_PREFIX) === 0;
@@ -423,7 +432,7 @@ export async function loadChecklistGroups(listKey) {
     const m = /^###\s+(.+?)\s*$/.exec(line);
     if (m) headings.push({ lineNo: idx, title: m[1].trim() });
   });
-  const records = flattenTasks(doc.roots).map((n) => toRecord(listKey, n));
+  const records = flattenTasks(doc.roots).map((n) => recordOf(listKey, n));
   const titled = headings.map((h) => ({ title: h.title, tasks: [] }));
   const ungrouped = [];
   for (const t of records) {
@@ -465,7 +474,7 @@ async function listTasks(opts = {}) {
     for (const node of doc.roots) {
       if (f.aggregateOnly && !node.due) continue;
       // 带上所属文件，确保同日期多文件下 guid 唯一、后续操作能定位到正确文件
-      items.push(toRecord(f.key, node, { file: f.path }));
+      items.push(recordOf(f.key, node, { file: f.path }));
     }
   }
   return res(200, { ok: true, count: items.length, items });
@@ -492,7 +501,7 @@ export async function listSubtasks(parentGuid) {
   const doc = await readTasks(path, g.dateKey);
   const node = locateNode(doc.roots, { lineNo: g.lineNo });
   if (!node) return res(404, { ok: false, reason: 'not_found' });
-  const items = node.children.map((c) => toRecord(g.dateKey, c, { parentGuid, file: g.file }));
+  const items = node.children.map((c) => recordOf(g.dateKey, c, { parentGuid, file: g.file }));
   return res(200, { ok: true, count: items.length, items });
 }
 
@@ -535,7 +544,7 @@ export async function createTask(task) {
   }
   const { out, lineNo } = appendLines(doc.lines, node, '');
   await writeTasks(path, doc.head, out);
-  return res(201, { ok: true, task: toRecord(dateKey, Object.assign({}, node, { lineNo }), { file: path }) });
+  return res(201, { ok: true, task: recordOf(dateKey, Object.assign({}, node, { lineNo }), { file: path }) });
 }
 
 // 在清单指定分组的最后一行追加任务。
@@ -575,7 +584,7 @@ export async function createChecklistTask(listKey, groupTitle, task) {
   lines.splice(insertAt, 0, newLine);
   await writeTasks(path, doc.head, lines);
   const created = Object.assign({}, node, { lineNo: insertAt });
-  return res(201, { ok: true, task: toRecord(listKey, created) });
+  return res(201, { ok: true, task: recordOf(listKey, created) });
 }
 
 // 将清单内任务移动到另一个分组（同文件内移动整块：删旧块 + 插入到目标分组末尾）。
@@ -614,7 +623,7 @@ export async function moveChecklistTask(listKey, guid, targetGroupTitle) {
 
   keep.splice(insertAt, 0, ...serializeBlock(node, node.indentStr));
   await writeTasks(path, doc.head, keep);
-  return res(200, { ok: true, task: toRecord(listKey, node) });
+  return res(200, { ok: true, task: recordOf(listKey, node) });
 }
 
 // 新建子任务：插入到父任务块之后，缩进一级
@@ -638,7 +647,7 @@ export async function createSubtask(parentGuid, task) {
   lines.splice(insertAt, 0, serializeTaskLine(child, child.indentStr));
   await writeTasks(path, doc.head, lines);
   const created = Object.assign({}, child, { lineNo: insertAt });
-  return res(201, { ok: true, task: toRecord(g.dateKey, created, { parentGuid, file: path }) });
+  return res(201, { ok: true, task: recordOf(g.dateKey, created, { parentGuid, file: path }) });
 }
 
 // 修改任务（标题/描述/完成态/日期）。日期跨文件时移动整块。
@@ -682,6 +691,12 @@ export async function updateTask(guid, patch) {
       node.cancelMark = false;
       node.cancelled = '';
     }
+  }
+
+  // 计划日期（⏳）编辑：仅当传入 scheduledDate 字段时改写（未传 = 保持不动，issue #13）；
+  // 清空 = 传空串，行内 ⏳ 一并移除
+  if (Object.prototype.hasOwnProperty.call(p, 'scheduledDate')) {
+    node.scheduled = String(p.scheduledDate || '').trim();
   }
 
   let targetKey = g.dateKey;
@@ -729,7 +744,7 @@ export async function updateTask(guid, patch) {
   if (targetKey === g.dateKey) {
     keep.splice(node.lineNo, 0, ...serializeBlock(node, node.indentStr));
     await writeTasks(path, doc.head, keep);
-    return res(200, { ok: true, task: toRecord(g.dateKey, node, { file: path }) });
+    return res(200, { ok: true, task: recordOf(g.dateKey, node, { file: path }) });
   }
 
   // 跨文件移动：先写回源文件，再追加到目标文件末尾
@@ -743,7 +758,7 @@ export async function updateTask(guid, patch) {
   const dst = await readTasks(dstPath, targetKey);
   const { out, lineNo } = appendLines(dst.lines, node, '');
   await writeTasks(dstPath, dst.head, out);
-  return res(200, { ok: true, task: toRecord(targetKey, Object.assign({}, node, { lineNo }), { file: dstPath }) });
+  return res(200, { ok: true, task: recordOf(targetKey, Object.assign({}, node, { lineNo }), { file: dstPath }) });
 }
 
 // 删除任务（连同其描述行与子任务）
@@ -777,7 +792,7 @@ export async function toggleTask(guid, done) {
   const lines = doc.lines.slice();
   lines.splice(node.lineNo, 1, serializeTaskLine(node, node.indentStr));
   await writeTasks(path, doc.head, lines);
-  return res(200, { ok: true, task: toRecord(g.dateKey, node, { file: path }) });
+  return res(200, { ok: true, task: recordOf(g.dateKey, node, { file: path }) });
 }
 
 // 设定任务状态：status ∈ 'todo' | 'done' | 'cancelled'（右键菜单用）
@@ -809,5 +824,5 @@ export async function setChecklistStatus(guid, status) {
   const lines = doc.lines.slice();
   lines.splice(node.lineNo, 1, serializeTaskLine(node, node.indentStr));
   await writeTasks(path, doc.head, lines);
-  return res(200, { ok: true, task: toRecord(g.dateKey, node, { file: path }) });
+  return res(200, { ok: true, task: recordOf(g.dateKey, node, { file: path }) });
 }

@@ -467,7 +467,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       }),
     ]);
 
-    // 分组：任务标记（完成日期标记开关）
+    // 分组：任务标记（完成日期标记 / 计划时间开关）
     const taskMark = group('groupTaskMark', [
       row('addDoneDateMarker', 'addDoneDateMarkerDesc', (s) => {
         s.addToggle((tg) => {
@@ -475,6 +475,16 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           tg.onChange(async (value) => {
             plugin.settings.addDoneDateMarker = value;
             await plugin.saveSettings();
+          });
+        });
+      }),
+      row('showScheduled', 'showScheduledDesc', (s) => {
+        s.addToggle((tg) => {
+          tg.setValue(plugin.settings.showScheduled === true);
+          tg.onChange(async (v) => {
+            plugin.settings.showScheduled = v === true;
+            await plugin.saveSettings();
+            plugin.reloadOpenViews();
           });
         });
       }),

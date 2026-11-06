@@ -42,7 +42,7 @@ import { Tasks } from '../composables/useTasks.js';
 import { openCtxMenu } from '../composables/useTaskCtxMenu.js';
 import {
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf,
-  statusIcon, timeText, richSummaryNoTags, plainInline, weekdayShort, spansDays
+  statusIcon, timeText, scheduledText, richSummaryNoTags, plainInline, weekdayShort, spansDays
 } from '../composables/tasks-logic.js';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
@@ -157,6 +157,8 @@ export default {
         statusIcon: (t) => statusIcon(t),
         richSummaryNoTags: (t) => richSummaryNoTags(t),
         timeText: (t) => timeText(t),
+        // ⏳ 计划日期（scheduled）展示文本，仅解析展示（issue #13）
+        scheduledText: (t) => scheduledText(t),
         dragHint: (t) => s.dragHint(t),
         dropInfo: (key) => s.dropInfo(key),
         richClick: (e) => s.richClick(e)

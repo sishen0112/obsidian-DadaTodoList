@@ -38,6 +38,7 @@
                    @contextmenu.prevent="ctx.openCtx(t, $event)">
                 <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, ctx.statusIcon(t)]" @click.stop.prevent="ctx.toggle(t)"></i>
                 <span class="cel-task-sum" v-html="ctx.richSummary(t)" @click="ctx.onRichClick"></span>
+                <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(t)">{{ scheduledText(t) }}</span>
                 <span v-if="ctx.taskTime(t)" class="cel-task-time">{{ ctx.taskTime(t) }}</span>
                 <!-- 单日全天：选中后首/尾出现拖动柄，可延伸为跨日期 -->
                 <div v-if="isChipSelected(t)" class="cel-span-h cel-span-h-l"
@@ -61,6 +62,7 @@
                  @contextmenu.prevent="ctx.openCtx(b.t, $event)">
               <i class="tk-check" :class="[{ done: b.t.completed || b.t.cancelled }, ctx.statusIcon(b.t)]" @click.stop.prevent="ctx.toggle(b.t)"></i>
               <span class="cel-task-sum" v-html="ctx.richSummary(b.t)" @click="ctx.onRichClick"></span>
+              <span v-if="b.t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(b.t)">{{ scheduledText(b.t) }}</span>
               <!-- 跨日期条右侧小字：显示开始-结束日期区间（如 10/2-10/7） -->
               <span class="cel-bar-range">{{ ctx.spanRange(b.t) }}</span>
               <!-- 全天/跨日期条：选中后首/尾出现拖动柄（拖左柄改开始日、拖右柄改结束日，另一端不变） -->
@@ -88,7 +90,7 @@
 // 月视图：日历网格 + 左侧「待办」拖拽面板（面板与周视图共用，样式在 tasks-shared.css）。
 // 只读父级共享状态/方法（通过 ctx），自身只持有月网格计算。
 import TodoSidePanel from '../TodoSidePanel.vue';
-import { getWeekStart, layoutSpanBars, spansDays, todayKey } from '../../composables/tasks-logic.js';
+import { getWeekStart, layoutSpanBars, spansDays, todayKey, scheduledText } from '../../composables/tasks-logic.js';
 
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -147,6 +149,8 @@ export default {
     }
   },
   methods: {
+    // ⏳ 计划日期徽标文本（issue #13，仅展示）
+    scheduledText(t) { return scheduledText(t); },
     // 单元格内的「单日」任务（跨日任务由横跨条渲染，避免重复）
     dayChips(c) {
       return this.ctx.tasksOf(c.day).filter((t) => !spansDays(t));
@@ -299,7 +303,7 @@ export default {
 .cel-task.dragging { opacity: .4; cursor: grabbing; }
 /* 提高特异性以压过 tasks-shared.css 的 .task-app .tk-check（20px）；其余视图不受影响 */
 .task-app .cel-task .tk-check { flex: none; width: 12px; height: 12px; font-size: 14px; line-height: 12px; }
-.cel-task-sum { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cel-task-sum { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cel-task-time { flex: none; margin-left: auto; font-size: 9px; opacity: .65; font-variant-numeric: tabular-nums; }
 .cel-task.done { color: var(--done-color); opacity: var(--done-opacity); }
 /* 跨日横跨条层：与日期格同列模板，按泳道逐行排布；跨到下一周由父级另起一条 */
@@ -346,7 +350,7 @@ export default {
 /* 续接端（非真实起止）不收圆角，以示「仍在延续」 */
 .cel-bar.cont-start { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .cel-bar.cont-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.cel-bar .cel-task-sum { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cel-bar .cel-task-sum { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .task-app .cel-bar .tk-check { flex: none; width: 12px; height: 12px; font-size: 14px; line-height: 12px; }
 /* 周/月视图：完成与取消任务均不显示删除线（仅降透明度区分） */
 .tk-weekview .tk-item .tk-sum { text-decoration: none; }

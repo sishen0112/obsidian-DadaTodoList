@@ -30,7 +30,10 @@
             <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, statusIcon(t)]"
                @click.stop.prevent="ctx.toggle(t)"></i>
             <div class="tk-q-body">
-              <div class="tk-q-title" :class="{ 'is-done': t.completed }" v-html="rich(t)" @click="onTitleClick"></div>
+              <div class="tk-q-titlerow">
+                <div class="tk-q-title" :class="{ 'is-done': t.completed }" v-html="rich(t)" @click="onTitleClick"></div>
+                <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(t)">{{ scheduledText(t) }}</span>
+              </div>
             </div>
             <div class="tk-q-meta">
               <span v-if="grp.isOverdue" class="tk-q-date is-overdue">{{ dateText(t) }}</span>
@@ -46,7 +49,7 @@
 
 <script>
 import { Tasks } from '../../composables/useTasks.js';
-import { renderInlineHtml, dateText, timeText, statusIcon, priorityToLevel, levelToPriorityEmoji, weekdayShort } from '../../composables/tasks-logic.js';
+import { renderInlineHtml, dateText, timeText, statusIcon, priorityToLevel, levelToPriorityEmoji, weekdayShort, scheduledText } from '../../composables/tasks-logic.js';
 
 // 四象限（艾森豪威尔矩阵）：按优先级把任务分到 2×2 网格（行占 50% 高、列占 50% 宽）
 //   左上 红 重要且紧急   → 高优先级
@@ -153,6 +156,8 @@ export default {
     rich(t) { return renderInlineHtml(t && t.summary); },
     dateText(t) { return dateText(t); },
     timeText(t) { return timeText(t); },
+    // ⏳ 计划日期徽标文本（issue #13，仅展示）
+    scheduledText(t) { return scheduledText(t); },
     spanRange(t) { return this.ctx.spanRange(t); },
     statusIcon(t) { return statusIcon(t); },
     onTaskClick(t, e) { this.ctx.onTaskClick(t, e); },
@@ -238,6 +243,11 @@ export default {
 .tk-q-item .tk-check { line-height: normal; color: var(--q-color); }
 .tk-q-item .tk-check:hover { color: var(--q-color); opacity: .8; }
 .tk-q-body { flex: 1 1 auto; min-width: 0; }
+/* 标题与 ⏳ 徽标同行（徽标见共享样式 .tk-sched，issue #13） */
+.tk-q-titlerow { display: flex; align-items: baseline; min-width: 0; gap: 2px; }
+.tk-q-titlerow .tk-q-title { flex: 1 1 auto; min-width: 0; }
+/* ⏳ 徽标字号对齐右侧日期/时间小字（.tk-q-date 等 11px） */
+.tk-q-titlerow .tk-sched { font-size: 11px; line-height: 15px; }
 .tk-q-title { font-size: 13.5px; line-height: 1.45; color: var(--ink); word-break: break-word; }
 .tk-q-title.is-done { color: var(--done-color); opacity: var(--done-opacity); }
 .tk-q-title :deep(a) { color: var(--text-accent); text-decoration: none; }

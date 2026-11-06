@@ -126,6 +126,18 @@
 .task-app .tk-item .tk-sum { flex: 6 1 0; min-width: 0; color: var(--ink); line-height: 1.5; word-break: break-word; }
 .task-app .tk-row .tk-sum { color: var(--ink); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; min-width: 0; }
 .task-app .tk-sum.done, .task-app .tk-row.done .tk-sum { color: var(--done-color); text-decoration: line-through; }
+/* ⏳ 计划日期徽标（issue #13）：跟在标题后方的浅底小标签，各任务视图共用；
+   空间不足可压缩至约 3 字符宽（min-width: 3ch），完整内容由 Obsidian tooltip 兜底 */
+.task-app .tk-sched {
+  flex: 0 1 auto; min-width: 3ch; display: inline-flex; align-items: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-left: 2px; padding: 0 5px; border-radius: 7px;
+  font-size: 10px; line-height: 14px; background: var(--gold-bg);
+}
+/* 列表行（TaskRow）：徽标位于右侧日期前，字号对齐 .tk-row .tk-date（12px）；
+   行内 align-items: flex-start，日期靠 padding-top:3px + 26px 行高对齐标题，
+   徽标高 16px，用 margin-top 把文字中心对到同一水平线（3 + 26/2 − 16/2 = 8px） */
+.task-app .tk-row > .tk-sched { flex: none; font-size: 12px; line-height: 16px; margin-top: 8px; }
 /* 日期时间：右对齐（撑满左侧名称后自然靠右），字号/颜色对齐清单列表项 .tk-cl-date */
 .task-app .tk-row .tk-date {
   flex: none; margin-left: auto; width: auto; white-space: nowrap;

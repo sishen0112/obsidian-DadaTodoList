@@ -59,7 +59,10 @@
                   <i class="tk-check" :class="[{ done: t.completed }, statusIcon(t)]"
                      @click.stop.prevent="onToggle(t)"></i>
                   <div class="tk-cl-row-main">
-                    <div class="tk-cl-sum" v-html="richSummaryNoTags(t)" @click="onRichClick"></div>
+                    <div class="tk-cl-sumrow">
+                      <div class="tk-cl-sum" v-html="richSummaryNoTags(t)" @click="onRichClick"></div>
+                      <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(t)">{{ scheduledText(t) }}</span>
+                    </div>
                     <div v-if="t.description" class="tk-cl-desc">{{ firstLine(t.description) }}</div>
                   </div>
                   <span v-if="t.dueAt" class="tk-cl-date"><i class="tk-date-ico la la-calendar"></i>{{ dateText(t) }}<template v-if="timeText(t) && !t.dueAllDay"><i class="tk-date-ico tk-date-ico-sep la la-clock"></i>{{ timeText(t) }}</template></span>
@@ -94,7 +97,10 @@
                 <i class="tk-check" :class="[{ done: t.completed }, statusIcon(t)]"
                    @click.stop.prevent="onToggle(t)"></i>
                 <div class="tk-cl-row-main">
-                  <div class="tk-cl-sum" v-html="richSummaryNoTags(t)" @click="onRichClick"></div>
+                  <div class="tk-cl-sumrow">
+                    <div class="tk-cl-sum" v-html="richSummaryNoTags(t)" @click="onRichClick"></div>
+                    <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(t)">{{ scheduledText(t) }}</span>
+                  </div>
                   <div v-if="t.description" class="tk-cl-desc">{{ firstLine(t.description) }}</div>
                   <span v-if="t.dueAt" class="tk-cl-date tk-cl-date-sub"><i class="tk-date-ico la la-calendar"></i>{{ dateText(t) }}<template v-if="timeText(t) && !t.dueAllDay"><i class="tk-date-ico tk-date-ico-sep la la-clock"></i>{{ timeText(t) }}</template></span>
                 </div>
@@ -116,7 +122,7 @@
 <script>
 import { Tasks } from '../../composables/useTasks.js';
 import { taskFilePath } from '../../api/tasks.js';
-import { statusIcon, dateText, timeText, richSummaryNoTags } from '../../composables/tasks-logic.js';
+import { statusIcon, dateText, timeText, richSummaryNoTags, scheduledText } from '../../composables/tasks-logic.js';
 import { VueModal } from '../../ui/VueModal.js';
 import TaskEditorModal from '../TaskEditorModal.vue';
 import { openTaskInFile } from '../../utils/openTaskInFile.js';
@@ -195,7 +201,7 @@ export default {
     }
   },
   methods: {
-    statusIcon, richSummaryNoTags, dateText, timeText, taskFilePath,
+    statusIcon, richSummaryNoTags, dateText, timeText, taskFilePath, scheduledText,
     pct(c) { return c.total ? Math.round((c.done / c.total) * 100) : 0; },
     gKey(g) { return g.title || '___ungrouped'; },
     firstLine(s) { return String(s || '').split(/\r?\n/)[0]; },
@@ -406,6 +412,11 @@ export default {
 .tk-cl-row:hover { background: var(--gold-bg); }
 .tk-cl-row .tk-check { flex: none; margin-top: 1px; }
 .tk-cl-row-main { flex: 1 1 auto; min-width: 0; }
+/* 标题与 ⏳ 徽标同行（徽标见共享样式 .tk-sched，issue #13） */
+.tk-cl-sumrow { display: flex; align-items: baseline; min-width: 0; gap: 2px; }
+.tk-cl-sumrow .tk-cl-sum { flex: 1 1 auto; min-width: 0; }
+/* ⏳ 徽标字号对齐右侧日期小字（.tk-cl-date 12px） */
+.tk-cl-sumrow .tk-sched { font-size: 12px; line-height: 16px; }
 .tk-cl-sum { font-size: 14px; color: var(--ink); line-height: 1.5; word-break: break-word; }
 .tk-cl-sum :deep(a) { color: var(--accent, var(--gold)); }
 .tk-cl-desc { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-top: 2px; word-break: break-word; }
