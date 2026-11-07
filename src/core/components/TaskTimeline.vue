@@ -559,7 +559,7 @@ export default {
   position: relative;
   display: flex; align-items: center; gap: 5px; min-width: 0; cursor: grab;
   margin: 0 1px; padding: 2px 6px; border-radius: 6px;
-  background: var(--panel); font-size: 12px; color: var(--ink);
+  background: var(--panel); font-size: 11.5px; line-height: 1.35; color: var(--ink);
   overflow: hidden;
 }
 /* 选中态：描边高亮，提示可拖动调整日期 */
