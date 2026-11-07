@@ -310,7 +310,13 @@
     "pluginHomepage": "Plugin homepage",
     "feedbackTitle": "Feedback",
     "feedbackDesc": "If you run into issues, {issue} or message the author on Xiaohongshu.",
-    "feedbackLink": "Open a GitHub Issue"
+    "feedbackLink": "Open a GitHub Issue",
+    "rebuildIndex": "Rebuild index",
+    "rebuildIndexDesc": "Rescan daily notes, inbox and checklist files to rebuild the task index. The time it takes depends on the number of task files — please wait patiently. Use this when view data no longer matches file contents.",
+    "rebuildIndexBtn": "Rebuild now",
+    "rebuildIndexRunning": "Rebuilding index…",
+    "rebuildIndexDone": "Index rebuilt in",
+    "rebuildIndexFail": "Index rebuild failed: "
   },
   "modals": {
     "linkAdd": "Add link",

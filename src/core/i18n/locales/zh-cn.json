@@ -310,7 +310,13 @@
     "pluginHomepage": "插件首页",
     "feedbackTitle": "问题反馈",
     "feedbackDesc": "使用中遇到问题，{issue}，或通过小红书私信联系作者。",
-    "feedbackLink": "在 GitHub 提交 Issue"
+    "feedbackLink": "在 GitHub 提交 Issue",
+    "rebuildIndex": "重建索引",
+    "rebuildIndexDesc": "重新扫描日记、收件箱与清单文件并重建任务索引。耗时取决于任务文件数量，请耐心等待；当视图数据与文件内容不一致时可使用。",
+    "rebuildIndexBtn": "开始重建",
+    "rebuildIndexRunning": "正在重建索引…",
+    "rebuildIndexDone": "索引重建完成，耗时",
+    "rebuildIndexFail": "索引重建失败："
   },
   "modals": {
     "linkAdd": "新增链接",

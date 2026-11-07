@@ -1,6 +1,6 @@
 import { PluginSettingTab, Notice, AbstractInputSuggest, TFolder, setIcon } from 'obsidian';
 import { t } from '../i18n/index.js';
-import { countInboxTasks, migrateInboxTasks } from '../api/tasks.js';
+import { countInboxTasks, migrateInboxTasks, loadAll, loadChecklists } from '../api/tasks.js';
 import { setColorScheme, setWeekStart, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
 import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
@@ -59,8 +59,8 @@ export class FolderSuggest extends AbstractInputSuggest {
 // Dada Todo · 设置页（Obsidian 1.13+ 声明式 API，getSettingDefinitions）
 // ----------------------------------------------------------------------------
 // 注意：本版本 Obsidian 仅消费 getSettingDefinitions()，经典 display() 已不生效。
-// 最外层平铺各基础分区（面板与外观 / 日记设置 / 收件箱与清单 / 视图与日程 /
-// 任务标记 / 关于），每个分区用 `type:'group'` + `heading` 给出小标题，组内
+// 最外层平铺各基础分区（关于 / 面板与外观 / 日记设置 / 收件箱与清单 / 视图与日程 /
+// 任务标记），每个分区用 `type:'group'` + `heading` 给出小标题，组内
 // 用 `type:'setting'` + `render` 渲染原有控件（外观与经典 SettingTab 一致）。
 // ============================================================================
 
@@ -558,11 +558,37 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           descEl.appendText(tpl.slice(idx + token.length));
         }),
       },
+      // 第四行：重建索引（重新扫描全部任务源并重建内存任务列表，视图数据异常时使用）
+      {
+        type: 'setting',
+        name: T('rebuildIndex'),
+        desc: T('rebuildIndexDesc'),
+        render: safe((s) => {
+          s.setName(T('rebuildIndex'));
+          s.setDesc(T('rebuildIndexDesc'));
+          s.addButton((btn) => {
+            btn.setButtonText(T('rebuildIndexBtn'));
+            btn.onClick(async () => {
+              const start = Date.now();
+              new Notice(T('rebuildIndexRunning'));
+              try {
+                // 全量重扫三个任务源（日记 / 收件箱 / 清单）重建内存任务列表，再刷新所有已打开视图
+                await Promise.all([loadAll(), loadChecklists()]);
+                plugin.reloadOpenViews();
+                new Notice(T('rebuildIndexDone') + '（' + Math.round((Date.now() - start) / 1000) + 's）');
+              } catch (e) {
+                new Notice(T('rebuildIndexFail') + (e && e.message || e));
+              }
+            });
+          });
+        }),
+      },
     ]);
 
     // 顶部不再单独渲染插件名 + 版本标题行：Obsidian 设置页 Tab 标题本身已是插件名，避免重复
 
-    const defs = [appearance, journal, inbox, views, reminder, taskMark, about];
+    // 关于置顶：让用户第一眼看到插件信息与求助入口（issue 反馈 / 重建索引入口也在此）
+    const defs = [about, appearance, journal, inbox, views, reminder, taskMark];
     return defs;
     } catch (e) {
       // 定义阶段抛错（非常罕见）：直接显示错误
