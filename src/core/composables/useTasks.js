@@ -3,7 +3,7 @@
 import { t } from '../i18n/index.js';
 import {
   loadAll, loadChecklists, loadByList, loadByDate, getDetail,
-  loadChecklistGroups,
+  loadChecklistGroups, collectTags,
   createTask, createChecklistTask, updateTask, deleteTask, toggleTask, setChecklistStatus, createSubtask, listSubtasks,
   moveChecklistTask
 } from '../api/tasks.js';
@@ -61,7 +61,9 @@ const api = {
   async setChecklistStatus(guid, status) { return (await unwrap(setChecklistStatus(guid, status))).task; },
   async listSubtasks(parentGuid) { return (await unwrap(listSubtasks(parentGuid))).items || []; },
   async createSubtask(parentGuid, task) { return (await unwrap(createSubtask(parentGuid, task))).task; },
-  async moveChecklistTask(listKey, guid, targetGroupTitle) { return await unwrap(moveChecklistTask(listKey, guid, targetGroupTitle)); }
+  async moveChecklistTask(listKey, guid, targetGroupTitle) { return await unwrap(moveChecklistTask(listKey, guid, targetGroupTitle)); },
+  // 全库历史标签（按频次倒序）：编辑弹窗添加标签时的智能提示数据源（issue #22）
+  async collectTags() { return await collectTags(); }
 };
 
 // 聚合命名空间导出，供组件以 Tasks.xxx 调用

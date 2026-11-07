@@ -36,7 +36,17 @@
         </span>
         <span v-if="addingTag" class="tk-tag-chip is-editing">
           <input ref="tagInput" v-model="tagDraft" class="tk-tag-input" type="text" :placeholder="$t('editor.tagName')"
+                 @input="refreshSugs" @keydown.up="onTagNav($event, -1)" @keydown.down="onTagNav($event, 1)"
                  @keydown.enter="onTagEnter" @keydown.esc="onTagEsc" @blur="commitTag" />
+          <!-- 智能提示面板：历史标签按频次倒序，输入时包含匹配过滤（issue #22） -->
+          <div v-if="sugOpen" class="tk-tag-sugs">
+            <div v-for="(s, i) in sugList" :key="s.name" class="tk-tag-sug"
+                 :class="{ active: i === sugIdx }"
+                 @mousedown.prevent="adoptSug(s.name)" @mouseenter="sugIdx = i">
+              <span class="tk-tag-text">#{{ s.name }}</span>
+              <span class="tk-tag-sug-n">{{ s.count }}</span>
+            </div>
+          </div>
         </span>
         <button v-else class="tk-add-mini" type="button" :title="$t('editor.addTag')" @click="startAddTag">
           <i class="la la-plus"></i>
@@ -185,7 +195,12 @@ export default {
       linkEditIndex: -1,
       // 新增标签
       addingTag: false,
-      tagDraft: ''
+      tagDraft: '',
+      // 标签智能提示（issue #22）：tagSugs 全量历史，sugList 为过滤后面板列表，sugIdx 键盘焦点
+      tagSugs: [],
+      sugList: [],
+      sugIdx: -1,
+      sugOpen: false
     };
   },
   computed: {
@@ -457,15 +472,48 @@ export default {
       }).open();
     },
 
-    /* ---------- 标签 ---------- */
-    startAddTag() {
+    /* ---------- 标签（含智能提示，issue #22） ---------- */
+    async startAddTag() {
       this.addingTag = true;
       this.tagDraft = '';
+      this.sugOpen = false;
+      this.sugIdx = -1;
       this.$nextTick(() => { const el = this.$refs.tagInput; if (el) el.focus(); });
+      // 异步拉取全库历史标签（collectTags 有缓存，写路径后自动重建）
+      try {
+        const list = await Tasks.collectTags();
+        if (!this.addingTag) return; // 期间输入框已关闭
+        this.tagSugs = Array.isArray(list) ? list : [];
+        this.refreshSugs();
+      } catch (e) { /* 拿不到历史标签时维持现状（无提示面板） */ }
+    },
+    // 按当前草稿过滤历史标签：包含匹配；排除本任务已添加的；空草稿 = 展示频次最高的前 8 个
+    refreshSugs() {
+      const q = sanitizeTag(this.tagDraft).toLowerCase();
+      const taken = this.form.tags;
+      const filtered = (this.tagSugs || []).filter((s) =>
+        taken.indexOf(s.name) < 0 && (!q || s.name.toLowerCase().indexOf(q) >= 0));
+      this.sugList = filtered.slice(0, 8);
+      this.sugIdx = -1;
+      this.sugOpen = this.sugList.length > 0;
+    },
+    // 采纳建议：加入标签后清空草稿并刷新面板（面板保持打开，可继续连选）
+    adoptSug(name) {
+      if (this.form.tags.indexOf(name) < 0) this.form.tags.push(name);
+      this.tagDraft = '';
+      this.refreshSugs();
+      this.$nextTick(() => { const el = this.$refs.tagInput; if (el) el.focus(); });
+    },
+    onTagNav(e, d) {
+      if (isImeKey(e) || !this.sugOpen || !this.sugList.length) return;
+      const n = this.sugList.length;
+      this.sugIdx = ((this.sugIdx < 0 ? (d > 0 ? -1 : 0) : this.sugIdx) + d + n) % n;
+      e.preventDefault();
     },
     cancelAddTag() {
       this.addingTag = false;
       this.tagDraft = '';
+      this.sugOpen = false;
     },
     commitTag() {
       if (!this.addingTag) return;
@@ -473,6 +521,7 @@ export default {
       if (name && this.form.tags.indexOf(name) < 0) this.form.tags.push(name);
       this.addingTag = false;
       this.tagDraft = '';
+      this.sugOpen = false;
     },
     removeTag(i) {
       this.form.tags.splice(i, 1);
@@ -485,10 +534,17 @@ export default {
     },
     onTagEnter(e) {
       if (isImeKey(e)) return;
+      // 面板打开时回车 = 采纳高亮项（未高亮则取第一项），面板关闭才走原本的提交
+      if (this.sugOpen && this.sugList.length) {
+        this.adoptSug(this.sugList[this.sugIdx >= 0 ? this.sugIdx : 0].name);
+        return;
+      }
       this.commitTag();
     },
     onTagEsc(e) {
       if (isImeKey(e)) return;
+      // Esc 两段式：先关建议面板，再取消输入
+      if (this.sugOpen) { this.sugOpen = false; return; }
       this.cancelAddTag();
     },
     close() { this.$emit('update:open', false); }
@@ -556,7 +612,20 @@ export default {
   opacity: .6; transition: opacity .15s ease, background .15s ease;
 }
 .tk-tag-del:hover { opacity: 1; background: var(--background-modifier-hover); }
-.tk-tag-chip.is-editing { padding: 1px 8px; }
+.tk-tag-chip.is-editing { padding: 1px 8px; position: relative; }
+/* 标签智能提示面板（issue #22）：锚定输入胶囊下方，历史标签按频次倒序 */
+.tk-tag-sugs {
+  position: absolute; top: calc(100% + 4px); left: 0; min-width: 160px; max-height: 180px;
+  overflow: auto; z-index: 30; padding: 4px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
+}
+.tk-tag-sug {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 3px 8px; border-radius: 5px; font-size: 12px; color: var(--ink); cursor: pointer;
+}
+.tk-tag-sug.active, .tk-tag-sug:hover { background: var(--hover); }
+.tk-tag-sug-n { flex: none; font-size: 10px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .tk-tag-input {
   width: 88px; border: none; background: transparent; padding: 0;
   font: inherit; font-size: 12px; color: inherit; box-shadow: none;

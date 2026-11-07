@@ -19,7 +19,10 @@ export function initTasksApi(p) { plugin = p; }
 // 自写标记：插件自身的写操作也会触发 vault / metadataCache 事件，
 // 视图层的「外部变更自动刷新」据此跳过自身引起的变更，避免无谓的重复加载。
 let lastSelfWriteAt = 0;
-function noteSelfWrite() { lastSelfWriteAt = Date.now(); }
+// 标签索引缓存（编辑弹窗智能提示，issue #22）：写路径统一经 noteSelfWrite()，
+// 故在此一并置空，下次 collectTags() 时全量重建，避免增量维护引入不一致
+let tagIndex = null;
+function noteSelfWrite() { lastSelfWriteAt = Date.now(); tagIndex = null; }
 export function isExternalChange() { return Date.now() - lastSelfWriteAt > 1200; }
 
 // 任务记录统一出口：⏳ 计划日期（scheduledAt）仅在设置「启用计划时间」开启时对外可见，
@@ -491,6 +494,34 @@ export async function getDetail(guid) {
   return r.body.items.find((t) => t.guid === guid) || null;
 }
 export const loadChecklists = () => listChecklists();
+
+// ---------- 全库标签索引（编辑弹窗智能提示，issue #22） ----------
+// 扫描全部任务源（日记 / 收件箱 / 清单，含清单内无 📅 的任务与缩进子任务——
+// 它们不进日历聚合，但标签同样算「用过」），统计每个标签的使用频次。
+// 返回 [{ name, count }]，按频次倒序、同频次按字母序。
+export async function collectTags() {
+  if (tagIndex) return tagIndex;
+  const counts = new Map();
+  const bump = (node) => {
+    if (!node) return;
+    if (Array.isArray(node.tags)) for (const g of node.tags) counts.set(g, (counts.get(g) || 0) + 1);
+    if (Array.isArray(node.children)) node.children.forEach(bump);
+  };
+  const files = [
+    ...listDailyFiles(),
+    { key: INBOX_KEY, path: taskFilePath(INBOX_KEY) },
+    ...checklistFileEntries(),
+  ];
+  for (const f of files) {
+    try {
+      const doc = await readTasks(f.path, f.key);
+      doc.roots.forEach(bump);
+    } catch (e) { /* 单个文件缺失 / 损坏不影响其余统计 */ }
+  }
+  tagIndex = [...counts.entries()].map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  return tagIndex;
+}
 
 // 列出某任务的子任务
 export async function listSubtasks(parentGuid) {
