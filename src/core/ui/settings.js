@@ -509,7 +509,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     };
 
     const about = group('groupAbout', [
-      // 第一行：软件名（左） + 版本标签（右）
+      // 第一行：软件名（左） + 版本标签 + 更新日志按钮（右，跳转 GitHub Releases 列表）
       {
         type: 'setting',
         name: plugin.manifest.name,
@@ -517,7 +517,9 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         render: safe((s) => {
           s.setName(plugin.manifest.name);
           s.descEl.empty();
-          s.controlEl.createSpan({ text: T('version') + ' ' + (plugin.manifest.version || ''), cls: 'dt-about-version-tag' });
+          const row = s.controlEl.createDiv('dt-about-links');
+          row.createSpan({ text: T('version') + ' ' + (plugin.manifest.version || ''), cls: 'dt-about-version-tag' });
+          aboutButton(row, 'lucide-history', T('changelog'), GH_REPO + '/releases');
         }),
       },
       // 第二行：作者（左：label「作者」+ 作者名） + 插件首页 / GitHub / 小红书 按钮（右）

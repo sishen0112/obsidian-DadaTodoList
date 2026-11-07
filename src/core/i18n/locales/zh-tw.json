@@ -259,6 +259,7 @@
     "remindTestBtn": "發送測試",
     "groupAbout": "關於",
     "version": "版本",
+    "changelog": "更新日誌",
     "pluginHomepage": "外掛首頁",
     "rebuildIndex": "重建索引",
     "rebuildIndexDesc": "重新掃描日記、收件箱與清單檔案並重建任務索引。耗時取決於任務檔案數量，請耐心等待；當視圖資料與檔案內容不一致時可使用。",
