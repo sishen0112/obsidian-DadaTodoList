@@ -1,6 +1,7 @@
 
 /* ---------- 设置页：关于区（版本标签 + 链接按钮） ---------- */
 .dt-about-version-tag {
+  display: inline-flex; align-items: center;
   padding: 2px 10px;
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
