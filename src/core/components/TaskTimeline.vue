@@ -583,7 +583,7 @@ export default {
 .tk-tl-aditem.selected .tk-tl-span-h { opacity: 1; pointer-events: auto; }
 .tk-tl-aditem.selected .tk-tl-span-h:hover::before { filter: brightness(1.12); }
 .tk-tl-aditem .tk-check { flex: none; }
-.tk-tl-aditem .tk-tl-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-tl-aditem .tk-tl-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 /* 跨日横跨条：续接端（非真实起止）不收圆角，以示「仍在延续」 */
 .tk-tl-aditem.cont-start { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .tk-tl-aditem.cont-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
@@ -656,8 +656,7 @@ export default {
 }
 .tk-tl-bt { display: flex; align-items: center; gap: 5px; min-width: 0; line-height: 24px; }
 .tk-tl-bt .tk-check { flex: none; }
-.tk-tl-bt .tk-tl-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tk-tl-block .tk-tl-sum { font-weight: 400; }
+.tk-tl-bt .tk-tl-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 /* 「其他时间」行：标题与 ⏳ 徽标同一行（外层为纵向 flex，需行内容器） */
 .tk-tl-sumrow { display: flex; align-items: center; min-width: 0; gap: 2px; }
 .tk-tl-sumrow .tk-tl-sum { flex: 1 1 auto; }
