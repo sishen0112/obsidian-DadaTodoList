@@ -298,7 +298,7 @@
     "tagColorsAddPlaceholder": "輸入標籤名（# 可省略）",
     "tagColorTip": "點擊修改標籤顏色",
     "tagColorTitle": "設定標籤顏色",
-    "tagColorPickFirst": "請先選擇一個顏色",
+    "tagColorNone": "無顏色（清除標籤顏色）",
     "tagColorCustom": "自訂顏色",
     "minuteUnit": " 分鐘",
     "inboxFile": "收件箱檔案",

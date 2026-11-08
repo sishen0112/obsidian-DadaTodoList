@@ -359,6 +359,9 @@
 }
 .tk-tagcolor-modal .tk-tagcolor-swatch:hover { transform: scale(1.12); }
 .tk-tagcolor-modal .tk-tagcolor-swatch.on { box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 3.5px var(--text-normal); }
+/* 「无颜色」：虚线空心圆，选中保存即清除标签颜色 */
+.tk-tagcolor-modal .tk-tagcolor-swatch.tk-tagcolor-none { border: 1px dashed var(--text-muted); box-shadow: none; }
+.tk-tagcolor-modal .tk-tagcolor-swatch.tk-tagcolor-none.on { box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 3.5px var(--text-normal); }
 /* 自定义行：标签 + 预览色块（透明 input 覆盖弹系统取色器）+ hex */
 .tk-tagcolor-modal .tk-tagcolor-customrow { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .tk-tagcolor-modal .tk-tagcolor-label { font-size: 12px; color: var(--text-muted); }

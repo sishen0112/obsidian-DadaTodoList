@@ -270,7 +270,7 @@
     "tagColorsAddPlaceholder": "Tag name (# optional)",
     "tagColorTip": "Click to change tag color",
     "tagColorTitle": "Set tag color",
-    "tagColorPickFirst": "Pick a color first",
+    "tagColorNone": "No color (clear tag color)",
     "tagColorCustom": "Custom color",
     "minuteUnit": " minutes",
     "inboxFile": "Inbox file",

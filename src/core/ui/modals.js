@@ -141,9 +141,14 @@ export class TagColorModal extends Modal {
 
     contentEl.createEl('div', { cls: 'tk-tagcolor-tag', text: '#' + this.tag });
 
-    // 色板：预设在前，用户自定义过的颜色追加在后（去重，不与预设重复）
+    // 色板：「无颜色」在最前，预设其次，用户自定义过的颜色追加在后（去重，不与预设重复）
     const grid = contentEl.createEl('div', { cls: 'tk-tagcolor-grid' });
     this.gridEl = grid;
+    const none = grid.createEl('button', {
+      cls: 'tk-tagcolor-swatch tk-tagcolor-none',
+      attr: { type: 'button', 'data-c': '', title: t('app.tagColorNone') }
+    });
+    none.addEventListener('click', () => this.apply(''));
     const all = [...TAG_COLOR_PRESETS, ...this.customColors.filter((c) => !TAG_COLOR_PRESETS.includes(c))];
     for (const c of all) {
       const b = grid.createEl('button', { cls: 'tk-tagcolor-swatch', attr: { type: 'button', 'data-c': c } });
@@ -166,7 +171,7 @@ export class TagColorModal extends Modal {
     new Setting(contentEl)
       .addButton((b) => b.setButtonText(t('common.cancel')).onClick(() => this.close()))
       .addButton((b) => b.setButtonText(t('common.save')).setCta().onClick(() => {
-        if (!this.selected) { new Notice(t('app.tagColorPickFirst')); return; }
+        // selected 为空串 = 选了「无颜色」：由调用方删除该标签已有颜色
         const cb = this.onSave;
         const { tag, selected } = this;
         this.close();
