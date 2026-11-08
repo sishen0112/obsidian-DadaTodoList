@@ -71,10 +71,17 @@
         <button v-for="c in presets" :key="c" type="button" class="tk-colorpop-swatch"
                 :class="{ on: colorPop.color === c }" :style="{ background: c }"
                 @click="colorPop.color = c"></button>
-        <span class="tk-colorpop-custom" :title="$t('app.tagColorCustom')">
+        <span class="tk-colorpop-custom" :title="$t('app.tagColorCustom')" @click="openCustom">
           <i class="la la-plus"></i>
-          <input type="color" :value="colorPop.color" @input="colorPop.color = $event.target.value" />
         </span>
+      </div>
+      <!-- 自定义行：点预览色块弹系统取色器实时预览，确定后才落到色板选中态 -->
+      <div v-if="showCustom" class="tk-colorpop-customrow">
+        <span class="tk-colorpop-preview" :style="{ background: customColor }" :title="$t('app.tagColorCustom')">
+          <input type="color" :value="customColor" @input="customColor = $event.target.value" />
+        </span>
+        <span class="tk-colorpop-hex">{{ customColor }}</span>
+        <button type="button" class="tk-colorpop-btn primary" @click="confirmCustom">{{ $t('common.confirm') }}</button>
       </div>
       <div class="tk-colorpop-actions">
         <button type="button" class="tk-colorpop-btn" @click="closeColorPop">{{ $t('common.cancel') }}</button>
@@ -93,6 +100,9 @@ export default {
     return {
       // 取色面板状态：{ tag, color, x, y } | null；x/y 为相对侧栏的 absolute 坐标
       colorPop: null,
+      // 自定义颜色：showCustom 控制内嵌编辑区，customColor 为确认前的暂存色
+      showCustom: false,
+      customColor: '',
       // 预设色板（issue #8）：与设置页标签颜色分组一致的常用色
       presets: ['#e5484d', '#e5683c', '#d9a514', '#3fa144', '#2aa198',
         '#3b82f6', '#7c6bd9', '#c15bc0', '#8d6e63', '#6b7280']
@@ -119,7 +129,18 @@ export default {
     },
     closeColorPop() {
       this.colorPop = null;
+      this.showCustom = false;
       this.unbindPopClosers();
+    },
+    // 展开自定义编辑区：暂存当前色，点预览色块再弹系统取色器实时调整
+    openCustom() {
+      this.showCustom = true;
+      this.customColor = this.colorPop ? this.colorPop.color : '#7c6bd9';
+    },
+    // 确定自定义色：落到色板选中态（真正的生效仍需面板的「保存」）
+    confirmCustom() {
+      if (this.colorPop && /^#[0-9a-fA-F]{6}$/.test(this.customColor)) this.colorPop.color = this.customColor;
+      this.showCustom = false;
     },
     // 保存：把选中的颜色上抛给容器（TasksApp.setTagColor 落盘并刷新各视图）
     saveColorPop() {
@@ -253,18 +274,25 @@ export default {
 }
 .tk-colorpop-swatch:hover { transform: scale(1.12); }
 .tk-colorpop-swatch.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--ink); }
-/* + 自定义：瓷砖样式，透明 color input 覆盖其上弹系统取色器 */
+/* + 自定义：点击展开内嵌编辑区（预览色块再弹系统取色器） */
 .tk-colorpop-custom {
-  position: relative; flex: none; width: 20px; height: 20px; border-radius: 50%;
+  flex: none; width: 20px; height: 20px; border-radius: 50%;
   border: 1px dashed var(--ink-soft); color: var(--ink-soft);
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 10px; cursor: pointer; box-sizing: border-box;
 }
 .tk-colorpop-custom:hover { color: var(--ink); border-color: var(--ink); }
-.tk-colorpop-custom input {
+/* 自定义行：预览色块（透明 input 覆盖弹系统取色器）+ hex + 确定 */
+.tk-colorpop-customrow { display: flex; align-items: center; gap: 8px; }
+.tk-colorpop-preview {
+  position: relative; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); cursor: pointer;
+}
+.tk-colorpop-preview input {
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   opacity: 0; border: none; padding: 0; margin: 0; cursor: pointer;
 }
+.tk-colorpop-hex { flex: 1 1 auto; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .tk-colorpop-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .tk-colorpop-btn {
   padding: 3px 10px; font: inherit; font-size: 12px;
