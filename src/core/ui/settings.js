@@ -599,6 +599,8 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         render: safe((s) => {
           s.setName(T('tagColors'));
           s.setDesc(T('tagColorsDesc'));
+          // 标签胶囊网格独占一行：control 撑满整行换到名称/说明下方（见 .dt-tagcolor-setting）
+          s.settingEl.addClass('dt-tagcolor-setting');
           const root = s.controlEl;
           root.empty();
           // 重建整个维护区（改色后调用）；配置存于 plugin.settings.tagColors

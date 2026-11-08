@@ -55,6 +55,9 @@
 .dt-tagcolor-add:hover { color: var(--text-accent); border-color: var(--text-accent); }
 
 /* 已配置标签：横向胶囊（标签名 + 颜色圆圈，点圆圈弹取色弹窗） */
+/* 标签网格独占一行：control 换行到名称/说明下方并靠左铺满 */
+.dt-tagcolor-setting { flex-wrap: wrap; }
+.dt-tagcolor-setting .setting-item-control { flex: 1 1 100%; justify-content: flex-start; }
 .dt-tagcolor-grid {
   display: flex;
   flex-wrap: wrap;
