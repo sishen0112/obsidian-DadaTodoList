@@ -766,11 +766,12 @@ function withAlpha(color, a) {
 // 时间轴任务块配色：标签颜色优先（issue #8），未命中配置的标签按标题哈希取色（浅底深字）
 export function colorOf(t, scheme) {
   // 标签优先：任务标签中第一个命中 tagColors 配置的决定整块背景色（叠加默认透明度，
-  // 与色卡浅底观感一致）；不返回 fg——文字色维持各视图默认（浅底深字逻辑不受影响）
+  // 与色卡浅底观感一致）；fg = 实色，供日程卡片左侧色条（--ag-bar）使用。
+  // 文字色不受影响——itemColor 仅在方案声明 useFg / 色卡标记 dark 时才把 fg 用作文字色
   const tags = t && Array.isArray(t.tags) ? t.tags : [];
   for (const g of tags) {
     const c = tagColors[g];
-    if (c) return { bg: withAlpha(c, 0.28) };
+    if (c) return { bg: withAlpha(c, 0.28), fg: c };
   }
   const arr = COLOR_SCHEMES[scheme] || COLOR_SCHEMES[activeColorScheme];
   const s = String((t && t.summary) || '');
