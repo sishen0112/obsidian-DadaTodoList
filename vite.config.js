@@ -61,9 +61,10 @@ export default defineConfig({
   },
   build: {
     outDir: OUT_DIR,
-    // 开发 watch 模式不清空 dist：避免文件「删除-重建」瞬间被 Hot Reload 误判
+    // 任何模式都不清空产物目录：dada-todo-list/ 被测试库软链为插件目录，
+    // Obsidian 把运行时配置 data.json 写在这里，清空会删掉用户的标签颜色等全部设置
     // （产物文件名固定为 main.js/styles.css/manifest.json，无残留哈希文件风险）
-    emptyOutDir: !isDev,
+    emptyOutDir: false,
     lib: {
       entry: 'src/core/main.js',
       formats: ['cjs'],
