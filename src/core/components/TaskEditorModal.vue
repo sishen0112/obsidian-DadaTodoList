@@ -43,8 +43,8 @@
             <div v-for="(s, i) in sugList" :key="s.name" class="tk-tag-sug"
                  :class="{ active: i === sugIdx }"
                  @mousedown.prevent="adoptSug(s.name)" @mouseenter="sugIdx = i">
-              <span class="tk-tag-sug-dot" :style="sugDotStyle(s.name)"></span>
               <span class="tk-tag-text">#{{ s.name }}</span>
+              <span v-if="sugDotStyle(s.name)" class="tk-tag-sug-dot" :style="sugDotStyle(s.name)"></span>
               <span class="tk-tag-sug-n">{{ s.count }}</span>
             </div>
           </div>
@@ -641,10 +641,10 @@ export default {
   padding: 3px 8px; border-radius: 5px; font-size: 12px; color: var(--ink); cursor: pointer;
 }
 .tk-tag-sug.active, .tk-tag-sug:hover { background: var(--hover); }
-/* 行首颜色圆点（issue #8）：已配置实色底、未配置空心描边（sugDotStyle 内联覆盖） */
+/* 行尾颜色圆点（issue #8）：已配置才渲染，实色底（sugDotStyle 内联覆盖） */
 .tk-tag-sug-dot {
   flex: none; width: 10px; height: 10px; border-radius: 50%;
-  border: 1px solid var(--ink-soft); background: transparent; box-sizing: border-box;
+  border: 1px solid transparent; background: transparent; box-sizing: border-box;
 }
 .tk-tag-sug .tk-tag-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-tag-sug-n { flex: none; font-size: 10px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
