@@ -10,7 +10,7 @@ import {
   INBOX_KEY, CHILD_INDENT,
   parseTasks, toRecord, serializeBlock, serializeTaskLine,
   nodeFromTask, locateNode, collectLineNos, todayKey, parseGuid, msToTime, dateToMs, flattenTasks,
-  priorityRank
+  priorityRank, splitSummary
 } from '../composables/tasks-logic.js';
 
 let plugin = null;
@@ -498,13 +498,15 @@ export const loadChecklists = () => listChecklists();
 // ---------- 全库标签索引（编辑弹窗智能提示，issue #22） ----------
 // 扫描全部任务源（日记 / 收件箱 / 清单，含清单内无 📅 的任务与缩进子任务——
 // 它们不进日历聚合，但标签同样算「用过」），统计每个标签的使用频次。
+// 注意：解析节点上没有 tags 字段，标签要从 summary 现场解析（splitSummary，与 toRecord 同源）。
 // 返回 [{ name, count }]，按频次倒序、同频次按字母序。
 export async function collectTags() {
   if (tagIndex) return tagIndex;
   const counts = new Map();
   const bump = (node) => {
     if (!node) return;
-    if (Array.isArray(node.tags)) for (const g of node.tags) counts.set(g, (counts.get(g) || 0) + 1);
+    const tags = splitSummary(node.summary).tags;
+    if (Array.isArray(tags)) for (const g of tags) counts.set(g, (counts.get(g) || 0) + 1);
     if (Array.isArray(node.children)) node.children.forEach(bump);
   };
   const files = [
