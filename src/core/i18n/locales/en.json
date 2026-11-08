@@ -269,6 +269,7 @@
     "tagColorsAdd": "Add",
     "tagColorsAddPlaceholder": "Tag name (# optional)",
     "tagColorTip": "Click to change tag color",
+    "tagColorCustom": "Custom color",
     "minuteUnit": " minutes",
     "inboxFile": "Inbox file",
     "inboxFileDesc": "File that stores tasks without a date, as a path relative to the vault root. Created automatically on startup if missing.",

@@ -13,29 +13,23 @@
                 :class="{ on: tagFilter === g.tag }" @click="$emit('toggle-tag', g.tag)">
           <i class="la" :class="tagFilter === g.tag ? 'la-folder-open' : 'la-folder'"></i>
           <span>{{ g.label }}</span>
-          <span class="tk-tagdot" :class="{ empty: !hexOf(g.tag) }" :style="hexOf(g.tag) ? { background: hexOf(g.tag) } : null" :title="$t('app.tagColorTip')">
-            <input type="color" :value="hexOf(g.tag) || '#7c6bd9'"
-                   @click.stop @change="$emit('set-tag-color', g.tag, $event.target.value)" />
-          </span>
+          <span class="tk-tagdot" :class="{ empty: !hexOf(g.tag) }" :style="hexOf(g.tag) ? { background: hexOf(g.tag) } : null" :title="$t('app.tagColorTip')"
+                @click.stop="openColorPop(g.tag, $event)"></span>
           <span class="cnt">{{ g.n }}</span>
         </button>
         <button v-for="c in g.items" :key="c.tag" class="tk-filter-item tk-filter-child" type="button"
                 :class="{ on: tagFilter === c.tag }" @click="$emit('toggle-tag', c.tag)">
           <span>{{ c.label }}</span>
-          <span class="tk-tagdot" :class="{ empty: !hexOf(c.tag) }" :style="hexOf(c.tag) ? { background: hexOf(c.tag) } : null" :title="$t('app.tagColorTip')">
-            <input type="color" :value="hexOf(c.tag) || '#7c6bd9'"
-                   @click.stop @change="$emit('set-tag-color', c.tag, $event.target.value)" />
-          </span>
+          <span class="tk-tagdot" :class="{ empty: !hexOf(c.tag) }" :style="hexOf(c.tag) ? { background: hexOf(c.tag) } : null" :title="$t('app.tagColorTip')"
+                @click.stop="openColorPop(c.tag, $event)"></span>
           <span class="cnt">{{ c.n }}</span>
         </button>
       </div>
       <button v-for="t in tagTree.loose" :key="t.tag" class="tk-filter-item" type="button"
               :class="{ on: tagFilter === t.tag }" @click="$emit('toggle-tag', t.tag)">
         <i class="la la-tag"></i><span>{{ t.label }}</span>
-        <span class="tk-tagdot" :class="{ empty: !hexOf(t.tag) }" :style="hexOf(t.tag) ? { background: hexOf(t.tag) } : null" :title="$t('app.tagColorTip')">
-          <input type="color" :value="hexOf(t.tag) || '#7c6bd9'"
-                 @click.stop @change="$emit('set-tag-color', t.tag, $event.target.value)" />
-        </span>
+        <span class="tk-tagdot" :class="{ empty: !hexOf(t.tag) }" :style="hexOf(t.tag) ? { background: hexOf(t.tag) } : null" :title="$t('app.tagColorTip')"
+              @click.stop="openColorPop(t.tag, $event)"></span>
         <span class="cnt">{{ t.n }}</span>
       </button>
     </template>
@@ -69,6 +63,24 @@
             :class="{ on: statusView === 'cancelled' }" @click="$emit('select-status', 'cancelled')">
       <i class="la la-minus-circle"></i><span>{{ $t('app.cancelled') }}</span><span class="cnt">{{ statusCounts.cancelled }}</span>
     </button>
+
+    <!-- 标签取色面板（issue #8）：预设色板 + 自定义（+ 弹系统取色器）+ 保存 / 取消 -->
+    <div v-if="colorPop" class="tk-colorpop" :style="{ left: colorPop.x + 'px', top: colorPop.y + 'px' }"
+         @pointerdown.stop @click.stop>
+      <div class="tk-colorpop-row">
+        <button v-for="c in presets" :key="c" type="button" class="tk-colorpop-swatch"
+                :class="{ on: colorPop.color === c }" :style="{ background: c }"
+                @click="colorPop.color = c"></button>
+        <span class="tk-colorpop-custom" :title="$t('app.tagColorCustom')">
+          <i class="la la-plus"></i>
+          <input type="color" :value="colorPop.color" @input="colorPop.color = $event.target.value" />
+        </span>
+      </div>
+      <div class="tk-colorpop-actions">
+        <button type="button" class="tk-colorpop-btn" @click="closeColorPop">{{ $t('common.cancel') }}</button>
+        <button type="button" class="tk-colorpop-btn primary" @click="saveColorPop">{{ $t('common.save') }}</button>
+      </div>
+    </div>
   </aside>
 </template>
 
@@ -77,12 +89,66 @@
 // 纯展示组件：所有选择动作上抛，标签与清单的互斥等逻辑由容器处理。
 export default {
   name: 'TaskFilters',
+  data() {
+    return {
+      // 取色面板状态：{ tag, color, x, y } | null；x/y 为相对侧栏的 absolute 坐标
+      colorPop: null,
+      // 预设色板（issue #8）：与设置页标签颜色分组一致的常用色
+      presets: ['#e5484d', '#e5683c', '#d9a514', '#3fa144', '#2aa198',
+        '#3b82f6', '#7c6bd9', '#c15bc0', '#8d6e63', '#6b7280']
+    };
+  },
   methods: {
     // 标签已配置颜色时返回 #hex（供圆点实色显示），否则空串（空心圆点）
     hexOf(tag) {
       const c = this.tagColors && this.tagColors[tag];
       return /^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? c : '';
+    },
+    // 打开取色面板：absolute 定位到圆点下方（侧栏有 container-type，不能用 fixed）
+    openColorPop(tag, e) {
+      const aside = this.$el;
+      const a = aside.getBoundingClientRect();
+      const d = e.currentTarget.getBoundingClientRect();
+      // 圆点位置换算成侧栏内坐标（含滚动偏移），再水平收进面板宽度内
+      const popW = 172;
+      let x = d.left - a.left + aside.scrollLeft;
+      let y = d.bottom - a.top + aside.scrollTop + 6;
+      x = Math.max(4, Math.min(x, aside.clientWidth - popW - 4));
+      this.colorPop = { tag, color: this.hexOf(tag) || '#7c6bd9', x, y };
+      this.bindPopClosers();
+    },
+    closeColorPop() {
+      this.colorPop = null;
+      this.unbindPopClosers();
+    },
+    // 保存：把选中的颜色上抛给容器（TasksApp.setTagColor 落盘并刷新各视图）
+    saveColorPop() {
+      if (this.colorPop) this.$emit('set-tag-color', this.colorPop.tag, this.colorPop.color);
+      this.closeColorPop();
+    },
+    // 面板打开期间：点面板外 / 滚动 / Esc 关闭（面板自身已 @pointerdown.stop）
+    bindPopClosers() {
+      if (this._popClosers) return;
+      const onDocDown = () => this.closeColorPop();
+      const onKey = (ev) => { if (ev.key === 'Escape') this.closeColorPop(); };
+      const onScroll = () => this.closeColorPop();
+      document.addEventListener('pointerdown', onDocDown, true);
+      document.addEventListener('keydown', onKey, true);
+      window.addEventListener('scroll', onScroll, true);
+      this._popClosers = [
+        ['pointerdown', onDocDown, document, true],
+        ['keydown', onKey, document, true],
+        ['scroll', onScroll, window, true]
+      ];
+    },
+    unbindPopClosers() {
+      if (!this._popClosers) return;
+      for (const [type, fn, target, capture] of this._popClosers) target.removeEventListener(type, fn, capture);
+      this._popClosers = null;
     }
+  },
+  beforeUnmount() {
+    this.unbindPopClosers();
   },
   props: {
     dateFilters: { type: Array, default: () => [] },
@@ -110,6 +176,8 @@ export default {
   background: var(--panel); border-right: 1px solid var(--line);
   border-radius: 0; box-shadow: none; padding: 10px 8px;
   container-type: inline-size;
+  /* 取色面板 .tk-colorpop 的定位基准（侧栏有 container-type，内部不能用 fixed） */
+  position: relative;
 }
 .tk-filter-h { font-size: 12px; font-weight: 700; letter-spacing: .6px; color: var(--ink-soft); margin: 2px 4px 8px; }
 .tk-filter-h + .tk-filter-h, .tk-filter-item + .tk-filter-h, div + .tk-filter-h { margin-top: 16px; }
@@ -132,7 +200,7 @@ export default {
 .tk-filter-item .tk-tagdot,
 .tk-filter-row .tk-tagdot {
   position: relative; flex: none; width: 12px; height: 12px;
-  border: 1.5px solid var(--ink-soft); border-radius: 50%;
+  border: 1px solid var(--ink-soft); border-radius: 50%;
   display: inline-block; cursor: pointer;
   transition: transform .12s ease;
 }
@@ -165,4 +233,44 @@ export default {
   .tk-filter-open { display: none; }
   .tk-filter-item .cnt { display: none; }
 }
+
+/* ===== 标签取色面板（issue #8）：预设色板 + 自定义 + 保存 / 取消 ===== */
+.tk-colorpop {
+  position: absolute; z-index: 50; width: 172px; box-sizing: border-box;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18); padding: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.tk-colorpop-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* 预设色块：圆形，选中时描边 */
+.tk-colorpop-swatch {
+  flex: none; width: 20px; height: 20px; border-radius: 50%;
+  border: none; padding: 0; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+  transition: transform .12s ease;
+}
+.tk-colorpop-swatch:hover { transform: scale(1.12); }
+.tk-colorpop-swatch.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--ink); }
+/* + 自定义：瓷砖样式，透明 color input 覆盖其上弹系统取色器 */
+.tk-colorpop-custom {
+  position: relative; flex: none; width: 20px; height: 20px; border-radius: 50%;
+  border: 1px dashed var(--ink-soft); color: var(--ink-soft);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; cursor: pointer; box-sizing: border-box;
+}
+.tk-colorpop-custom:hover { color: var(--ink); border-color: var(--ink); }
+.tk-colorpop-custom input {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  opacity: 0; border: none; padding: 0; margin: 0; cursor: pointer;
+}
+.tk-colorpop-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.tk-colorpop-btn {
+  padding: 3px 10px; font: inherit; font-size: 12px;
+  border: 1px solid var(--line); border-radius: 6px; background: transparent;
+  color: var(--ink); cursor: pointer; box-shadow: none !important;
+  transition: background .15s ease;
+}
+.tk-colorpop-btn:hover { background: var(--gold-bg); }
+.tk-colorpop-btn.primary { background: var(--gold); border-color: var(--gold); color: var(--text-on-accent); }
+.tk-colorpop-btn.primary:hover { filter: brightness(1.05); background: var(--gold); }
 </style>

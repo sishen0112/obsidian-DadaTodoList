@@ -269,6 +269,7 @@
     "tagColorsAdd": "添加",
     "tagColorsAddPlaceholder": "输入标签名（# 可省略）",
     "tagColorTip": "点击修改标签颜色",
+    "tagColorCustom": "自定义颜色",
     "minuteUnit": " 分钟",
     "inboxFile": "收件箱文件",
     "inboxFileDesc": "无日期任务的存放文件，填写相对库根目录的路径。文件不存在时会在启动时自动创建。",

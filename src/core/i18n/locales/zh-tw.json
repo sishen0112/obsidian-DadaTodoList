@@ -297,6 +297,7 @@
     "tagColorsAdd": "添加",
     "tagColorsAddPlaceholder": "輸入標籤名（# 可省略）",
     "tagColorTip": "點擊修改標籤顏色",
+    "tagColorCustom": "自訂顏色",
     "minuteUnit": " 分鐘",
     "inboxFile": "收件箱檔案",
     "inboxFileDesc": "無日期任務的存放檔案，填寫相對庫根目錄的路徑。檔案不存在時會在啟動時自動建立。",
