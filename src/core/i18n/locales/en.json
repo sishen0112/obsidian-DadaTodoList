@@ -269,6 +269,8 @@
     "tagColorsAdd": "Add",
     "tagColorsAddPlaceholder": "Tag name (# optional)",
     "tagColorTip": "Click to change tag color",
+    "tagColorTitle": "Set tag color",
+    "tagColorPickFirst": "Pick a color first",
     "tagColorCustom": "Custom color",
     "minuteUnit": " minutes",
     "inboxFile": "Inbox file",

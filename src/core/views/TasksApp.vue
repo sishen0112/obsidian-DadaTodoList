@@ -105,6 +105,7 @@ import TaskTopBar from '../components/TaskTopBar.vue';
 import WeekDayView from '../components/WeekDayView.vue';
 import TaskRow from '../components/tasks/TaskRow.vue';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
+import { TagColorModal } from '../ui/modals.js';
 
 import ChecklistView from '../components/tasks/ChecklistView.vue';
 import TaskMonthView from '../components/tasks/TaskMonthView.vue';
@@ -541,6 +542,17 @@ export default {
       await this.plugin.saveSettings();
       setTagColors(next);
       this.plugin.reloadOpenViews();
+    },
+    // 圆点点击弹原生取色 Modal：预设色板 + data.json 里已自定义的颜色 + 自定义取色器
+    openTagColorModal(tag) {
+      const map = this.plugin.settings.tagColors || {};
+      const used = [...new Set(Object.values(map).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)))];
+      new TagColorModal(this.plugin.app, {
+        tag,
+        color: map[tag] || '',
+        customColors: used,
+        onSave: (t2, color) => { this.setTagColor(t2, color); }
+      }).open();
     },
     // 日程视图：左侧时间点 / 右侧卡片，沿用时间轴配色；文字色走 itemColor（皮卡丘近黑/焦棕深底色卡走亮字、其余亮底深字，紫罗兰走亮色字）
     agendaCard(t) { const c = this.colorOf(t); return { background: c.bg, color: itemColor(t).color, '--ag-bar': c.fg }; },

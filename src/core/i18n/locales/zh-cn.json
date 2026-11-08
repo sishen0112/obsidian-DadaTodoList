@@ -269,6 +269,8 @@
     "tagColorsAdd": "添加",
     "tagColorsAddPlaceholder": "输入标签名（# 可省略）",
     "tagColorTip": "点击修改标签颜色",
+    "tagColorTitle": "设置标签颜色",
+    "tagColorPickFirst": "请先选择一个颜色",
     "tagColorCustom": "自定义颜色",
     "minuteUnit": " 分钟",
     "inboxFile": "收件箱文件",

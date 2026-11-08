@@ -8,7 +8,7 @@
                     :checklists="ctx.checklists" :active-list="ctx.activeList"
                     :status-view="ctx.statusView" :status-counts="ctx.statusCounts"
                     @select-date="ctx.selectDate" @toggle-tag="ctx.toggleTagFilter"
-                    @set-tag-color="ctx.setTagColor"
+                    @edit-tag-color="ctx.openTagColorModal"
                     @select-list="ctx.selectList" @select-status="ctx.selectStatus"
                     @open-list-file="ctx.openListFile" />
 
