@@ -326,7 +326,13 @@ export function renderInlineHtml(text, opts = {}) {
         : escapeHtml(m[0]);
     } else {
       out += escapeHtml(m[3]); // 保留前置空白，避免与前后文字粘连
-      if (withTags) out += '<span class="tk-inline-tag">#' + escapeHtml(m[4]) + '</span>';
+      if (withTags) {
+        const tag = m[4];
+        const c = tagColors[tag];
+        // 标签色胶囊（issue #8）：命中配置 → 浅底（与任务块同透明度）+ 标题同色文字
+        const style = c ? ' style="background:' + withAlpha(c, 0.28) + ';color:var(--ink)"' : '';
+        out += '<span class="tk-inline-tag"' + style + '>#' + escapeHtml(tag) + '</span>';
+      }
     }
     last = m.index + m[0].length;
     if (m[0] === '') re.lastIndex++;
@@ -744,6 +750,13 @@ export function getWeekStart() {
 // 是否处于 Obsidian 深色主题（dark mode 下紫罗兰配色需要切到深紫底 + 亮紫字）
 function isDarkMode() {
   return typeof document !== 'undefined' && document.body && document.body.classList.contains('theme-dark');
+}
+
+// 标签胶囊配色（列表视图 .tk-tag 等独立胶囊）：命中 tagColors → 浅底（与任务块同透明度）+
+// 标题同色文字；未命中返回 null（走默认胶囊样式）
+export function tagChipStyle(name) {
+  const c = tagColors[name];
+  return c ? { background: withAlpha(c, 0.28), color: 'var(--ink)' } : null;
 }
 
 // hex 颜色 → 带透明度的 rgba：标签色与配色方案的浅底观感保持一致（透明度对齐默认色卡的 .28）。

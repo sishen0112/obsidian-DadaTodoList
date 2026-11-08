@@ -60,7 +60,7 @@
                      @click.stop.prevent="onToggle(t)"></i>
                   <div class="tk-cl-row-main">
                     <div class="tk-cl-sumrow">
-                      <div class="tk-cl-sum" v-html="richSummaryNoTags(t)" @click="onRichClick"></div>
+                      <div class="tk-cl-sum" v-html="renderInlineHtml(t && t.summary)" @click="onRichClick"></div>
                       <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(t)">{{ scheduledText(t) }}</span>
                     </div>
                     <div v-if="t.description" class="tk-cl-desc">{{ firstLine(t.description) }}</div>
@@ -98,7 +98,7 @@
                    @click.stop.prevent="onToggle(t)"></i>
                 <div class="tk-cl-row-main">
                   <div class="tk-cl-sumrow">
-                    <div class="tk-cl-sum" v-html="richSummaryNoTags(t)" @click="onRichClick"></div>
+                    <div class="tk-cl-sum" v-html="renderInlineHtml(t && t.summary)" @click="onRichClick"></div>
                     <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(t)">{{ scheduledText(t) }}</span>
                   </div>
                   <div v-if="t.description" class="tk-cl-desc">{{ firstLine(t.description) }}</div>
@@ -122,7 +122,7 @@
 <script>
 import { Tasks } from '../../composables/useTasks.js';
 import { taskFilePath } from '../../api/tasks.js';
-import { statusIcon, dateText, timeText, richSummaryNoTags, scheduledText } from '../../composables/tasks-logic.js';
+import { statusIcon, dateText, timeText, richSummaryNoTags, renderInlineHtml, scheduledText } from '../../composables/tasks-logic.js';
 import { VueModal } from '../../ui/VueModal.js';
 import TaskEditorModal from '../TaskEditorModal.vue';
 import { openTaskInFile } from '../../utils/openTaskInFile.js';

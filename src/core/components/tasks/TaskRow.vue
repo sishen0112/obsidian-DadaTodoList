@@ -7,7 +7,7 @@
       <div class="tk-body">
         <span class="tk-sum" v-html="richSummaryNoTags(task)" @click="onRichClick"></span>
         <div v-if="task.tags && task.tags.length" class="tk-tags">
-          <span v-for="tag in task.tags" :key="tag" class="tk-tag">#{{ tag }}</span>
+          <span v-for="tag in task.tags" :key="tag" class="tk-tag" :style="tagChipStyle(tag)">#{{ tag }}</span>
         </div>
       </div>
       <span v-if="task.scheduledAt" class="tk-sched" v-tooltip="scheduledText(task)">{{ scheduledText(task) }}</span>
@@ -20,7 +20,7 @@
 <script>
 // 任务列表行（待办/已办分组共用）。
 // 纯展示组件：勾选 / 选中 / 编辑等动作全部上抛，由容器统一处理。
-import { statusIcon, dateText, timeText, richSummaryNoTags, priorityToLevel, scheduledText } from '../../composables/tasks-logic.js';
+import { statusIcon, dateText, timeText, richSummaryNoTags, priorityToLevel, scheduledText, tagChipStyle } from '../../composables/tasks-logic.js';
 
 export default {
   name: 'TaskRow',
@@ -52,6 +52,8 @@ export default {
     timeText(t) { return timeText(t); },
     // ⏳ 计划日期徽标文本（issue #13，仅展示）
     scheduledText(t) { return scheduledText(t); },
+    // 标签胶囊配色（issue #8）：命中标签色的返回浅底样式
+    tagChipStyle(name) { return tagChipStyle(name); },
     richSummaryNoTags(t) { return richSummaryNoTags(t); },
     // 行点击：按住 Ctrl（Win）/Cmd（Mac）直接跳转到任务所在笔记并高亮，无需打开编辑器
     onClickRow(e) {
