@@ -161,7 +161,7 @@
 
 <script>
 import { Tasks } from '../composables/useTasks.js';
-import { splitSummary, composeSummary, sanitizeTag, isImeKey, PRIORITY_ICON, priorityToLevel, levelToPriorityEmoji, withAlpha } from '../composables/tasks-logic.js';
+import { splitSummary, composeSummary, sanitizeTag, isImeKey, PRIORITY_ICON, priorityToLevel, levelToPriorityEmoji, withAlpha, validHex } from '../composables/tasks-logic.js';
 import { LinkFormModal, ConfirmModal } from '../ui/modals.js';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
 import SubtaskList from './SubtaskList.vue';
@@ -526,17 +526,13 @@ export default {
     },
     // 标签胶囊配色（issue #8）：已配置颜色 → 浅底 .28 + 同色边框，文字 --ink；未配置走默认样式
     chipStyle(tag) {
-      const map = (this.plugin && this.plugin.settings && this.plugin.settings.tagColors) || {};
-      const c = map[tag];
-      return /^#[0-9a-fA-F]{6}$/.test(String(c || ''))
-        ? { background: withAlpha(c, 0.28), borderColor: c, color: 'var(--ink)' }
-        : null;
+      const c = validHex((this.plugin && this.plugin.settings && this.plugin.settings.tagColors || {})[tag]);
+      return c ? { background: withAlpha(c, 0.28), borderColor: c, color: 'var(--ink)' } : null;
     },
-    // 标签提示列表行首圆点：已配置实色底、未配置空心
+    // 标签提示列表行尾圆点：已配置实色底（未配置不渲染）
     sugDotStyle(name) {
-      const map = (this.plugin && this.plugin.settings && this.plugin.settings.tagColors) || {};
-      const c = map[name];
-      return /^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? { background: c, borderColor: 'transparent' } : null;
+      const c = validHex((this.plugin && this.plugin.settings && this.plugin.settings.tagColors || {})[name]);
+      return c ? { background: c, borderColor: 'transparent' } : null;
     },
     removeTag(i) {
       this.form.tags.splice(i, 1);

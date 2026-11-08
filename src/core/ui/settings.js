@@ -2,7 +2,7 @@ import { PluginSettingTab, Notice, AbstractInputSuggest, TFolder, setIcon } from
 import { t } from '../i18n/index.js';
 import { TagColorModal } from './modals.js';
 import { countInboxTasks, migrateInboxTasks, loadAll, loadChecklists, collectTags } from '../api/tasks.js';
-import { setColorScheme, setWeekStart, setTagColors, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
+import { setColorScheme, setWeekStart, tagColorOf, usedTagColors, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
 import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
@@ -603,27 +603,16 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           s.settingEl.addClass('dt-tagcolor-setting');
           const root = s.controlEl;
           root.empty();
-          // 重建整个维护区（改色后调用）；配置存于 plugin.settings.tagColors
+          // 重建整个维护区（改色后调用）；落盘统一走 plugin.setTagColor（含 data.json 持久化与视图刷新）
           const build = () => {
             root.empty();
-            const map = plugin.settings.tagColors || {};
-            const save = async () => {
-              plugin.settings.tagColors = map;
-              await plugin.saveSettings();
-              setTagColors(map);
-              plugin.reloadOpenViews();
-            };
             // 点圆圈弹取色弹窗设置 / 清除（选「无颜色」即删除映射）
             const openPicker = (name) => {
-              const used = [...new Set(Object.values(map).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)))];
               new TagColorModal(plugin.app, {
                 tag: name,
-                color: map[name] || '',
-                customColors: used,
-                onSave: (t2, color2) => {
-                  if (color2) map[t2] = color2; else delete map[t2];
-                  save().then(build);
-                }
+                color: tagColorOf(name),
+                customColors: usedTagColors(plugin.settings.tagColors),
+                onSave: (t2, color2) => plugin.setTagColor(t2, color2).then(build)
               }).open();
             };
             // 横向胶囊：标签名在前、颜色圆圈在后；已配置实色、未配置空心，点圆圈设置
@@ -635,7 +624,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
                 return;
               }
               for (const name of names) {
-                const color = map[name] || '';
+                const color = tagColorOf(name);
                 const chip = grid.createDiv('dt-tagcolor-chip');
                 chip.createSpan({ text: '#' + name, cls: 'dt-tagcolor-name' });
                 const dot = chip.createSpan({ cls: 'dt-tagcolor-dot' + (color ? '' : ' is-empty') });
@@ -648,7 +637,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
             // 全量任务标签（与列表页侧栏同口径，按名称排序）；collectTags 失败时兜底只显示已配置的
             collectTags()
               .then((list) => renderGrid((list || []).map((s) => s.name).sort((a, b) => a.localeCompare(b))))
-              .catch(() => renderGrid(Object.keys(map).sort((a, b) => a.localeCompare(b))));
+              .catch(() => renderGrid(Object.keys(plugin.settings.tagColors || {}).sort((a, b) => a.localeCompare(b))));
           };
           build();
         }),

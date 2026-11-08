@@ -98,7 +98,7 @@ import {
   renderInlineHtml, plainInline,
   dateText, timeText, statusIcon, plainTitle, richSummaryNoTags, doneDay, spanDateText,
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf, weekdayLong,
-  getWeekStart, spansDays, setTagColors
+  getWeekStart, spansDays, tagColorOf, usedTagColors
 } from '../composables/tasks-logic.js';
 import TaskEditorModal from '../components/TaskEditorModal.vue';
 import TaskTopBar from '../components/TaskTopBar.vue';
@@ -534,23 +534,16 @@ export default {
     // 时间轴块配色 / 农历 / 节假日：纯函数在 tasks-logic（周视图组件与月视图 ctx 共用），此处仅作委托
     colorOf(t) { return colorOf(t); },
     itemColor(t) { return itemColor(t); },
-    // 侧栏圆点点击改色（issue #8）：落盘 + 注入取色层 + 刷新视图
+    // 侧栏圆点点击改色（issue #8）：统一走 plugin.setTagColor（落盘 + 注入取色层 + 刷新视图）
     async setTagColor(tag, color) {
-      const next = Object.assign({}, this.plugin.settings.tagColors || {});
-      if (color) next[tag] = color; else delete next[tag];
-      this.plugin.settings.tagColors = next;
-      await this.plugin.saveSettings();
-      setTagColors(next);
-      this.plugin.reloadOpenViews();
+      await this.plugin.setTagColor(tag, color);
     },
     // 圆点点击弹原生取色 Modal：预设色板 + data.json 里已自定义的颜色 + 自定义取色器
     openTagColorModal(tag) {
-      const map = this.plugin.settings.tagColors || {};
-      const used = [...new Set(Object.values(map).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)))];
       new TagColorModal(this.plugin.app, {
         tag,
-        color: map[tag] || '',
-        customColors: used,
+        color: tagColorOf(tag),
+        customColors: usedTagColors(this.plugin.settings.tagColors),
         onSave: (t2, color) => { this.setTagColor(t2, color); }
       }).open();
     },

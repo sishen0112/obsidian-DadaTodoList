@@ -69,13 +69,14 @@
 <script>
 // 列表视图左侧筛选侧栏（日期 / 标签 / 清单）。
 // 纯展示组件：所有选择动作上抛，标签与清单的互斥等逻辑由容器处理。
+import { validHex } from '../../composables/tasks-logic.js';
+
 export default {
   name: 'TaskFilters',
   methods: {
     // 标签已配置颜色时返回 #hex（供圆点实色显示），否则空串（空心圆点）
     hexOf(tag) {
-      const c = this.tagColors && this.tagColors[tag];
-      return /^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? c : '';
+      return validHex(this.tagColors && this.tagColors[tag]);
     }
   },
   props: {

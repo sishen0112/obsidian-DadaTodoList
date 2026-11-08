@@ -262,6 +262,17 @@ export default class DadaTodoPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  // 标签改色的统一入口（issue #8）：落盘 + 注入取色层 + 刷新各视图。
+  // TasksApp 侧栏弹窗与设置页共用；color 为空串 = 清除该标签的颜色
+  async setTagColor(tag, color) {
+    const next = Object.assign({}, this.settings.tagColors || {});
+    if (color) next[tag] = color; else delete next[tag];
+    this.settings.tagColors = next;
+    await this.saveSettings();
+    setTagColors(next);
+    this.reloadOpenViews();
+  }
+
   // 数据相关设置（每日笔记加载范围 / 收件箱路径）变更后调用：
   // 刷新所有已打开的面板，让新配置立即生效，无需手动重开面板
   reloadOpenViews() {

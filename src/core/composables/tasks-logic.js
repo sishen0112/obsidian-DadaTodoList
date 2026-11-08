@@ -736,6 +736,25 @@ export function setTagColors(m) {
   tagColors = (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
 }
 
+// 合法标签色的统一校验：仅接受 6 位 hex（取色器与映射值都该是这个形态）
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+// 校验并规整标签色：合法 6 位 hex 原样返回，否则空串
+export function validHex(c) {
+  const s = String(c || '');
+  return HEX_COLOR_RE.test(s) ? s : '';
+}
+
+// 标签已配置合法颜色时返回 #hex，否则空串（读模块级注入的映射，供弹窗 / 设置页等非响应式场景）
+export function tagColorOf(name) {
+  return validHex(tagColors[name]);
+}
+
+// 一个映射里所有合法的自定义色（去重）：取色弹窗的「已用颜色」色板
+export function usedTagColors(map) {
+  return [...new Set(Object.values(map || {}).filter((c) => HEX_COLOR_RE.test(String(c || ''))))];
+}
+
 // 每周起始日：0 = 周日 … 6 = 周六。由 main.js 在加载设置、以及设置变更时调用 setWeekStart 更新。
 // 周视图 / 月视图 / 日历格据此重排首列与周范围；视图在设置变更后通过 reloadOpenViews() 重载。
 let weekStartDay = 0;

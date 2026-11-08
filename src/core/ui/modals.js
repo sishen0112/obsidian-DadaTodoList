@@ -1,5 +1,6 @@
 import { Modal, Notice, Setting } from 'obsidian';
 import { t } from '../i18n/index.js';
+import { validHex } from '../composables/tasks-logic.js';
 
 // ============================================================================
 // Obsidian 原生 Modal 辅助
@@ -126,7 +127,7 @@ export class TagColorModal extends Modal {
     this.color = color;
     this.customColors = customColors;
     this.onSave = onSave;
-    this.selected = /^#[0-9a-fA-F]{6}$/.test(color) ? color : '';
+    this.selected = validHex(color);
     this.gridEl = null;
     this.previewEl = null;
     this.inputEl = null;
