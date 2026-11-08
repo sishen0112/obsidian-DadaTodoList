@@ -4,9 +4,11 @@
       <!-- 左侧筛选：日期 + 标签 + 清单（纯展示，互斥逻辑在容器） -->
       <task-filters :date-filters="ctx.dateFilters" :date-filter="ctx.dateFilter"
                     :tag-tree="ctx.tagTree" :tag-filter="ctx.tagFilter"
+                    :tag-colors="ctx.tagColors"
                     :checklists="ctx.checklists" :active-list="ctx.activeList"
                     :status-view="ctx.statusView" :status-counts="ctx.statusCounts"
                     @select-date="ctx.selectDate" @toggle-tag="ctx.toggleTagFilter"
+                    @set-tag-color="ctx.setTagColor"
                     @select-list="ctx.selectList" @select-status="ctx.selectStatus"
                     @open-list-file="ctx.openListFile" />
 

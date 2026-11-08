@@ -12,16 +12,28 @@
         <button class="tk-filter-item tk-filter-parent" type="button"
                 :class="{ on: tagFilter === g.tag }" @click="$emit('toggle-tag', g.tag)">
           <i class="la" :class="tagFilter === g.tag ? 'la-folder-open' : 'la-folder'"></i>
-          <span>{{ g.label }}</span><span class="cnt">{{ g.n }}</span>
+          <span>{{ g.label }}</span>
+          <input type="color" class="tk-tagdot" :class="{ empty: !hexOf(g.tag) }"
+                 :value="hexOf(g.tag) || '#7c6bd9'" :title="$t('app.tagColorTip')"
+                 @click.stop @change="$emit('set-tag-color', g.tag, $event.target.value)" />
+          <span class="cnt">{{ g.n }}</span>
         </button>
         <button v-for="c in g.items" :key="c.tag" class="tk-filter-item tk-filter-child" type="button"
                 :class="{ on: tagFilter === c.tag }" @click="$emit('toggle-tag', c.tag)">
-          <span>{{ c.label }}</span><span class="cnt">{{ c.n }}</span>
+          <span>{{ c.label }}</span>
+          <input type="color" class="tk-tagdot" :class="{ empty: !hexOf(c.tag) }"
+                 :value="hexOf(c.tag) || '#7c6bd9'" :title="$t('app.tagColorTip')"
+                 @click.stop @change="$emit('set-tag-color', c.tag, $event.target.value)" />
+          <span class="cnt">{{ c.n }}</span>
         </button>
       </div>
       <button v-for="t in tagTree.loose" :key="t.tag" class="tk-filter-item" type="button"
               :class="{ on: tagFilter === t.tag }" @click="$emit('toggle-tag', t.tag)">
-        <i class="la la-tag"></i><span>{{ t.label }}</span><span class="cnt">{{ t.n }}</span>
+        <i class="la la-tag"></i><span>{{ t.label }}</span>
+        <input type="color" class="tk-tagdot" :class="{ empty: !hexOf(t.tag) }"
+               :value="hexOf(t.tag) || '#7c6bd9'" :title="$t('app.tagColorTip')"
+               @click.stop @change="$emit('set-tag-color', t.tag, $event.target.value)" />
+        <span class="cnt">{{ t.n }}</span>
       </button>
     </template>
 
@@ -62,12 +74,21 @@
 // 纯展示组件：所有选择动作上抛，标签与清单的互斥等逻辑由容器处理。
 export default {
   name: 'TaskFilters',
+  methods: {
+    // 标签已配置颜色时返回 #hex（供圆点实色显示），否则空串（空心圆点）
+    hexOf(tag) {
+      const c = this.tagColors && this.tagColors[tag];
+      return /^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? c : '';
+    }
+  },
   props: {
     dateFilters: { type: Array, default: () => [] },
     dateFilter: { type: String, default: 'all' },
     // 标签树：{ groups: [{label, tag, n, items}], loose: [{label, tag, n}] }
     tagTree: { type: Object, required: true },
     tagFilter: { type: String, default: '' },
+    // 标签颜色映射（issue #8）：圆点据此显示实色 / 空心
+    tagColors: { type: Object, default: () => ({}) },
     checklists: { type: Array, default: () => [] },
     activeList: { type: String, default: '' },
     // 状态视图：'' | 'done' | 'cancelled'；statusCounts 为当前池内的数量
@@ -101,6 +122,18 @@ export default {
 .tk-filter-item i { flex: none; width: 15px; text-align: center; font-size: 13px; }
 .tk-filter-item span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-filter-item .cnt { flex: none; font-size: 12px; opacity: .7; font-variant-numeric: tabular-nums; }
+/* 标签颜色圆点（issue #8）：原生 color input 伪装成圆点，点击弹系统取色器；
+   未配置颜色 → 空心圆点（透明色板 + 描边），已配置 → 实色圆点（描边隐藏） */
+.tk-tagdot {
+  flex: none; width: 12px; height: 12px; padding: 0; margin: 0;
+  border: 1.5px solid var(--ink-soft); border-radius: 50%;
+  background: transparent; cursor: pointer;
+}
+.tk-tagdot::-webkit-color-swatch-wrapper { padding: 0; }
+.tk-tagdot::-webkit-color-swatch { border: none; border-radius: 50%; }
+.tk-tagdot.empty::-webkit-color-swatch { background: transparent; }
+.tk-tagdot:not(.empty) { border-color: transparent; }
+.tk-tagdot:hover { transform: scale(1.15); }
 .tk-filter-parent { font-weight: 600; }
 .tk-filter-child { padding-left: 24px; font-size: 13.5px; }
 /* 清单行：名称按钮（选中加载任务）+ 打开文件图标 */

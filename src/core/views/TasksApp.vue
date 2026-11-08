@@ -98,7 +98,7 @@ import {
   renderInlineHtml, plainInline,
   dateText, timeText, statusIcon, plainTitle, richSummaryNoTags, doneDay, spanDateText,
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf, weekdayLong,
-  getWeekStart, spansDays
+  getWeekStart, spansDays, setTagColors
 } from '../composables/tasks-logic.js';
 import TaskEditorModal from '../components/TaskEditorModal.vue';
 import TaskTopBar from '../components/TaskTopBar.vue';
@@ -530,6 +530,17 @@ export default {
     // 时间轴块配色 / 农历 / 节假日：纯函数在 tasks-logic（周视图组件与月视图 ctx 共用），此处仅作委托
     colorOf(t) { return colorOf(t); },
     itemColor(t) { return itemColor(t); },
+    // 标签颜色映射（issue #8）：列表视图侧栏圆点据此显示实色 / 空心
+    tagColors() { return (this.plugin.settings && this.plugin.settings.tagColors) || {}; },
+    // 侧栏圆点点击改色（issue #23 侧的补全入口）：落盘 + 注入取色层 + 刷新视图
+    async setTagColor(tag, color) {
+      const next = Object.assign({}, this.plugin.settings.tagColors || {});
+      if (color) next[tag] = color; else delete next[tag];
+      this.plugin.settings.tagColors = next;
+      await this.plugin.saveSettings();
+      setTagColors(next);
+      this.plugin.reloadOpenViews();
+    },
     // 日程视图：左侧时间点 / 右侧卡片，沿用时间轴配色；文字色走 itemColor（皮卡丘近黑/焦棕深底色卡走亮字、其余亮底深字，紫罗兰走亮色字）
     agendaCard(t) { const c = this.colorOf(t); return { background: c.bg, color: itemColor(t).color, '--ag-bar': c.fg }; },
     // 日程视图：已延期 / 更远 分组折叠切换
