@@ -231,6 +231,9 @@ export default {
 .tk-filter-row .tk-tagdot:not(.empty) { border-color: transparent; }
 .tk-filter-item .tk-tagdot:hover,
 .tk-filter-row .tk-tagdot:hover { transform: scale(1.15); }
+/* 选中态：圆点改 1.5px 白描边（空心/实色统一），计数用白色（置于上方规则之后以覆盖） */
+.tk-filter-item.on .tk-tagdot { border-color: #fff; border-width: 1.5px; }
+.tk-filter-item.on .cnt { color: #fff; opacity: 1; }
 .tk-tagdot input {
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   opacity: 0; border: none; padding: 0; margin: 0; cursor: pointer;
