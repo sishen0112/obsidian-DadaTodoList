@@ -202,6 +202,9 @@ export default {
     // 是否采用左侧竖向菜单：由设置项 menuStyle 控制（horizontal=底部胶囊 / vertical=左侧竖向菜单）。
     // 直接读取响应式 settings，设置页改动后即时生效（无需重启）。基础版与 Pro 共用此开关，体验一致。
     verticalMenu() { return (this.plugin.settings && this.plugin.settings.menuStyle) === 'vertical'; },
+    // 标签颜色映射（issue #8）：列表视图侧栏圆点据此显示实色 / 空心。
+    // 必须是 computed——methods 里的同名函数经 ctx 传给子组件时是函数引用，子组件永远查空
+    tagColors() { return (this.plugin.settings && this.plugin.settings.tagColors) || {}; },
     // 视图菜单项：按设置的顺序（menuViews）排列并过滤隐藏项（menuHiddenViews）。
     // settings 为响应式对象，设置页改动后菜单即时更新，无需重载视图。
     menuItems() {
@@ -530,9 +533,7 @@ export default {
     // 时间轴块配色 / 农历 / 节假日：纯函数在 tasks-logic（周视图组件与月视图 ctx 共用），此处仅作委托
     colorOf(t) { return colorOf(t); },
     itemColor(t) { return itemColor(t); },
-    // 标签颜色映射（issue #8）：列表视图侧栏圆点据此显示实色 / 空心
-    tagColors() { return (this.plugin.settings && this.plugin.settings.tagColors) || {}; },
-    // 侧栏圆点点击改色（issue #23 侧的补全入口）：落盘 + 注入取色层 + 刷新视图
+    // 侧栏圆点点击改色（issue #8）：落盘 + 注入取色层 + 刷新视图
     async setTagColor(tag, color) {
       const next = Object.assign({}, this.plugin.settings.tagColors || {});
       if (color) next[tag] = color; else delete next[tag];
