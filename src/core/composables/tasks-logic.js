@@ -746,14 +746,31 @@ function isDarkMode() {
   return typeof document !== 'undefined' && document.body && document.body.classList.contains('theme-dark');
 }
 
+// hex 颜色 → 带透明度的 rgba：标签色与配色方案的浅底观感保持一致（透明度对齐默认色卡的 .28）。
+// 非 hex（如已是 rgba 的串）原样返回
+function withAlpha(color, a) {
+  const s = String(color || '').trim();
+  let m = /^#([0-9a-f]{6})$/i.exec(s);
+  if (m) {
+    const n = parseInt(m[1], 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  m = /^#([0-9a-f]{3})$/i.exec(s);
+  if (m) {
+    const [r, g, b] = m[1].split('');
+    return 'rgba(' + parseInt(r + r, 16) + ',' + parseInt(g + g, 16) + ',' + parseInt(b + b, 16) + ',' + a + ')';
+  }
+  return s;
+}
+
 // 时间轴任务块配色：标签颜色优先（issue #8），未命中配置的标签按标题哈希取色（浅底深字）
 export function colorOf(t, scheme) {
-  // 标签优先：任务标签中第一个命中 tagColors 配置的决定整块背景色；
-  // 不返回 fg——文字色维持各视图默认（浅底深字 / 深底色卡逻辑不受影响）
+  // 标签优先：任务标签中第一个命中 tagColors 配置的决定整块背景色（叠加默认透明度，
+  // 与色卡浅底观感一致）；不返回 fg——文字色维持各视图默认（浅底深字逻辑不受影响）
   const tags = t && Array.isArray(t.tags) ? t.tags : [];
   for (const g of tags) {
     const c = tagColors[g];
-    if (c) return { bg: c };
+    if (c) return { bg: withAlpha(c, 0.28) };
   }
   const arr = COLOR_SCHEMES[scheme] || COLOR_SCHEMES[activeColorScheme];
   const s = String((t && t.summary) || '');
