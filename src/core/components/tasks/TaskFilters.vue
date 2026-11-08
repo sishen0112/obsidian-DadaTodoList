@@ -127,7 +127,8 @@ export default {
 .tk-filter-item .tk-tagdot,
 .tk-filter-row .tk-tagdot {
   position: relative; flex: none; width: 12px; height: 12px;
-  border: 1px solid var(--ink-soft); border-radius: 50%;
+  /* 虚线描边：已配置颜色的圆点会以实色底覆盖（border-color: transparent），只剩实色圆 */
+  border: 1px dashed var(--ink-soft); border-radius: 50%;
   display: inline-block; cursor: pointer;
   transition: transform .12s ease;
 }
