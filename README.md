@@ -26,6 +26,7 @@
 - **Flexible time** — single time, time ranges (start – end), all-day, or **cross-date** (start date – end date, shown across multiple days), switchable per task
 - **Subtasks** — indented lines become nested subtasks of any depth
 - **Task priority** — mark tasks high / medium / low (🔺 / 🔼 / 🔽); the format is read & write compatible with the obsidian-tasks plugin, set right in the task editor
+- **Tag colors** — assign a color to any tag in settings: task blocks, agenda cards and tag pills all pick it up; click the color dot in the list sidebar to change it anytime
 - **Drag to reschedule** — drag tasks between days, or drag the handles on the timeline to fine-tune start / end times
 - **Option/Alt + drag to copy** — hold Option (Mac) / Alt or Ctrl (Windows·Linux) while dragging to drop a copy at the target; the original stays put. In the month view the copy keeps its original times and only changes the date; on the week / day timeline the drop point becomes the new start time (original duration preserved)
 - **Customizable view menu** — choose which views appear in the switcher menu and drag to reorder them; hidden views keep their order and can be restored anytime
