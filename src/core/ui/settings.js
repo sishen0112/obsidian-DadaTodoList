@@ -1,7 +1,7 @@
 import { PluginSettingTab, Notice, AbstractInputSuggest, TFolder, setIcon } from 'obsidian';
 import { t } from '../i18n/index.js';
-import { countInboxTasks, migrateInboxTasks, loadAll, loadChecklists } from '../api/tasks.js';
-import { setColorScheme, setWeekStart, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
+import { countInboxTasks, migrateInboxTasks, loadAll, loadChecklists, collectTags } from '../api/tasks.js';
+import { setColorScheme, setWeekStart, setTagColors, sanitizeTag, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
 import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
@@ -60,7 +60,7 @@ export class FolderSuggest extends AbstractInputSuggest {
 // ----------------------------------------------------------------------------
 // 注意：本版本 Obsidian 仅消费 getSettingDefinitions()，经典 display() 已不生效。
 // 最外层平铺各基础分区（关于 / 面板与外观 / 日记设置 / 收件箱与清单 / 视图与日程 /
-// 任务标记），每个分区用 `type:'group'` + `heading` 给出小标题，组内
+// 任务标记 / 标签颜色），每个分区用 `type:'group'` + `heading` 给出小标题，组内
 // 用 `type:'setting'` + `render` 渲染原有控件（外观与经典 SettingTab 一致）。
 // ============================================================================
 
@@ -589,8 +589,75 @@ export class DadaTodoSettingTab extends PluginSettingTab {
 
     // 顶部不再单独渲染插件名 + 版本标题行：Obsidian 设置页 Tab 标题本身已是插件名，避免重复
 
+    // ---------- 标签颜色（issue #8：标签 → 任务块颜色映射维护） ----------
+    const tagColorGroup = group('groupTagColors', [
+      {
+        type: 'setting',
+        name: T('tagColors'),
+        desc: T('tagColorsDesc'),
+        render: safe((s) => {
+          s.setName(T('tagColors'));
+          s.setDesc(T('tagColorsDesc'));
+          const root = s.controlEl;
+          root.empty();
+          // 重建整个维护区（增删后调用）；配置存于 plugin.settings.tagColors
+          const build = () => {
+            root.empty();
+            const map = plugin.settings.tagColors || {};
+            const save = async () => {
+              plugin.settings.tagColors = map;
+              await plugin.saveSettings();
+              setTagColors(map);
+              plugin.reloadOpenViews();
+            };
+            const hexOf = (c) => (/^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? c : '#7c6bd9');
+            // 已配置行：色点 + 标签名 + 颜色选择器 + 删除
+            for (const [name, color] of Object.entries(map)) {
+              const row = root.createDiv('dt-tagcolor-row');
+              row.createSpan({ cls: 'dt-tagcolor-dot' }).style.background = color;
+              row.createSpan({ text: '#' + name, cls: 'dt-tagcolor-name' });
+              const picker = row.createEl('input', { type: 'color', cls: 'dt-tagcolor-picker', value: hexOf(color) });
+              picker.addEventListener('input', () => {
+                map[name] = picker.value;
+                row.querySelector('.dt-tagcolor-dot').style.background = picker.value;
+                save();
+              });
+              const del = row.createEl('button', { cls: 'dt-tagcolor-del' });
+              setIcon(del, 'lucide-x');
+              del.setAttribute('aria-label', t('editor.delTag'));
+              del.addEventListener('click', () => { delete map[name]; save().then(build); });
+            }
+            // 新增行：标签名输入（带历史标签 datalist 建议）+ 颜色选择器 + 添加
+            const addRow = root.createDiv('dt-tagcolor-row');
+            const input = addRow.createEl('input', { type: 'text', cls: 'dt-tagcolor-input', placeholder: T('tagColorsAddPlaceholder') });
+            const picker = addRow.createEl('input', { type: 'color', cls: 'dt-tagcolor-picker', value: '#7c6bd9' });
+            const add = addRow.createEl('button', { cls: 'dt-tagcolor-add' });
+            setIcon(add, 'lucide-plus');
+            add.setAttribute('aria-label', T('tagColorsAdd'));
+            const doAdd = () => {
+              const name = sanitizeTag(input.value);
+              if (!name || map[name]) return;
+              map[name] = picker.value;
+              save().then(build);
+            };
+            add.addEventListener('click', doAdd);
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+            // 历史标签作为输入建议（collectTags 有缓存；失败则无建议，仍可手输）
+            collectTags().then((list) => {
+              if (!list || !list.length) return;
+              const dl = addRow.createEl('datalist');
+              dl.id = 'dt-tagcolor-history';
+              list.forEach((sug) => dl.createEl('option', { value: sug.name }));
+              input.setAttribute('list', dl.id);
+            }).catch(() => {});
+          };
+          build();
+        }),
+      },
+    ]);
+
     // 关于置顶：让用户第一眼看到插件信息与求助入口（issue 反馈 / 重建索引入口也在此）
-    const defs = [about, appearance, journal, inbox, views, reminder, taskMark];
+    const defs = [about, appearance, journal, inbox, views, reminder, taskMark, tagColorGroup];
     return defs;
     } catch (e) {
       // 定义阶段抛错（非常罕见）：直接显示错误

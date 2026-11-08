@@ -723,6 +723,13 @@ export function setColorScheme(name) {
   activeColorScheme = COLOR_SCHEMES[name] ? name : 'default';
 }
 
+// 标签颜色映射（issue #8）：由 main.js 在设置加载 / 变更时注入；键 = 标签名，值 = CSS 颜色。
+// 命中标签的任务块用该颜色作整块背景，文字色等其余属性维持默认（不额外调整）
+let tagColors = {};
+export function setTagColors(m) {
+  tagColors = (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+}
+
 // 每周起始日：0 = 周日 … 6 = 周六。由 main.js 在加载设置、以及设置变更时调用 setWeekStart 更新。
 // 周视图 / 月视图 / 日历格据此重排首列与周范围；视图在设置变更后通过 reloadOpenViews() 重载。
 let weekStartDay = 0;
@@ -739,8 +746,15 @@ function isDarkMode() {
   return typeof document !== 'undefined' && document.body && document.body.classList.contains('theme-dark');
 }
 
-// 时间轴任务块配色：按标题哈希取色（浅底深字）
+// 时间轴任务块配色：标签颜色优先（issue #8），未命中配置的标签按标题哈希取色（浅底深字）
 export function colorOf(t, scheme) {
+  // 标签优先：任务标签中第一个命中 tagColors 配置的决定整块背景色；
+  // 不返回 fg——文字色维持各视图默认（浅底深字 / 深底色卡逻辑不受影响）
+  const tags = t && Array.isArray(t.tags) ? t.tags : [];
+  for (const g of tags) {
+    const c = tagColors[g];
+    if (c) return { bg: c };
+  }
   const arr = COLOR_SCHEMES[scheme] || COLOR_SCHEMES[activeColorScheme];
   const s = String((t && t.summary) || '');
   let h = 0;

@@ -1,4 +1,59 @@
 
+/* ---------- 设置页：标签颜色维护（issue #8） ---------- */
+.dt-tagcolor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.dt-tagcolor-dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--background-modifier-border);
+}
+.dt-tagcolor-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+}
+.dt-tagcolor-picker {
+  flex: none;
+  width: 34px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: transparent;
+  cursor: pointer;
+}
+.dt-tagcolor-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dt-tagcolor-del,
+.dt-tagcolor-add {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.dt-tagcolor-del:hover { color: var(--text-error); border-color: var(--text-error); }
+.dt-tagcolor-add:hover { color: var(--text-accent); border-color: var(--text-accent); }
+
 /* ---------- 设置页：关于区（版本标签 + 链接按钮） ---------- */
 .dt-about-version-tag {
   display: inline-flex; align-items: center;

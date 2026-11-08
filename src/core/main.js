@@ -2,7 +2,7 @@ import { ItemView, Plugin } from 'obsidian';
 import { createApp, reactive } from 'vue';
 import TasksApp from './views/TasksApp.vue';
 import { initTasksApi, ensureInboxFile } from './api/tasks.js';
-import { setColorScheme, setWeekStart } from './composables/tasks-logic.js';
+import { setColorScheme, setWeekStart, setTagColors } from './composables/tasks-logic.js';
 import { normalizeMenuViews, normalizeMenuHidden } from './composables/viewMenu.js';
 import { setupDevReload } from './dev/devReload.js';
 import { setupHoverPreview, teardownHoverPreview } from './hoverPreview.js';
@@ -217,6 +217,8 @@ export default class DadaTodoPlugin extends Plugin {
       dailyLoadWindow: data.dailyLoadWindow || 'all',
       // 任务块配色方案：default（默认）/ morandi（莫兰迪）/ jelly（卡通果冻），默认 default
       colorScheme: data.colorScheme || 'default',
+      // 标签颜色映射（issue #8）：{ 标签名: CSS 颜色 }，命中的任务块整块用该颜色
+      tagColors: (data.tagColors && typeof data.tagColors === 'object' && !Array.isArray(data.tagColors)) ? data.tagColors : {},
       // 日 / 周视图时间轴显示范围（整点小时）：开始 0–23、结束 1–24，结束须晚于开始；默认 0–24（全天）
       timelineStartHour: Math.max(0, Math.min(23, Math.round(Number.isFinite(data.timelineStartHour) ? data.timelineStartHour : 0))),
       timelineEndHour: (() => {
@@ -250,9 +252,10 @@ export default class DadaTodoPlugin extends Plugin {
     };
     // 让设置在 Vue 中具备响应式：菜单样式等设置改动后可即时生效，无需重启 Obsidian
     this.settings = reactive(this.settings);
-    // 启动即用已保存的配色方案 / 每周起始日初始化（视图重载时会按此重算）
+    // 启动即用已保存的配色方案 / 每周起始日 / 标签颜色初始化（视图重载时会按此重算）
     setColorScheme(this.settings.colorScheme);
     setWeekStart(this.settings.weekStart);
+    setTagColors(this.settings.tagColors);
   }
 
   async saveSettings() {
