@@ -611,11 +611,11 @@ export default {
 }
 .tk-add-mini:hover { background: var(--gold-bg); color: var(--gold); border-color: var(--gold); }
 
-/* 标签胶囊：× 删除；已配置颜色的标签由 chipStyle 内联浅底+同色边框（透明边兜底占位） */
+/* 标签胶囊：× 删除；已配置颜色的标签由 chipStyle 内联浅底+同色边框覆盖，未配置走默认描边 */
 .tk-tag-chip {
   display: inline-flex; align-items: center; gap: 2px;
   padding: 1px 2px 1px 10px; border-radius: 999px;
-  border: 1px solid transparent;
+  border: 1px solid var(--line);
   background: var(--tag-bg);
   color: var(--tag-ink);
   font-size: 12px; line-height: 20px;
