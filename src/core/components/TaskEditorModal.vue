@@ -28,7 +28,7 @@
       <!-- 标签：胶囊右侧 × 可删除，末尾 + 可新增 -->
       <div class="tk-links">
         <span class="tk-links-label">{{ $t('editor.tags') }}</span>
-        <span v-for="(tag, i) in form.tags" :key="tag" class="tk-tag-chip">
+        <span v-for="(tag, i) in form.tags" :key="tag" class="tk-tag-chip" :style="chipStyle(tag)">
           <span class="tk-tag-text">#{{ tag }}</span>
           <button class="tk-tag-del" type="button" :title="$t('editor.delTag')" @click="removeTag(i)">
             <i class="la la-times"></i>
@@ -43,6 +43,7 @@
             <div v-for="(s, i) in sugList" :key="s.name" class="tk-tag-sug"
                  :class="{ active: i === sugIdx }"
                  @mousedown.prevent="adoptSug(s.name)" @mouseenter="sugIdx = i">
+              <span class="tk-tag-sug-dot" :style="sugDotStyle(s.name)"></span>
               <span class="tk-tag-text">#{{ s.name }}</span>
               <span class="tk-tag-sug-n">{{ s.count }}</span>
             </div>
@@ -160,7 +161,7 @@
 
 <script>
 import { Tasks } from '../composables/useTasks.js';
-import { splitSummary, composeSummary, sanitizeTag, isImeKey, PRIORITY_ICON, priorityToLevel, levelToPriorityEmoji } from '../composables/tasks-logic.js';
+import { splitSummary, composeSummary, sanitizeTag, isImeKey, PRIORITY_ICON, priorityToLevel, levelToPriorityEmoji, withAlpha } from '../composables/tasks-logic.js';
 import { LinkFormModal, ConfirmModal } from '../ui/modals.js';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
 import SubtaskList from './SubtaskList.vue';
@@ -523,6 +524,20 @@ export default {
       this.tagDraft = '';
       this.sugOpen = false;
     },
+    // 标签胶囊配色（issue #8）：已配置颜色 → 浅底 .28 + 同色边框，文字 --ink；未配置走默认样式
+    chipStyle(tag) {
+      const map = (this.plugin && this.plugin.settings && this.plugin.settings.tagColors) || {};
+      const c = map[tag];
+      return /^#[0-9a-fA-F]{6}$/.test(String(c || ''))
+        ? { background: withAlpha(c, 0.28), borderColor: c, color: 'var(--ink)' }
+        : null;
+    },
+    // 标签提示列表行首圆点：已配置实色底、未配置空心
+    sugDotStyle(name) {
+      const map = (this.plugin && this.plugin.settings && this.plugin.settings.tagColors) || {};
+      const c = map[name];
+      return /^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? { background: c, borderColor: 'transparent' } : null;
+    },
     removeTag(i) {
       this.form.tags.splice(i, 1);
     },
@@ -596,10 +611,11 @@ export default {
 }
 .tk-add-mini:hover { background: var(--gold-bg); color: var(--gold); border-color: var(--gold); }
 
-/* 标签胶囊：× 删除 */
+/* 标签胶囊：× 删除；已配置颜色的标签由 chipStyle 内联浅底+同色边框（透明边兜底占位） */
 .tk-tag-chip {
   display: inline-flex; align-items: center; gap: 2px;
   padding: 1px 2px 1px 10px; border-radius: 999px;
+  border: 1px solid transparent;
   background: var(--tag-bg);
   color: var(--tag-ink);
   font-size: 12px; line-height: 20px;
@@ -621,10 +637,16 @@ export default {
   box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
 }
 .tk-tag-sug {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; align-items: center; gap: 8px;
   padding: 3px 8px; border-radius: 5px; font-size: 12px; color: var(--ink); cursor: pointer;
 }
 .tk-tag-sug.active, .tk-tag-sug:hover { background: var(--hover); }
+/* 行首颜色圆点（issue #8）：已配置实色底、未配置空心描边（sugDotStyle 内联覆盖） */
+.tk-tag-sug-dot {
+  flex: none; width: 10px; height: 10px; border-radius: 50%;
+  border: 1px solid var(--ink-soft); background: transparent; box-sizing: border-box;
+}
+.tk-tag-sug .tk-tag-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-tag-sug-n { flex: none; font-size: 10px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .tk-tag-input {
   width: 88px; border: none; background: transparent; padding: 0;

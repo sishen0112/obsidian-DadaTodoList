@@ -761,7 +761,7 @@ export function tagChipStyle(name) {
 
 // hex 颜色 → 带透明度的 rgba：标签色与配色方案的浅底观感保持一致（透明度对齐默认色卡的 .28）。
 // 非 hex（如已是 rgba 的串）原样返回
-function withAlpha(color, a) {
+export function withAlpha(color, a) {
   const s = String(color || '').trim();
   let m = /^#([0-9a-f]{6})$/i.exec(s);
   if (m) {
