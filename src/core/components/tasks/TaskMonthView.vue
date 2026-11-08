@@ -37,7 +37,7 @@
                    @click.stop="onSelect(t, $event)" @dblclick.stop="ctx.onTaskClick(t, $event)"
                    @contextmenu.prevent="ctx.openCtx(t, $event)">
                 <i class="tk-check" :class="[{ done: t.completed || t.cancelled }, ctx.statusIcon(t)]" @click.stop.prevent="ctx.toggle(t)"></i>
-                <span class="cel-task-sum" v-html="ctx.richSummary(t)" @click="ctx.onRichClick"></span>
+                <span class="cel-task-sum" v-html="ctx.richSummaryNoTags(t)" @click="ctx.onRichClick"></span>
                 <span v-if="t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(t)">{{ scheduledText(t) }}</span>
                 <span v-if="ctx.taskTime(t)" class="cel-task-time">{{ ctx.taskTime(t) }}</span>
                 <!-- 单日全天：选中后首/尾出现拖动柄，可延伸为跨日期 -->
@@ -61,7 +61,7 @@
                  @click.stop="onSelect(b.t, $event)" @dblclick.stop="ctx.onTaskClick(b.t, $event)"
                  @contextmenu.prevent="ctx.openCtx(b.t, $event)">
               <i class="tk-check" :class="[{ done: b.t.completed || b.t.cancelled }, ctx.statusIcon(b.t)]" @click.stop.prevent="ctx.toggle(b.t)"></i>
-              <span class="cel-task-sum" v-html="ctx.richSummary(b.t)" @click="ctx.onRichClick"></span>
+              <span class="cel-task-sum" v-html="ctx.richSummaryNoTags(b.t)" @click="ctx.onRichClick"></span>
               <span v-if="b.t.scheduledAt" class="tk-sched" v-tooltip="scheduledText(b.t)">{{ scheduledText(b.t) }}</span>
               <!-- 跨日期条右侧小字：显示开始-结束日期区间（如 10/2-10/7） -->
               <span class="cel-bar-range">{{ ctx.spanRange(b.t) }}</span>
