@@ -2,7 +2,7 @@ import { PluginSettingTab, Notice, AbstractInputSuggest, TFolder, setIcon } from
 import { t } from '../i18n/index.js';
 import { TagColorModal } from './modals.js';
 import { countInboxTasks, migrateInboxTasks, loadAll, loadChecklists, collectTags } from '../api/tasks.js';
-import { setColorScheme, setWeekStart, setTagColors, sanitizeTag, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
+import { setColorScheme, setWeekStart, setTagColors, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
 import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
@@ -601,7 +601,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           s.setDesc(T('tagColorsDesc'));
           const root = s.controlEl;
           root.empty();
-          // 重建整个维护区（增删后调用）；配置存于 plugin.settings.tagColors
+          // 重建整个维护区（改色后调用）；配置存于 plugin.settings.tagColors
           const build = () => {
             root.empty();
             const map = plugin.settings.tagColors || {};
@@ -611,54 +611,42 @@ export class DadaTodoSettingTab extends PluginSettingTab {
               setTagColors(map);
               plugin.reloadOpenViews();
             };
-            const hexOf = (c) => (/^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? c : '#7c6bd9');
-            // 已配置标签：横向胶囊（标签名在前、颜色圆圈在后），点圆圈弹取色弹窗设置/清除
-            const entries = Object.entries(map);
-            const grid = root.createDiv('dt-tagcolor-grid');
-            if (!entries.length) grid.createSpan({ cls: 'dt-tagcolor-empty', text: T('tagColorsEmpty') });
-            for (const [name, color] of entries) {
-              const chip = grid.createDiv('dt-tagcolor-chip');
-              chip.createSpan({ text: '#' + name, cls: 'dt-tagcolor-name' });
-              const dot = chip.createSpan({ cls: 'dt-tagcolor-dot' });
-              dot.style.background = color;
-              if (typeof dot.setTooltip === 'function') dot.setTooltip(T('tagColorTip'));
-              else dot.setAttribute('aria-label', T('tagColorTip'));
-              dot.addEventListener('click', () => {
-                const used = [...new Set(Object.values(map).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)))];
-                new TagColorModal(plugin.app, {
-                  tag: name,
-                  color: map[name] || '',
-                  customColors: used,
-                  onSave: (t2, color2) => {
-                    if (color2) map[t2] = color2; else delete map[t2];
-                    save().then(build);
-                  }
-                }).open();
-              });
-            }
-            // 新增行：标签名输入（带历史标签 datalist 建议）+ 颜色选择器 + 添加
-            const addRow = root.createDiv('dt-tagcolor-row');
-            const input = addRow.createEl('input', { type: 'text', cls: 'dt-tagcolor-input', placeholder: T('tagColorsAddPlaceholder') });
-            const picker = addRow.createEl('input', { type: 'color', cls: 'dt-tagcolor-picker', value: '#7c6bd9' });
-            const add = addRow.createEl('button', { cls: 'dt-tagcolor-add' });
-            setIcon(add, 'lucide-plus');
-            add.setAttribute('aria-label', T('tagColorsAdd'));
-            const doAdd = () => {
-              const name = sanitizeTag(input.value);
-              if (!name || map[name]) return;
-              map[name] = picker.value;
-              save().then(build);
+            // 点圆圈弹取色弹窗设置 / 清除（选「无颜色」即删除映射）
+            const openPicker = (name) => {
+              const used = [...new Set(Object.values(map).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)))];
+              new TagColorModal(plugin.app, {
+                tag: name,
+                color: map[name] || '',
+                customColors: used,
+                onSave: (t2, color2) => {
+                  if (color2) map[t2] = color2; else delete map[t2];
+                  save().then(build);
+                }
+              }).open();
             };
-            add.addEventListener('click', doAdd);
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
-            // 历史标签作为输入建议（collectTags 有缓存；失败则无建议，仍可手输）
-            collectTags().then((list) => {
-              if (!list || !list.length) return;
-              const dl = addRow.createEl('datalist');
-              dl.id = 'dt-tagcolor-history';
-              list.forEach((sug) => dl.createEl('option', { value: sug.name }));
-              input.setAttribute('list', dl.id);
-            }).catch(() => {});
+            // 横向胶囊：标签名在前、颜色圆圈在后；已配置实色、未配置空心，点圆圈设置
+            const renderGrid = (names) => {
+              root.empty();
+              const grid = root.createDiv('dt-tagcolor-grid');
+              if (!names.length) {
+                grid.createSpan({ cls: 'dt-tagcolor-empty', text: T('tagColorsEmpty') });
+                return;
+              }
+              for (const name of names) {
+                const color = map[name] || '';
+                const chip = grid.createDiv('dt-tagcolor-chip');
+                chip.createSpan({ text: '#' + name, cls: 'dt-tagcolor-name' });
+                const dot = chip.createSpan({ cls: 'dt-tagcolor-dot' + (color ? '' : ' is-empty') });
+                if (color) dot.style.background = color;
+                if (typeof dot.setTooltip === 'function') dot.setTooltip(T('tagColorTip'));
+                else dot.setAttribute('aria-label', T('tagColorTip'));
+                dot.addEventListener('click', () => openPicker(name));
+              }
+            };
+            // 全量任务标签（与列表页侧栏同口径，按名称排序）；collectTags 失败时兜底只显示已配置的
+            collectTags()
+              .then((list) => renderGrid((list || []).map((s) => s.name).sort((a, b) => a.localeCompare(b))))
+              .catch(() => renderGrid(Object.keys(map).sort((a, b) => a.localeCompare(b))));
           };
           build();
         }),

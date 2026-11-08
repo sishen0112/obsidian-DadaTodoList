@@ -81,6 +81,8 @@
   transition: transform .12s ease;
 }
 .dt-tagcolor-chip .dt-tagcolor-dot:hover { transform: scale(1.2); }
+/* 未配置颜色的标签：空心圆点（点击同样可弹窗设置） */
+.dt-tagcolor-chip .dt-tagcolor-dot.is-empty { background: transparent; border: 1px solid var(--text-muted); }
 .dt-tagcolor-empty { font-size: var(--font-ui-small); color: var(--text-muted); }
 
 /* ---------- 设置页：关于区（版本标签 + 链接按钮） ---------- */
