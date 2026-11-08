@@ -146,8 +146,11 @@ export class TagColorModal extends Modal {
     this.gridEl = grid;
     const none = grid.createEl('button', {
       cls: 'tk-tagcolor-swatch tk-tagcolor-none',
-      attr: { type: 'button', 'data-c': '', title: t('app.tagColorNone') }
+      attr: { type: 'button', 'data-c': '' }
     });
+    // 用 Obsidian 自带 tooltip（setTooltip），旧版本兜底 title
+    if (typeof none.setTooltip === 'function') none.setTooltip(t('app.tagColorNone'));
+    else none.setAttribute('title', t('app.tagColorNone'));
     none.addEventListener('click', () => this.apply(''));
     const all = [...TAG_COLOR_PRESETS, ...this.customColors.filter((c) => !TAG_COLOR_PRESETS.includes(c))];
     for (const c of all) {
@@ -157,13 +160,15 @@ export class TagColorModal extends Modal {
       b.addEventListener('click', () => this.apply(c));
     }
 
-    // 自定义行：点预览色块弹系统取色器实时预览，点「保存」才生效
+    // 自定义行：点预览色块（空色时圈内显示 +）弹系统取色器实时预览，点「保存」才生效
     const row = contentEl.createEl('div', { cls: 'tk-tagcolor-customrow' });
     row.createEl('span', { cls: 'tk-tagcolor-label', text: t('app.tagColorCustom') });
     const preview = row.createEl('span', { cls: 'tk-tagcolor-preview' });
+    const plus = preview.createEl('i', { cls: 'la la-plus tk-tagcolor-plus' });
     const hexEl = row.createEl('span', { cls: 'tk-tagcolor-hex' });
     const input = preview.createEl('input', { type: 'color' });
     this.previewEl = preview;
+    this.plusEl = plus;
     this.hexEl = hexEl;
     this.inputEl = input;
     input.addEventListener('input', () => this.apply(input.value));
@@ -190,8 +195,9 @@ export class TagColorModal extends Modal {
       });
     }
     if (this.previewEl) this.previewEl.style.background = c || 'transparent';
+    if (this.plusEl) this.plusEl.classList.toggle('is-hidden', !!c);
     if (this.inputEl) this.inputEl.value = c || '#7c6bd9';
-    if (this.hexEl) this.hexEl.setText(c || '—');
+    if (this.hexEl) this.hexEl.setText(c || '');
   }
 
   onClose() {
