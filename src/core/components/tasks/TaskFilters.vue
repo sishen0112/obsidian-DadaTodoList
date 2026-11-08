@@ -13,8 +13,7 @@
                 :class="{ on: tagFilter === g.tag }" @click="$emit('toggle-tag', g.tag)">
           <i class="la" :class="tagFilter === g.tag ? 'la-folder-open' : 'la-folder'"></i>
           <span>{{ g.label }}</span>
-          <span class="tk-tagdot" :style="hexOf(g.tag) ? { color: hexOf(g.tag) } : null" :title="$t('app.tagColorTip')">
-            <i class="la" :class="hexOf(g.tag) ? 'la-dot-circle' : 'la-circle'"></i>
+          <span class="tk-tagdot" :class="{ empty: !hexOf(g.tag) }" :style="hexOf(g.tag) ? { background: hexOf(g.tag) } : null" :title="$t('app.tagColorTip')">
             <input type="color" :value="hexOf(g.tag) || '#7c6bd9'"
                    @click.stop @change="$emit('set-tag-color', g.tag, $event.target.value)" />
           </span>
@@ -23,8 +22,7 @@
         <button v-for="c in g.items" :key="c.tag" class="tk-filter-item tk-filter-child" type="button"
                 :class="{ on: tagFilter === c.tag }" @click="$emit('toggle-tag', c.tag)">
           <span>{{ c.label }}</span>
-          <span class="tk-tagdot" :style="hexOf(c.tag) ? { color: hexOf(c.tag) } : null" :title="$t('app.tagColorTip')">
-            <i class="la" :class="hexOf(c.tag) ? 'la-dot-circle' : 'la-circle'"></i>
+          <span class="tk-tagdot" :class="{ empty: !hexOf(c.tag) }" :style="hexOf(c.tag) ? { background: hexOf(c.tag) } : null" :title="$t('app.tagColorTip')">
             <input type="color" :value="hexOf(c.tag) || '#7c6bd9'"
                    @click.stop @change="$emit('set-tag-color', c.tag, $event.target.value)" />
           </span>
@@ -34,8 +32,7 @@
       <button v-for="t in tagTree.loose" :key="t.tag" class="tk-filter-item" type="button"
               :class="{ on: tagFilter === t.tag }" @click="$emit('toggle-tag', t.tag)">
         <i class="la la-tag"></i><span>{{ t.label }}</span>
-        <span class="tk-tagdot" :style="hexOf(t.tag) ? { color: hexOf(t.tag) } : null" :title="$t('app.tagColorTip')">
-          <i class="la" :class="hexOf(t.tag) ? 'la-dot-circle' : 'la-circle'"></i>
+        <span class="tk-tagdot" :class="{ empty: !hexOf(t.tag) }" :style="hexOf(t.tag) ? { background: hexOf(t.tag) } : null" :title="$t('app.tagColorTip')">
           <input type="color" :value="hexOf(t.tag) || '#7c6bd9'"
                  @click.stop @change="$emit('set-tag-color', t.tag, $event.target.value)" />
         </span>
@@ -128,18 +125,21 @@ export default {
 .tk-filter-item i { flex: none; width: 15px; text-align: center; font-size: 13px; }
 .tk-filter-item span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-filter-item .cnt { flex: none; font-size: 12px; opacity: .7; font-variant-numeric: tabular-nums; }
-/* 标签颜色圆点（issue #8）：字体图标负责视觉（已配置 la-dot-circle 实心圆着色、
-   未配置 la-circle 空心圆），透明 color input 覆盖其上负责弹系统取色器。
-   用 .tk-filter-item 前缀提权，压掉 .tk-filter-item span 的 flex 撑满规则（否则被拉成椭圆） */
+/* 标签颜色圆点（issue #8）：纯 CSS 圆点负责视觉（已配置实色底、未配置空心描边），
+   透明 color input 覆盖其上负责弹系统取色器。
+   用 .tk-filter-item / .tk-filter-row 前缀提权，压掉 .tk-filter-item span 的 flex 撑满规则
+   （否则圆点被拉成椭圆） */
 .tk-filter-item .tk-tagdot,
 .tk-filter-row .tk-tagdot {
-  position: relative; flex: none; width: 16px; height: 16px;
-  display: inline-flex; align-items: center; justify-content: center;
-  color: var(--ink-soft); cursor: pointer;
+  position: relative; flex: none; width: 12px; height: 12px;
+  border: 1.5px solid var(--ink-soft); border-radius: 50%;
+  display: inline-block; cursor: pointer;
   transition: transform .12s ease;
 }
-.tk-tagdot .la { font-size: 13px; line-height: 1; }
-.tk-tagdot:hover { transform: scale(1.15); }
+.tk-filter-item .tk-tagdot:not(.empty),
+.tk-filter-row .tk-tagdot:not(.empty) { border-color: transparent; }
+.tk-filter-item .tk-tagdot:hover,
+.tk-filter-row .tk-tagdot:hover { transform: scale(1.15); }
 .tk-tagdot input {
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   opacity: 0; border: none; padding: 0; margin: 0; cursor: pointer;
