@@ -126,17 +126,19 @@ export default {
       if (this.colorPop) this.$emit('set-tag-color', this.colorPop.tag, this.colorPop.color);
       this.closeColorPop();
     },
-    // 面板打开期间：点面板外 / 滚动 / Esc 关闭（面板自身已 @pointerdown.stop）
+    // 面板打开期间：点面板外 / 滚动 / Esc 关闭。
+    // pointerdown 必须用冒泡阶段（不能用捕获）：面板靠 @pointerdown.stop 拦截，
+    // 捕获阶段 document 先于面板触发，会导致点预设色块面板立即关闭
     bindPopClosers() {
       if (this._popClosers) return;
       const onDocDown = () => this.closeColorPop();
       const onKey = (ev) => { if (ev.key === 'Escape') this.closeColorPop(); };
       const onScroll = () => this.closeColorPop();
-      document.addEventListener('pointerdown', onDocDown, true);
+      document.addEventListener('pointerdown', onDocDown);
       document.addEventListener('keydown', onKey, true);
       window.addEventListener('scroll', onScroll, true);
       this._popClosers = [
-        ['pointerdown', onDocDown, document, true],
+        ['pointerdown', onDocDown, document, false],
         ['keydown', onKey, document, true],
         ['scroll', onScroll, window, true]
       ];
