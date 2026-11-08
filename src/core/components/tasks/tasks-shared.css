@@ -57,7 +57,7 @@
   line-height: 1.6;
   border-radius: 999px;
   background: var(--tag-bg);
-  color: var(--tag-ink);
+  color: var(--ink); /* 文字用标题色（issue #8）：命中标签色时由内联样式覆盖背景，文字保持一致 */
   white-space: nowrap;
   vertical-align: baseline;
 }
@@ -80,8 +80,8 @@
 .task-app .tk-tag {
   display: inline-flex; align-items: center; gap: 2px;
   padding: 0 8px; border-radius: 999px;
-  font-size: 11px; line-height: 17px; font-weight: 500;
-  background: var(--tag-bg); color: var(--tag-ink); white-space: nowrap;
+  font-size: 11px; line-height: 17px;
+  background: var(--tag-bg); color: var(--ink); white-space: nowrap;
   transition: background .15s ease, color .15s ease;
 }
 .task-app .tk-tag:hover { background: rgba(110, 79, 184, .2); color: var(--tag-ink-strong); }

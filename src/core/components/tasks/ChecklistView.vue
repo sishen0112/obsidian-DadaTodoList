@@ -201,7 +201,7 @@ export default {
     }
   },
   methods: {
-    statusIcon, richSummaryNoTags, dateText, timeText, taskFilePath, scheduledText,
+    statusIcon, richSummaryNoTags, renderInlineHtml, dateText, timeText, taskFilePath, scheduledText,
     pct(c) { return c.total ? Math.round((c.done / c.total) * 100) : 0; },
     gKey(g) { return g.title || '___ungrouped'; },
     firstLine(s) { return String(s || '').split(/\r?\n/)[0]; },
