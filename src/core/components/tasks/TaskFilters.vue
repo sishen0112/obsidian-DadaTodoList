@@ -136,8 +136,9 @@ export default {
 .tk-filter-row .tk-tagdot:not(.empty) { border-color: transparent; }
 .tk-filter-item .tk-tagdot:hover,
 .tk-filter-row .tk-tagdot:hover { transform: scale(1.15); }
-/* 选中态：圆点改 1.5px 白描边（空心/实色统一），计数用白色（置于上方规则之后以覆盖） */
-.tk-filter-item.on .tk-tagdot { border-color: #fff; border-width: 1.5px; }
+/* 选中态：圆点改 1.5px 白描边（已配置实线、未配置保持虚线），计数用白色 */
+.tk-filter-item.on .tk-tagdot { border-color: #fff; border-width: 1.5px; border-style: solid; }
+.tk-filter-item.on .tk-tagdot.empty { border-style: dashed; }
 .tk-filter-item.on .cnt { color: #fff; opacity: 1; }
 .tk-filter-parent { font-weight: 600; }
 .tk-filter-child { padding-left: 24px; font-size: 13.5px; }
