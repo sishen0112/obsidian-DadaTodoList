@@ -50,8 +50,8 @@
                   v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
             <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
           </button>
-          <button class="tk-btn" type="button" v-tooltip="$t('app.newTask')" @click="$emit('new-task')">
-            <i class="la la-plus"></i><span>{{ $t('app.newTask') }}</span>
+          <button class="tk-btn ico" type="button" v-tooltip="$t('app.newTask')" @click="$emit('new-task')">
+            <i class="la la-plus"></i>
           </button>
         </div>
       </template>
