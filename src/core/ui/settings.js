@@ -708,11 +708,15 @@ export class DadaTodoSettingTab extends PluginSettingTab {
       if (cmp > 0) {
         el.addClass('dt-about-update-available');
         el.createSpan({ text: T('updateAvailable', { version: latest }) });
-        const link = el.createEl('a', { cls: 'dt-about-update-link' });
-        link.setAttribute('href', 'https://community.obsidian.md/plugins/' + this.plugin.manifest.id);
-        link.setAttribute('target', '_blank');
-        link.setAttribute('rel', 'noopener');
+        // 「前往更新」：点击直接打开 Obsidian 设置里的「第三方插件」页（非网页）
+        const link = el.createEl('span', { cls: 'dt-about-update-link' });
         link.setText(T('updateGoto'));
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const settings = this.app.setting;
+          settings.open();
+          settings.openTabById('community-plugins');
+        });
       } else if (cmp === 0) {
         el.addClass('dt-about-update-latest');
         el.setText(T('updateLatest'));
