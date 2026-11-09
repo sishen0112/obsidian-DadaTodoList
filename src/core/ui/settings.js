@@ -99,7 +99,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     try {
     const plugin = this.plugin;
     const app = this.app;
-    const T = (k) => t('settings.' + k);
+    const T = (k, opts) => t('settings.' + k, opts);
     // 临时调试：包裹每个渲染回调，抛错时把错误显示在对应项内而非中断整页渲染
     const safe = (fn) => (s, g) => {
       try { return fn(s, g); } catch (e) {
@@ -709,7 +709,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
         el.addClass('dt-about-update-available');
         el.createSpan({ text: T('updateAvailable', { version: latest }) });
         const link = el.createEl('a', { cls: 'dt-about-update-link' });
-        link.setAttribute('href', 'https://github.com/' + UPDATE_REPO + '/releases');
+        link.setAttribute('href', 'https://community.obsidian.md/plugins/' + this.plugin.manifest.id);
         link.setAttribute('target', '_blank');
         link.setAttribute('rel', 'noopener');
         link.setText(T('updateGoto'));
