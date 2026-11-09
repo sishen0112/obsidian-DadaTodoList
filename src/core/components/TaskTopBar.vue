@@ -19,6 +19,9 @@
                 v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
           <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
         </button>
+        <button class="tk-btn ico" type="button" v-tooltip="$t('app.newTask')" @click="$emit('new-task')">
+          <i class="la la-plus"></i>
+        </button>
       </template>
 
       <!-- 日程视图：区间 + 回到今天 + 仅显示待办 -->
@@ -30,6 +33,9 @@
         <button class="tk-btn ico" type="button" :class="{ on: hideDone }"
                 v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
           <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
+        </button>
+        <button class="tk-btn ico" type="button" v-tooltip="$t('app.newTask')" @click="$emit('new-task')">
+          <i class="la la-plus"></i>
         </button>
       </template>
 
@@ -44,6 +50,9 @@
                   v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
             <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
           </button>
+          <button class="tk-btn" type="button" v-tooltip="$t('app.newTask')" @click="$emit('new-task')">
+            <i class="la la-plus"></i><span>{{ $t('app.newTask') }}</span>
+          </button>
         </div>
       </template>
 
@@ -53,6 +62,9 @@
         <button class="tk-btn ico" type="button" :class="{ on: hideDone }"
                 v-tooltip="hideDone ? $t('app.showAll') : $t('app.hideDone')" @click="$emit('toggle-hide-done')">
           <i class="la" :class="hideDone ? 'la-eye-slash' : 'la-eye'"></i>
+        </button>
+        <button class="tk-btn ico" type="button" v-tooltip="$t('app.newTask')" @click="$emit('new-task')">
+          <i class="la la-plus"></i>
         </button>
       </template>
     </div>
@@ -76,7 +88,7 @@ export default {
     hideDone: { type: Boolean, default: false },
     clMainView: { type: String, default: 'cols' }
   },
-  emits: ['navigate', 'toggle-todo-panel', 'toggle-hide-done', 'set-cl-main-view', 'back-to-today'],
+  emits: ['navigate', 'toggle-todo-panel', 'toggle-hide-done', 'new-task', 'set-cl-main-view', 'back-to-today'],
   computed: {
     // 周/日/月共用的导航文案（i18n key）；其余视图返回 null 走各自分支
     nav() {

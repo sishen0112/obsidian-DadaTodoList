@@ -130,6 +130,30 @@
   height: 14px;
 }
 
+/* ---------- 设置页：关于区（自检新版状态，显示在左侧说明区） ---------- */
+.dt-about-update-status {
+  font-size: var(--font-ui-small);
+}
+.dt-about-update-checking {
+  color: var(--text-muted);
+}
+.dt-about-update-latest {
+  color: var(--text-success, var(--interactive-success, var(--text-normal)));
+}
+/* 有新版本：用强调色提示，并附发布页链接 */
+.dt-about-update-available {
+  color: var(--text-accent);
+}
+.dt-about-update-link {
+  color: var(--text-accent);
+  text-decoration: none;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.dt-about-update-link:hover {
+  text-decoration: underline;
+}
+
 .dt-about-feedback-link {
   color: var(--text-accent);
   text-decoration: none;

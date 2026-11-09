@@ -5,6 +5,30 @@ import { countInboxTasks, migrateInboxTasks, loadAll, loadChecklists, collectTag
 import { setColorScheme, setWeekStart, tagColorOf, usedTagColors, EXTRA_SCHEME_OPTIONS, isImeKey } from '../composables/tasks-logic.js';
 import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
+// 自检新版：比对 GitHub 仓库 main 分支 manifest 的 version 与本地版本
+const UPDATE_REPO = 'sishen0112/obsidian-DadaTodoList';
+
+// 语义化版本号比较（'x.y.z'）：a>b → 1，a<b → -1，相等 → 0
+function semverCompare(a, b) {
+  const pa = String(a || '').split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || '').split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x > y) return 1;
+    if (x < y) return -1;
+  }
+  return 0;
+}
+
+// 取线上最新版本号（GitHub raw manifest，main 分支）；失败抛错由调用处静默处理
+async function fetchLatestVersion() {
+  const url = 'https://raw.githubusercontent.com/' + UPDATE_REPO + '/main/manifest.json';
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return data && data.version ? data.version : null;
+}
+
 // 收件箱文件路径补全：输入时浮层建议库内 md 文件（也允许手输尚不存在的路径，启动时会自动创建）
 class MarkdownFileSuggest extends AbstractInputSuggest {
   constructor(app, inputEl, onPick) {
@@ -510,14 +534,17 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     };
 
     const about = group('groupAbout', [
-      // 第一行：软件名（左） + 版本标签 + 更新日志按钮（右，跳转 GitHub Releases 列表）
+      // 第一行：左侧 插件名（名称）+ 自检新版状态（说明）；右侧 当前版本号 + 更新日志按钮
       {
         type: 'setting',
         name: plugin.manifest.name,
         desc: '',
         render: safe((s) => {
           s.setName(plugin.manifest.name);
-          s.descEl.empty();
+          // 左侧说明区：每次打开设置都自检新版，显示是否最新 / 可更新及最新版本号
+          const statusEl = s.descEl.createSpan({ cls: 'dt-about-update-status' });
+          this.checkForUpdate(statusEl, T);
+          // 右侧控件：当前版本号 + 更新日志按钮
           const row = s.controlEl.createDiv('dt-about-links');
           row.createSpan({ text: T('version') + ' ' + (plugin.manifest.version || ''), cls: 'dt-about-version-tag' });
           aboutButton(row, 'lucide-history', T('changelog'), GH_REPO + '/releases');
@@ -662,6 +689,38 @@ export class DadaTodoSettingTab extends PluginSettingTab {
           }
         }]
       }];
+    }
+  }
+
+  // 自检新版：每次打开设置页（关于区第一行）自动调用。
+  // 比对 GitHub 仓库 main 分支 manifest 的 version 与本地 manifest.version；
+  // 结果写在左侧说明区：是否最新，若不是则提示可更新并给出最新版本号与发布页链接。
+  async checkForUpdate(el, T) {
+    const cur = this.plugin.manifest.version || '';
+    el.setText(T('updateChecking'));
+    el.addClass('dt-about-update-checking');
+    try {
+      const latest = await fetchLatestVersion();
+      el.removeClass('dt-about-update-checking');
+      el.empty();
+      if (!latest) return; // 取不到版本号：不提示
+      const cmp = semverCompare(latest, cur);
+      if (cmp > 0) {
+        el.addClass('dt-about-update-available');
+        el.createSpan({ text: T('updateAvailable', { version: latest }) });
+        const link = el.createEl('a', { cls: 'dt-about-update-link' });
+        link.setAttribute('href', 'https://github.com/' + UPDATE_REPO + '/releases');
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener');
+        link.setText(T('updateGoto'));
+      } else if (cmp === 0) {
+        el.addClass('dt-about-update-latest');
+        el.setText(T('updateLatest'));
+      }
+      // cmp < 0（本地版本比线上还新，如开发版）：不提示
+    } catch (e) {
+      el.removeClass('dt-about-update-checking');
+      el.setText(''); // 网络不可达 / 被拦截：静默忽略，不影响设置页
     }
   }
 

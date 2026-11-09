@@ -21,7 +21,7 @@
                   @navigate="onNav" @switch-view="switchView"
                   @toggle-todo-panel="todoPanelOpen = !todoPanelOpen"
                   @toggle-hide-done="toggleHideDone" @set-cl-main-view="setClMainView"
-                  @back-to-today="scrollAgendaToToday" />
+                  @new-task="openNew()" @back-to-today="scrollAgendaToToday" />
 
     <div class="tk-body">
       <transition name="tk-view" mode="out-in" appear>

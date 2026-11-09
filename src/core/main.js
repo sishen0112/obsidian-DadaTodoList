@@ -10,6 +10,8 @@ import { DadaTodoSettingTab } from './ui/settings.js';
 import { ReminderService } from './services/reminder.js';
 import { initI18n, t } from './i18n/index.js';
 import { tooltip } from './directives/tooltip.js';
+import { VueModal } from './ui/VueModal.js';
+import TaskEditorModal from './components/TaskEditorModal.vue';
 import 'line-awesome/dist/line-awesome/css/line-awesome.min.css';
 import './styles/tokens.css';
 import './styles/modals.css';
@@ -111,6 +113,20 @@ export default class DadaTodoPlugin extends Plugin {
       id: commandId,
       name: t('app.openDada'),
       callback: () => this.activateView()
+    });
+
+    // 新建任务：直接弹出新建任务弹窗（复用 VueModal 桥，无需先打开视图）
+    this.addCommand({
+      id: 'new-task',
+      name: t('app.newTask'),
+      callback: () => {
+        new VueModal(this.app, TaskEditorModal, {
+          open: true,
+          plugin: this,
+          // 新建后若已有视图打开则静默刷新，让新任务即时出现
+          onSaved: () => this.reloadOpenViews()
+        }).open();
+      }
     });
 
     this.addSettingTab(new DadaTodoSettingTab(this.app, this));
