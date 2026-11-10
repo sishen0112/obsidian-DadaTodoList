@@ -539,13 +539,16 @@ export async function listSubtasks(parentGuid) {
 }
 
 // ---------- 写 ----------
-// 追加到文件末尾（去掉尾部空行后补一个空行）
+// 追加到文件末尾：新任务块紧接上一个任务（不插入空行）；
+// 写回时在末尾补一个空行——即「最后一个任务下方有一个空行」，
+// 下次追加时会先去掉这个尾部空行再直接接上，因此任务之间不会积累空行
 function appendLines(lines, node, indentStr) {
   const out = lines.slice();
   while (out.length && !out[out.length - 1].trim()) out.pop();
-  if (out.length) out.push('');
   const lineNo = out.length;
   out.push(...serializeBlock(node, indentStr));
+  out.push('');
+  out.push('');
   return { out, lineNo };
 }
 
