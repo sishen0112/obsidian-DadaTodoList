@@ -44,7 +44,7 @@
                  @dragover.prevent="onDragOver($event, g.title)" @drop="onDrop($event, g.title)">
               <div class="tk-cl-gtitle" :class="{ 'is-plain': !g.title }">
                 <template v-if="g.title">
-                  <span class="tk-cl-gtxt">{{ g.title }}</span><span class="tk-cl-gcnt">{{ g.tasks.length }}</span>
+                  <span class="tk-cl-gtxt">{{ g.title }}</span><span class="tk-cl-gcnt"><span class="tk-cl-done">{{ g.done }}</span>/{{ g.total }}</span>
                 </template>
                 <span v-else class="tk-cl-gplain">{{ $t('app.ungrouped') }}</span>
                 <button class="tk-add cl-gadd" type="button" :title="$t('app.addTaskToGroup')" @click="openAdd(g)">
@@ -81,7 +81,7 @@
                  @dragover.prevent="onDragOver($event, g.title)" @drop="onDrop($event, g.title)">
             <div class="tk-cl-gtitle" :class="{ 'is-plain': !g.title }">
               <template v-if="g.title">
-                <span class="tk-cl-gtxt">{{ g.title }}</span><span class="tk-cl-gcnt">{{ g.tasks.length }}</span>
+                <span class="tk-cl-gtxt">{{ g.title }}</span><span class="tk-cl-gcnt"><span class="tk-cl-done">{{ g.done }}</span>/{{ g.total }}</span>
               </template>
               <span v-else class="tk-cl-gplain">{{ $t('app.ungrouped') }}</span>
               <button class="tk-add cl-gadd" type="button" :title="$t('app.addTaskToGroup')" @click="openAdd(g)">
@@ -166,11 +166,19 @@ export default {
           .sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i)
           .map((x) => x.t);
       };
+      // 每个分组附带 total（组内任务总数）/ done（已完成数），供分组头展示「已完成/总数」，
+      // 始终基于原始 g.tasks 计算，故「隐藏已完成」开启时计数口径仍准确。
+      const build = (g, visible) => ({
+        title: g.title,
+        tasks: visible,
+        total: g.tasks.length,
+        done: g.tasks.reduce((n, t) => n + (t.completed ? 1 : 0), 0),
+      });
       if (!this.hideDone) {
-        return this.groups.map((g) => ({ title: g.title, tasks: sortTasks(g.tasks) }));
+        return this.groups.map((g) => build(g, sortTasks(g.tasks)));
       }
       return this.groups
-        .map((g) => ({ title: g.title, tasks: sortTasks(g.tasks).filter((t) => !(t.completed || t.cancelled)) }))
+        .map((g) => build(g, sortTasks(g.tasks).filter((t) => !(t.completed || t.cancelled))))
         .filter((g) => g.tasks.length);
     },
   },
@@ -391,6 +399,7 @@ export default {
 .tk-cl-gtxt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-cl-gplain { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 .tk-cl-gcnt { font-size: 11px; font-weight: 600; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.tk-cl-done { color: var(--text-accent, var(--gold)); font-weight: 700; }
 .tk-cl-rows { display: flex; flex-direction: column; }
 /* 清单任务排序动画：勾选完成/取消后平滑沉到组底（FLIP 位移），并给增删一个轻微淡入淡出 */
 /* 用 .tk-cl-rows 后代选择器提高特异性，压过 .tk-cl-row 自带的 transition（否则 transform 不被过渡，位移动画失效） */
