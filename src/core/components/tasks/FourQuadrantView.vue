@@ -12,8 +12,8 @@
           <i class="la la-plus"></i>
         </div>
       </header>
-      <div class="tk-quad-body">
-        <div v-if="!q.groups.length" class="tk-q-empty">{{ $t('app.matrixEmpty') }}</div>
+      <transition-group name="tk-quad" tag="div" class="tk-quad-body">
+        <div v-if="!q.groups.length" key="__empty" class="tk-q-empty">{{ $t('app.matrixEmpty') }}</div>
         <template v-for="grp in q.groups" :key="grp.key">
           <div class="tk-grp-h" :class="{ 'is-overdue': grp.isOverdue, 'tk-grp-done': grp.key === 'done' }" @click="toggleGroup(q.key, grp.key)">
             <i class="la la-caret-right tk-caret" :class="{ open: !isGroupCollapsed(q.key, grp.key) }"></i>
@@ -42,7 +42,7 @@
             </div>
           </div>
         </template>
-      </div>
+      </transition-group>
     </section>
   </div>
 </template>
@@ -230,6 +230,17 @@ export default {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px;
   display: flex; flex-direction: column; gap: 0;
 }
+/* 仅四象限：完成 / 取消任务时，复用清单视图同款动画 —— 任务在新位置（如「已完成」组）
+   平滑滑动归位（FLIP 位移），并给增删一个轻微淡入淡出。
+   用 .tk-quad-body 后代选择器提高特异性，压过 .tk-q-item 自带的 transition（否则 transform
+   不被过渡，位移动画失效），与清单视图 .tk-cl-rows .tk-clmove-move 同思路。 */
+.tk-quad-body .tk-quad-move { transition: transform .3s cubic-bezier(.4, 0, .2, 1); }
+.tk-quad-body .tk-quad-enter-active,
+.tk-quad-body .tk-quad-leave-active { transition: opacity .2s ease; }
+.tk-quad-body .tk-quad-enter-from,
+.tk-quad-body .tk-quad-enter,
+.tk-quad-body .tk-quad-leave-to,
+.tk-quad-body .tk-quad-leave { opacity: 0; }
 .tk-q-item {
   display: flex; gap: 8px; align-items: center;
   padding: 8px;
