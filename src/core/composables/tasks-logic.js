@@ -292,6 +292,24 @@ function inlineRe() {
   return /\[([^\]]*)\]\(([^)\s]+)\)|(^|[\s(（])#([\p{L}\p{N}_\-/]+)/gu;
 }
 
+// 行内 Markdown 正则（含 wikilink）：wikilink [[...]] 优先，其次 md 链接，其次 #标签。
+// 独立工厂：renderInlineHtml 用它解析展示层，不影响 inlineRe()（编辑器的标题字段提取）。
+function inlineReWithWikilinks() {
+  return /\[\[([^\[\]]+)\]\]|\[([^\]]*)\]\(([^)\s]+)\)|(^|[\s(（])#([\p{L}\p{N}_\-/]+)/gu;
+}
+
+// 解析 [[目标#标题|别名]] → { target, display }
+//   target：供 openLinkText / 页面预览跳转（可含 #标题、/子路径、^块引用）
+//   display：展示文字——别名优先；无别名且带 # 时取标题段；否则取目标名（与 Obsidian 一致）
+function parseWikilink(inner) {
+  let target = inner, alias = '';
+  const bar = inner.indexOf('|');
+  if (bar >= 0) { target = inner.slice(0, bar); alias = inner.slice(bar + 1); }
+  if (alias) return { target, display: alias };
+  const hash = target.indexOf('#');
+  return { target, display: hash >= 0 ? target.slice(hash + 1) : target };
+}
+
 // 提取标题中的标签与链接（结构化字段，便于筛选/展示），仅模块内部使用
 function parseInline(text) {
   const src = String(text == null ? '' : text);
@@ -313,23 +331,17 @@ export function renderInlineHtml(text, opts = {}) {
   const withTags = opts.tags !== false;
   const src = stripMute(text); // 🔕 为提醒关闭标记，不在任何展示位出现
   // 行内解析：wikilink [[...]] 优先；其次 markdown 链接 [text](url)；其次 #标签。
-  // 注意：此处用独立正则，不改动共享的 inlineRe()（它供 parseInline/splitSummary 提取标题字段，
-  // 改动会影响编辑器里 wikilink 的还原逻辑），wikilink 仅在展示层解析为可点击链接。
-  const re = /\[\[([^\[\]]+)\]\]|\[([^\]]*)\]\(([^)\s]+)\)|(^|[\s(（])#([\p{L}\p{N}_\-/]+)/gu;
+  // 注意：用独立工厂 inlineReWithWikilinks()，不改动共享的 inlineRe()（它供 parseInline/splitSummary
+  // 提取标题字段，改动会影响编辑器里 wikilink 的还原逻辑），wikilink 仅在展示层解析为可点击链接。
+  const re = inlineReWithWikilinks();
   let out = '';
   let last = 0;
   let m;
   while ((m = re.exec(src)) !== null) {
     out += escapeHtml(src.slice(last, m.index));
     if (m[1] !== undefined) {
-      // [[目标#标题|别名]] → 可点击跳转的 Obsidian 双链。data-link 存「目标#标题」供 openLinkText，
-      // 展示文字优先用别名，其次取 # 后的标题段，最后回退到目标名（与 Obsidian 一致）。
-      const inner = m[1];
-      let target = inner, alias = '';
-      const bar = inner.indexOf('|');
-      if (bar >= 0) { target = inner.slice(0, bar); alias = inner.slice(bar + 1); }
-      const hash = target.indexOf('#');
-      const display = alias || (hash >= 0 ? target.slice(hash + 1) : target) || target;
+      // [[目标#标题|别名]] → 可点击跳转的 Obsidian 双链；data-link 存 target 供 openLinkText / 页面预览
+      const { target, display } = parseWikilink(m[1]);
       out += '<a class="tk-wikilink" data-link="' + escapeHtml(target) + '" href="#" rel="noopener">'
         + escapeHtml(display) + '</a>';
     } else if (m[2] !== undefined) {
