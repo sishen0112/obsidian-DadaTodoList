@@ -49,6 +49,14 @@
   word-break: break-all;
 }
 .task-app .tk-inline-link:hover { color: var(--gold-soft); }
+/* 标题内 [[双链]]：复用 Obsidian 原生强调色，下划线提示可点击跳转 */
+.task-app .tk-wikilink {
+  color: var(--text-accent, var(--gold));
+  text-decoration: none;
+  border-bottom: 1px solid var(--text-accent, var(--gold));
+  cursor: pointer;
+}
+.task-app .tk-wikilink:hover { opacity: .8; }
 .task-app .tk-inline-tag {
   display: inline-block;
   margin: 0 .15em;

@@ -50,6 +50,7 @@
 <script>
 import { Tasks } from '../../composables/useTasks.js';
 import { renderInlineHtml, dateText, timeText, statusIcon, priorityToLevel, levelToPriorityEmoji, weekdayShort, scheduledText } from '../../composables/tasks-logic.js';
+import { handleInlineLinkClick } from '../../utils/openWikilink.js';
 
 // 四象限（艾森豪威尔矩阵）：按优先级把任务分到 2×2 网格（行占 50% 高、列占 50% 宽）
 //   左上 红 重要且紧急   → 高优先级
@@ -161,8 +162,8 @@ export default {
     spanRange(t) { return this.ctx.spanRange(t); },
     statusIcon(t) { return statusIcon(t); },
     onTaskClick(t, e) { this.ctx.onTaskClick(t, e); },
-    // 标题内链接点击：阻止冒泡，避免同时触发所在行的「打开编辑器」
-    onTitleClick(e) { if (e.target && e.target.tagName === 'A') e.stopPropagation(); },
+    // 标题内链接点击：拦截 [[双链]] 跳转，其余 <a> 仅阻止冒泡（保留默认跳转）
+    onTitleClick(e) { handleInlineLinkClick(e, this.plugin); },
     // 跨象限拖拽：拖起任务，落点到另一象限即改优先级
     onDragStart(t, e) {
       this.dragGuid = t.guid;

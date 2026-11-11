@@ -171,6 +171,7 @@
     "fileMissing": "File not found: ",
     "noLineNo": "Task has no line number, cannot locate",
     "openFileFail": "Failed to open the task's file: ",
+    "openLinkFail": "Failed to open the link: ",
     "settings": "Settings"
   },
   "editor": {

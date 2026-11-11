@@ -34,7 +34,7 @@
               <span>{{ g.label }}</span><span class="cnt">{{ g.n }}</span>
             </button>
             <template v-if="!ctx.dayCollapsed[g.key]">
-              <task-row v-for="t in g.tasks" :key="t.guid" :task="t"
+              <task-row v-for="t in g.tasks" :key="t.guid" :task="t" :plugin="ctx.plugin"
                         :selected="t.guid === ctx.selectedGuid"
                         @select="ctx.openEdit" @toggle="ctx.toggle" @open="ctx.openTask" />
             </template>
@@ -60,7 +60,7 @@
                      :title="$t('app.postponeAllTip')" @click="ctx.openPostpone">{{ $t('app.postponeBtn') }}</div>
               </div>
               <template v-if="!ctx.todoCollapsed[b.key]">
-                <task-row v-for="t in b.tasks" :key="t.guid" :task="t"
+                <task-row v-for="t in b.tasks" :key="t.guid" :task="t" :plugin="ctx.plugin"
                           :selected="t.guid === ctx.selectedGuid"
                           :show-date="b.key === 'overdue' || b.key === 'week7' || b.key === 'far'"
                           @select="ctx.openEdit" @toggle="ctx.toggle" @open="ctx.openTask" />
@@ -78,7 +78,7 @@
             </button>
             <template v-if="ctx.showCompleted">
               <div v-if="!ctx.listCompleted.length" class="tk-group-empty">{{ $t('app.noDone') }}</div>
-              <task-row v-for="t in ctx.listCompleted" :key="t.guid" :task="t"
+              <task-row v-for="t in ctx.listCompleted" :key="t.guid" :task="t" :plugin="ctx.plugin"
                         :selected="t.guid === ctx.selectedGuid"
                         @select="ctx.openEdit" @toggle="ctx.toggle" @open="ctx.openTask" />
             </template>
@@ -94,7 +94,7 @@
             </button>
             <template v-if="ctx.showCancelled">
               <div v-if="!ctx.listCancelled.length" class="tk-group-empty">{{ $t('app.noCancelled') }}</div>
-              <task-row v-for="t in ctx.listCancelled" :key="t.guid" :task="t"
+              <task-row v-for="t in ctx.listCancelled" :key="t.guid" :task="t" :plugin="ctx.plugin"
                         :selected="t.guid === ctx.selectedGuid"
                         @select="ctx.openEdit" @toggle="ctx.toggle" @open="ctx.openTask" />
             </template>

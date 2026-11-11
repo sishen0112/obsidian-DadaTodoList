@@ -171,6 +171,7 @@
     "fileMissing": "找不到文件：",
     "noLineNo": "任务缺少行号，无法定位",
     "openFileFail": "打开任务所在文件失败：",
+    "openLinkFail": "打开链接失败：",
     "settings": "设置"
   },
   "editor": {

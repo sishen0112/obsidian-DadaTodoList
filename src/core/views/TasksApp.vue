@@ -105,6 +105,7 @@ import TaskTopBar from '../components/TaskTopBar.vue';
 import WeekDayView from '../components/WeekDayView.vue';
 import TaskRow from '../components/tasks/TaskRow.vue';
 import { openTaskInFile } from '../utils/openTaskInFile.js';
+import { handleInlineLinkClick } from '../utils/openWikilink.js';
 import { TagColorModal } from '../ui/modals.js';
 
 import ChecklistView from '../components/tasks/ChecklistView.vue';
@@ -697,9 +698,9 @@ export default {
     richSummaryNoTags(t) { return richSummaryNoTags(t); },
     // 纯标题（不含链接与标签的 Markdown），用于详情面板
     plainTitle(t) { return plainTitle(t); },
-    // v-html 内的链接点击：阻止冒泡，避免同时触发所在行的「打开编辑器」
+    // v-html 内的链接点击：拦截 [[双链]] 跳转，其余 <a> 仅阻止冒泡（保留默认跳转）
     onRichClick(e) {
-      if (e.target && e.target.tagName === 'A') e.stopPropagation();
+      handleInlineLinkClick(e, this.plugin);
     },
     onDragStart(t, e) {
       this.dragGuid = t.guid;

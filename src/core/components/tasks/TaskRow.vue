@@ -21,6 +21,7 @@
 // 任务列表行（待办/已办分组共用）。
 // 纯展示组件：勾选 / 选中 / 编辑等动作全部上抛，由容器统一处理。
 import { statusIcon, dateText, timeText, richSummaryNoTags, priorityToLevel, scheduledText, tagChipStyle } from '../../composables/tasks-logic.js';
+import { handleInlineLinkClick } from '../../utils/openWikilink.js';
 
 export default {
   name: 'TaskRow',
@@ -28,7 +29,9 @@ export default {
     task: { type: Object, required: true },
     selected: { type: Boolean, default: false },
     // 显示模式：true=仅日期（日历图标，用于「最近7天/更远」分组），false=仅时间（时钟图标，其余分组）
-    showDate: { type: Boolean, default: false }
+    showDate: { type: Boolean, default: false },
+    // 插件实例（用于标题内 [[双链]] 跳转）；列表视图从 ctx.plugin 透传
+    plugin: { type: Object, default: null }
   },
   computed: {
     // 优先级档位（用于列表行徽标配色）
@@ -60,9 +63,9 @@ export default {
       if (e && (e.metaKey || e.ctrlKey)) this.$emit('open', this.task);
       else this.$emit('select', this.task);
     },
-    // v-html 内的链接点击：阻止冒泡，避免同时触发行选中
+    // v-html 内的链接点击：拦截 [[双链]] 跳转，其余 <a> 仅阻止冒泡（保留默认跳转）
     onRichClick(e) {
-      if (e.target && e.target.tagName === 'A') e.stopPropagation();
+      handleInlineLinkClick(e, this.plugin);
     }
   }
 };

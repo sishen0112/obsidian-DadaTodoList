@@ -126,6 +126,7 @@ import { statusIcon, dateText, timeText, richSummaryNoTags, renderInlineHtml, sc
 import { VueModal } from '../../ui/VueModal.js';
 import TaskEditorModal from '../TaskEditorModal.vue';
 import { openTaskInFile } from '../../utils/openTaskInFile.js';
+import { handleInlineLinkClick } from '../../utils/openWikilink.js';
 import { openCtxMenu } from '../../composables/useTaskCtxMenu.js';
 import TaskContextMenu from './TaskContextMenu.vue';
 
@@ -280,9 +281,9 @@ export default {
       if (!path) return;
       this.plugin.app.workspace.openLinkText(path, '', false);
     },
-    // v-html 内的链接点击：阻止冒泡，避免同时触发所在行的「打开编辑器」
+    // v-html 内的链接点击：拦截 [[双链]] 跳转，其余 <a> 仅阻止冒泡（保留默认跳转）
     onRichClick(e) {
-      if (e.target && e.target.tagName === 'A') e.stopPropagation();
+      handleInlineLinkClick(e, this.plugin);
     },
     // 拖拽：将任务项拖到其他分组
     onDragStart(e, t) {

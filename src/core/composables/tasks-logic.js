@@ -312,22 +312,36 @@ function parseInline(text) {
 export function renderInlineHtml(text, opts = {}) {
   const withTags = opts.tags !== false;
   const src = stripMute(text); // 🔕 为提醒关闭标记，不在任何展示位出现
-  const re = inlineRe();
+  // 行内解析：wikilink [[...]] 优先；其次 markdown 链接 [text](url)；其次 #标签。
+  // 注意：此处用独立正则，不改动共享的 inlineRe()（它供 parseInline/splitSummary 提取标题字段，
+  // 改动会影响编辑器里 wikilink 的还原逻辑），wikilink 仅在展示层解析为可点击链接。
+  const re = /\[\[([^\[\]]+)\]\]|\[([^\]]*)\]\(([^)\s]+)\)|(^|[\s(（])#([\p{L}\p{N}_\-/]+)/gu;
   let out = '';
   let last = 0;
   let m;
   while ((m = re.exec(src)) !== null) {
     out += escapeHtml(src.slice(last, m.index));
     if (m[1] !== undefined) {
-      const href = safeHref(m[2]);
-      const label = m[1] || m[2];
+      // [[目标#标题|别名]] → 可点击跳转的 Obsidian 双链。data-link 存「目标#标题」供 openLinkText，
+      // 展示文字优先用别名，其次取 # 后的标题段，最后回退到目标名（与 Obsidian 一致）。
+      const inner = m[1];
+      let target = inner, alias = '';
+      const bar = inner.indexOf('|');
+      if (bar >= 0) { target = inner.slice(0, bar); alias = inner.slice(bar + 1); }
+      const hash = target.indexOf('#');
+      const display = alias || (hash >= 0 ? target.slice(hash + 1) : target) || target;
+      out += '<a class="tk-wikilink" data-link="' + escapeHtml(target) + '" href="#" rel="noopener">'
+        + escapeHtml(display) + '</a>';
+    } else if (m[2] !== undefined) {
+      const href = safeHref(m[3]);
+      const label = m[2] || m[3];
       out += href
         ? '<a class="tk-inline-link" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(label) + '</a>'
         : escapeHtml(m[0]);
     } else {
-      out += escapeHtml(m[3]); // 保留前置空白，避免与前后文字粘连
+      out += escapeHtml(m[4]); // 保留前置空白，避免与前后文字粘连
       if (withTags) {
-        const tag = m[4];
+        const tag = m[5];
         const c = tagColors[tag];
         // 标签色胶囊（issue #8）：命中配置 → 浅底（与任务块同透明度）+ 标题同色文字
         const style = c ? ' style="background:' + withAlpha(c, 0.28) + ';color:var(--ink)"' : '';

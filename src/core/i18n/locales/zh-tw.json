@@ -171,6 +171,7 @@
     "fileMissing": "找不到檔案：",
     "noLineNo": "任務缺少行號，無法定位",
     "openFileFail": "開啟任務所在檔案失敗：",
+    "openLinkFail": "開啟連結失敗：",
     "settings": "設定"
   },
   "editor": {

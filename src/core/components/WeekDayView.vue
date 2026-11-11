@@ -39,6 +39,7 @@
 import TaskTimeline from './TaskTimeline.vue';
 import TodoSidePanel from './TodoSidePanel.vue';
 import { Tasks } from '../composables/useTasks.js';
+import { handleInlineLinkClick } from '../utils/openWikilink.js';
 import { openCtxMenu } from '../composables/useTaskCtxMenu.js';
 import {
   colorOf, itemColor, lunarDayText, lunarTagText, holidayOf,
@@ -490,9 +491,9 @@ export default {
     dragHint(t) {
       return this.$t('app.dragHintFull', { title: plainInline(t.summary) });
     },
-    // v-html 内的链接点击：阻止冒泡，避免同时触发所在行的「打开编辑器」
+    // v-html 内的链接点击：拦截 [[双链]] 跳转，其余 <a> 仅阻止冒泡（保留默认跳转）
     richClick(e) {
-      if (e.target && e.target.tagName === 'A') e.stopPropagation();
+      handleInlineLinkClick(e, this.plugin);
     }
   }
 };
