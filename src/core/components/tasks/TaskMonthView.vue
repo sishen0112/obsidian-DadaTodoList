@@ -31,7 +31,7 @@
               <div v-for="t in dayChips(c)" :key="t.guid" class="cel-task"
                    :class="{ done: t.completed || t.cancelled, dragging: ctx.dragGuid === t.guid, selected: selectedGuid === t.guid }"
                    :style="ctx.itemColor(t)"
-                   :title="ctx.dragHint(t)" :draggable="!resizing"
+                   :draggable="!resizing"
                    @dragstart="ctx.onDragStart(t, $event)"
                    @dragend="ctx.onDragEnd"
                    @click.stop="onSelect(t, $event)" @dblclick.stop="ctx.onTaskClick(t, $event)"
