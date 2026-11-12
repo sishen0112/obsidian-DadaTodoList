@@ -6,7 +6,7 @@ import { setColorScheme, setWeekStart, tagColorOf, usedTagColors, EXTRA_SCHEME_O
 import { VIEW_MENU_ITEMS, DEFAULT_MENU_VIEWS, reorderViews } from '../composables/viewMenu.js';
 
 // 自检新版：比对 GitHub 仓库 main 分支 manifest 的 version 与本地版本
-const UPDATE_REPO = 'sishen0112/obsidian-DadaTodoList';
+const UPDATE_REPO = 'Plover-PY/obsidian-DadaTodoList';
 
 // 语义化版本号比较（'x.y.z'）：a>b → 1，a<b → -1，相等 → 0
 function semverCompare(a, b) {
@@ -516,7 +516,7 @@ export class DadaTodoSettingTab extends PluginSettingTab {
     ]);
 
     // 分组：关于（软件信息 / 作者 / 反馈渠道）
-    const GH_REPO = 'https://github.com/sishen0112/obsidian-DadaTodoList';
+    const GH_REPO = 'https://github.com/Plover-PY/obsidian-DadaTodoList';
     const GH_ISSUES = GH_REPO + '/issues';
     // 作者小红书主页：用户提供链接后填入此处；留空则不显示小红书按钮
     const XIAOHONGSHU_URL = 'https://xhslink.cn/o/2G9OTVU76WP';
